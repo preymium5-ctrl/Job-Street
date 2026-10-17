@@ -1,15 +1,16 @@
-.brand-lockup { display: inline-flex; align-items: center; gap: 8px; color: var(--brand-blue); flex-shrink: 0; }
-.brand-mark { display: block; width: 58px; height: 64px; object-fit: contain; }
-.brand-name { display: flex; flex-direction: column; gap: 2px; line-height: 1; letter-spacing: -.03em; }
-.brand-name-prefix { color: var(--brand-blue); font-size: 23px; font-weight: 800; }
-.brand-name-country { color: var(--brand-red); font-size: 29px; font-weight: 800; }
+.brand-lockup { display: inline-flex; align-items: center; gap: 12px; color: var(--brand-navy); flex-shrink: 0; }
+.brand-mark { display: block; width: 84px; height: 48px; object-fit: contain; }
+.brand-name { display: flex; flex-direction: column; gap: 1px; line-height: 1; letter-spacing: -.035em; }
+.brand-name-prefix { color: var(--brand-navy); font-size: 22px; font-weight: 800; }
+.brand-name-country { color: var(--brand-teal); font-size: 26px; font-weight: 800; }
 .wordmark { flex-shrink: 0; }
-.site-footer .brand-mark { width: 65px; height: 70px; }
+.site-footer .brand-mark { width: 100px; height: 56px; }
 .site-footer .brand-name-country { font-size: 32px; }
 .hero-title > span:first-child { color: var(--brand-blue); }
-.hero-title > span:nth-child(2), .hero-title .accent-dot { color: var(--brand-red); }
+.hero-title > span:nth-child(2), .hero-title .accent-dot { color: var(--brand-teal); }
 @media (max-width: 700px) {
- .brand-mark { width: 48px; height: 54px; }
- .brand-name-prefix { font-size: 19px; }
- .brand-name-country { font-size: 24px; }
+ .brand-lockup { gap: 8px; }
+ .brand-mark { width: 62px; height: 38px; }
+ .brand-name-prefix { font-size: 17px; }
+ .brand-name-country { font-size: 20px; }
 }

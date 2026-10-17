@@ -18,7 +18,7 @@
 .industryList button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 11px 12px; border-radius: 6px; text-align: left; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .industryList button b { font-size: 10px; font-weight: 500; color: var(--muted); }
 .industryList button:hover { background: var(--surface-soft); }
-.industryList button[aria-pressed="true"] { color: var(--brand-blue); background: var(--brand-red); font-weight: 600; }
+.industryList button[aria-pressed="true"] { color: var(--brand-blue); background: var(--brand-teal); font-weight: 600; }
 .industryList button[aria-pressed="true"] b { color: var(--brand-blue); }
 .selectField { display: grid; gap: 9px; margin-top: 23px; font-size: 10px; color: var(--muted); }
 .selectField select { width: 100%; min-width: 0; padding: 12px 9px; border: 1px solid var(--line); border-radius: 6px; color: var(--brand-blue); background: transparent; font-size: 11px; }
@@ -44,7 +44,7 @@
 .empty > svg { margin-inline: auto; }
 .empty h3 { font-size: 28px; font-weight: 400; letter-spacing: -.035em; margin-top: 20px; }
 .empty p { margin: 15px auto 25px; max-width: 330px; font-size: 13px; color: var(--muted); }
-.empty button { display: inline-flex; align-items: center; gap: 15px; padding: 13px 18px; background: var(--brand-red); border-radius: 8px; font-size: 12px; }
+.empty button { display: inline-flex; align-items: center; gap: 15px; padding: 13px 18px; background: var(--brand-teal); border-radius: 8px; font-size: 12px; }
 .directory button:focus-visible, .directory select:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 3px; }
 @media (min-width: 1480px) { .workspace { gap: 40px; } }
 @media (max-width: 1150px) { .workspace { grid-template-columns: 190px minmax(0,1fr); gap: 25px; } .grid { gap: 24px; } .searchNote { display: none; } .search { width: 100%; } }
@@ -52,4 +52,4 @@
 @media (max-width: 600px) { .grid { grid-template-columns: 1fr; gap: 22px; } .directory { padding-block: 25px 60px; } .search { padding: 16px; gap: 10px; } .search input { font-size: 14px; } .resultsHeader { align-items: flex-start; gap: 12px; } .resultsHeader h2 { font-size: 33px; } .sort { margin-top: 27px; } .sort select { max-width: 96px; font-size: 9px; } .filterBody { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 15px; } .end { font-size: 9px; } }
 
 .industryList button[aria-pressed="true"], .industryList button[aria-pressed="true"] b, .empty button { color: #fff; }
-.resultsHeader h2 > span, .activeFilters button { background: var(--red-soft); color: var(--brand-red); }
+.resultsHeader h2 > span, .activeFilters button { background: var(--teal-soft); color: var(--brand-teal-hover); }

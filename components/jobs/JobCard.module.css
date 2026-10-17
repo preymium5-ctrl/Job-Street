@@ -5,12 +5,12 @@
 .photo img { object-fit: cover; transition: transform .8s; }
 .card:hover .photo img { transform: scale(1.035); }
 .cover::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg,color-mix(in srgb, var(--brand-navy) 19%, transparent),transparent 30%,color-mix(in srgb, var(--brand-navy) 54%, transparent) 62%,color-mix(in srgb, var(--brand-navy) 98%, transparent)); }
-.fee { position: absolute; z-index: 2; left: 22px; top: 22px; display: flex; align-items: center; gap: 9px; max-width: calc(100% - 44px); border-radius: 8px; padding: 12px 16px; background: var(--brand-red); color: var(--brand-blue); font-size: 15px; line-height: 1.35; font-weight: 700; letter-spacing: .025em; text-transform: uppercase; }
+.fee { position: absolute; z-index: 2; left: 22px; top: 22px; display: flex; align-items: center; gap: 9px; max-width: calc(100% - 44px); border-radius: 8px; padding: 12px 16px; background: var(--brand-teal); color: var(--brand-blue); font-size: 15px; line-height: 1.35; font-weight: 700; letter-spacing: .025em; text-transform: uppercase; }
 .fee svg { flex-shrink: 0; width: 22px; height: 22px; }
 .coverTitle { position: absolute; z-index: 2; bottom: 32px; left: 28px; right: 28px; color: #fff; }
 .coverTitle > span { display: block; font-size: 13px; line-height: 1.5; color: var(--surface-soft); margin-bottom: 12px; }
 .card .coverTitle h3 { color: #fff; font-size: clamp(34px, 2.8vw, 42px); line-height: 1.12; letter-spacing: -.035em; font-weight: 500; overflow-wrap: anywhere; }
-.coverTitle a:hover { color: var(--brand-red); }
+.coverTitle a:hover { color: var(--brand-teal); }
 .imageNote { position: absolute; z-index: 2; bottom: 12px; left: 28px; font-size: 11px; color: var(--surface-soft); }
 .body { display: flex; flex-direction: column; flex: 1; min-width: 0; padding: 28px 28px 20px; }
 .locationRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--muted); }
@@ -38,7 +38,7 @@
 .details { color: var(--brand-blue); border: 1px solid var(--line); }
 .details:hover { background: var(--paper); }
 .apply { background: var(--brand-navy); color: var(--surface-soft); border: 1px solid var(--brand-blue); }
-.apply svg { color: var(--brand-red); }
+.apply svg { color: var(--brand-teal); }
 .apply:hover { background: var(--brand-blue); }
 .listed { margin-top: 16px; text-align: center; color: var(--muted); font-size: 12px; }
 .card a:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 4px; }
@@ -47,7 +47,7 @@
 @media (prefers-reduced-motion: reduce) { .card, .photo img { transition: none; } .card:hover .photo img { transform: none; } }
 
 .fee { color: #fff; }
-.coverTitle a:hover { color: var(--red-soft); }
-.apply { background: var(--brand-red); border-color: var(--brand-red); color: #fff; }
+.coverTitle a:hover { color: var(--teal-soft); }
+.apply { background: var(--brand-teal); border-color: var(--brand-teal); color: #fff; }
 .apply svg { color: #fff; }
-.apply:hover { background: var(--brand-red-hover); }
+.apply:hover { background: var(--brand-teal-hover); }

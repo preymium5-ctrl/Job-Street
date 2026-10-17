@@ -1,9 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises";
 import sharp from "sharp";
 
-const source = await readFile(new URL("../public/brand/jobs-in-croatia-mark-512.png", import.meta.url));
-const raster = (size) => sharp(source).resize(size, size).flatten({ background: "#FFFFFF" }).png().toBuffer();
-await writeFile(new URL("../app/icon.svg", import.meta.url), `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="#FFFFFF"/><image width="512" height="512" href="data:image/png;base64,${source.toString("base64")}"/></svg>\n`);
+const source = await readFile(new URL("../public/brand/jobstreet-croatia-ribbon.png", import.meta.url));
+const raster = (size) => sharp(source).resize(size, size, { fit: "contain", background: "#FFFFFF" }).flatten({ background: "#FFFFFF" }).png().toBuffer();
+await writeFile(new URL("../app/icon.svg", import.meta.url), `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="#FFFFFF"/><image width="512" height="512" preserveAspectRatio="xMidYMid meet" href="data:image/png;base64,${source.toString("base64")}"/></svg>\n`);
 
 await writeFile(new URL("../app/icon1.png", import.meta.url), await raster(192));
 await writeFile(new URL("../app/apple-icon.png", import.meta.url), await raster(180));

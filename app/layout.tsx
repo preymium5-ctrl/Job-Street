@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   },
   ...(process.env.GOOGLE_SITE_VERIFICATION ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION.trim() } } : {}),
 };
-export const viewport: Viewport = { themeColor: "#164B83" };
+export const viewport: Viewport = { themeColor: "#102f4d" };
 export default function RootLayout({
   children,
 }: {

@@ -2,8 +2,8 @@
   padding-bottom: 0;
 }
 .hero {
-  background: #164B83;
-  color: #F3F6FA;
+  background: var(--brand-blue);
+  color: var(--paper);
   padding: 36px 0 0;
 }
 .heroInner {
@@ -15,7 +15,7 @@
   align-items: center;
   flex-wrap: wrap;
   font-size: 12px;
-  color: #E6F0FA;
+  color: var(--teal-soft);
   padding-bottom: 48px;
 }
 .breadcrumbs a {
@@ -25,7 +25,7 @@
   color: #fff;
 }
 .breadcrumbs [aria-current] {
-  color: #F3F6FA;
+  color: var(--paper);
 }
 .heroGrid {
   display: grid;
@@ -50,11 +50,11 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #FDE8EA;
+  background: var(--teal-soft);
 }
 .category {
   font-size: 12px;
-  color: #E6F0FA;
+  color: var(--teal-soft);
   margin: 0 0 17px;
 }
 .heroText h1 {
@@ -67,12 +67,12 @@
   max-width: 650px;
 }
 .titleDot {
-  color: #E6F0FA;
+  color: var(--teal-soft);
 }
 .summary {
   font-size: 17px;
   line-height: 1.7;
-  color: #E6F0FA;
+  color: var(--teal-soft);
   max-width: 440px;
   margin: 0 0 28px;
 }
@@ -81,7 +81,7 @@
   gap: 20px;
   flex-wrap: wrap;
   font-size: 12px;
-  color: #E6F0FA;
+  color: var(--teal-soft);
 }
 .metadata > span {
   display: flex;
@@ -89,14 +89,14 @@
   align-items: center;
 }
 .salary {
-  color: #E6F0FA;
+  color: var(--teal-soft);
   font-size: 16px;
   margin-top: 22px;
 }
 .workerCount {
   margin-top: 20px;
   font-size: 15px;
-  color: #E6F0FA;
+  color: var(--teal-soft);
 }
 .workerCount strong {
   font-size: 24px;
@@ -153,7 +153,7 @@
   margin-top: 40px;
   font-size: 9px;
   letter-spacing: 0.09em;
-  color: #E6F0FA;
+  color: var(--teal-soft);
 }
 .heroFoot > span:last-child {
   display: flex;
@@ -174,7 +174,7 @@
   scroll-margin-top: 130px;
 }
 .exampleNotice {
-  background: #E6F0FA;
+  background: var(--teal-soft);
   border-left: 2px solid var(--accent);
   padding: 21px 25px;
   margin-bottom: 48px;
@@ -187,7 +187,7 @@
 .exampleNotice p {
   font-size: 13px;
   line-height: 1.7;
-  color: #6B7280;
+  color: var(--muted);
   margin: 8px 0 0;
 }
 .section {
@@ -213,7 +213,7 @@
 .sectionContent > p {
   font-size: 15px;
   line-height: 1.9;
-  color: #6B7280;
+  color: var(--muted);
   margin: 0;
 }
 .list {
@@ -226,7 +226,7 @@
 .list li {
   position: relative;
   padding-left: 23px;
-  color: #6B7280;
+  color: var(--muted);
   font-size: 15px;
   line-height: 1.8;
 }
@@ -243,7 +243,7 @@
 .smallNote {
   font-size: 12px !important;
   line-height: 1.8 !important;
-  color: #6B7280 !important;
+  color: var(--muted) !important;
   margin-top: 25px !important;
 }
 .employment {
@@ -258,7 +258,7 @@
   font-size: 13px;
 }
 .employment dt {
-  color: #6B7280;
+  color: var(--muted);
 }
 .employment dd {
   margin: 0;
@@ -287,7 +287,7 @@
 }
 .process p {
   font-size: 13px;
-  color: #6B7280;
+  color: var(--muted);
   line-height: 1.8;
   margin: 0;
 }
@@ -317,7 +317,7 @@
 }
 .faq details > p {
   font-size: 13px;
-  color: #6B7280;
+  color: var(--muted);
   line-height: 1.9;
   margin: 0 0 22px;
   padding-right: 25px;
@@ -327,7 +327,7 @@
   top: 110px;
 }
 .applyPanel {
-  background: #E6F0FA;
+  background: var(--teal-soft);
   padding: 31px 27px;
   border-top: 3px solid var(--accent);
 }
@@ -347,14 +347,14 @@
 }
 .applyPanel dl > div {
   padding: 13px 0;
-  border-top: 1px solid #D7E0EC;
+  border-top: 1px solid var(--line);
 }
 .applyPanel dt {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 10px;
-  color: #6B7280;
+  color: var(--muted);
   margin-bottom: 6px;
 }
 .applyPanel dd {
@@ -369,16 +369,16 @@
 .applyPanel > p {
   font-size: 10px;
   line-height: 1.6;
-  color: #6B7280;
+  color: var(--muted);
   margin: 15px 0 0;
 }
 .panelExample {
   font-size: 10px;
-  color: #6B7280;
+  color: var(--muted);
   line-height: 1.7;
   padding-top: 15px;
   margin-top: 19px;
-  border-top: 1px solid #D7E0EC;
+  border-top: 1px solid var(--line);
 }
 .backLink {
   display: flex;
@@ -394,7 +394,7 @@
   transform: translateX(4px);
 }
 .related {
-  background: #164B83;
+  background: var(--brand-blue);
   color: var(--paper);
   padding: 90px 0 95px;
 }
@@ -406,7 +406,7 @@
   margin-bottom: 50px;
 }
 .relatedHeading :global(.eyebrow) {
-  color: #E6F0FA;
+  color: var(--teal-soft);
 }
 .relatedHeading h2 {
   font-size: clamp(44px, 5.5vw, 72px);
@@ -416,7 +416,7 @@
   margin: 24px 0 0;
 }
 .relatedHeading h2 span {
-  color: #E6F0FA;
+  color: var(--teal-soft);
 }
 .relatedAll {
   display: flex;
@@ -437,7 +437,7 @@
   height: 270px;
   display: block;
   overflow: hidden;
-  background: #123F6E;
+  background: var(--brand-navy);
 }
 .relatedImage img {
   object-fit: cover;
@@ -472,7 +472,7 @@
   justify-content: space-between;
   gap: 7px;
   font-size: 9px;
-  color: #E6F0FA;
+  color: var(--teal-soft);
   margin: 23px 0 13px;
 }
 .relatedCategory > span {
@@ -489,7 +489,7 @@
 }
 .relatedLocation {
   font-size: 11px;
-  color: #E6F0FA;
+  color: var(--teal-soft);
   margin: 0 0 25px;
 }
 .relatedActions {
@@ -507,7 +507,7 @@
   letter-spacing: 0.03em;
 }
 .relatedActions a:last-child {
-  color: #FDE8EA;
+  color: var(--teal-soft);
 }
 .mobileApply {
   display: none;
@@ -612,7 +612,7 @@
     padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
     border-top: 1px solid var(--line);
     background: var(--paper);
-    box-shadow: 0 -3px 20px #222B390A;
+    box-shadow: 0 -3px 20px color-mix(in srgb, var(--brand-navy) 4%, transparent);
   }
   .mobileApply > div {
     display: flex;
@@ -810,13 +810,13 @@
   margin: 20px 0;
   padding-left: 16px;
   border-left: 3px solid var(--accent);
-  color: #E6F0FA;
+  color: var(--teal-soft);
   font-size: 15px;
   line-height: 1.7;
 }
 .applicantNote strong {
   display: block;
-  color: #E6F0FA;
+  color: var(--teal-soft);
 }
 
 .sectionHeading h2, .process h3, .applyPanel h2 { color: var(--brand-blue); }

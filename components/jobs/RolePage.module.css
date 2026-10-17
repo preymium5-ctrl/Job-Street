@@ -15,7 +15,7 @@
 .photo { position: relative; min-height: 435px; isolation: isolate; }
 .photo > img { object-fit: cover; }
 .photo::after { content: ""; position: absolute; inset: 45% 0 0; z-index: 1; background: linear-gradient(transparent,color-mix(in srgb, var(--brand-navy) 87%, transparent)); pointer-events: none; }
-.feeBadge { position: absolute; left: 25px; top: 25px; z-index: 2; display: inline-flex; align-items: center; gap: 10px; background: var(--brand-red); color: var(--brand-blue); padding: 13px 17px; border-radius: 8px; }
+.feeBadge { position: absolute; left: 25px; top: 25px; z-index: 2; display: inline-flex; align-items: center; gap: 10px; background: var(--brand-teal); color: var(--brand-blue); padding: 13px 17px; border-radius: 8px; }
 .feeBadge strong { font-size: 13px; font-weight: 600; letter-spacing: .015em; }
 .photoCaption { position: absolute; left: 29px; bottom: 25px; right: 25px; z-index: 2; color: #fff; }
 .photoCaption > span { display: block; max-width: 330px; font-size: 24px; letter-spacing: -.025em; line-height: 1.2; }
@@ -24,10 +24,10 @@
 .kicker { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: .11em; line-height: 1.5; color: var(--muted); }
 .package > .kicker { color: var(--surface-soft); }
 .package > h2 { font-size: 35px; font-weight: 400; line-height: 1.04; letter-spacing: -.04em; margin-top: 14px; color: var(--surface-soft); }
-.package em, .finalCallout em, .relatedHeading em { font-family: Georgia,"Times New Roman",serif; font-weight: 400; color: var(--brand-red); }
+.package em, .finalCallout em, .relatedHeading em { font-family: Georgia,"Times New Roman",serif; font-weight: 400; color: var(--brand-teal); }
 .package :global(.job-pay) { margin-top: 25px; }
 .package :global(.job-pay-label) { color: var(--surface-soft); opacity: 1; font-size: 9px; letter-spacing: .08em; }
-.package :global(.job-pay-amount strong) { color: var(--brand-red); font-weight: 400; letter-spacing: -.04em; font-size: 35px; }
+.package :global(.job-pay-amount strong) { color: var(--brand-teal); font-weight: 400; letter-spacing: -.04em; font-size: 35px; }
 .package :global(.job-pay-amount > span) { font-size: 9px; color: var(--surface-soft); opacity: 1; }
 .package :global(.salary-conversion-amount) { font-size: 12px; color: var(--surface-soft); font-weight: 400; }
 .package :global(.salary-conversion-amount small) { font-size: 9px; }
@@ -38,8 +38,8 @@
 .packageFacts svg { color: var(--surface-soft); margin-top: 3px; flex: 0 0 auto; }
 .packageFacts strong { display: block; color: var(--surface-soft); font-size: 17px; font-weight: 400; line-height: 1.3; }
 .packageFacts span { color: var(--surface-soft); font-size: 9px; }
-.applyButton { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 49px; padding: 14px 18px; border-radius: 8px; background: var(--brand-red); color: var(--brand-blue); font-weight: 600; font-size: 12px; }
-.applyButton:hover { background: var(--brand-red-hover); }
+.applyButton { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 49px; padding: 14px 18px; border-radius: 8px; background: var(--brand-teal); color: var(--brand-blue); font-weight: 600; font-size: 12px; }
+.applyButton:hover { background: var(--brand-teal-hover); }
 .package > .applyButton { margin-top: 24px; }
 .applicationHint { text-align: center; margin-top: 11px; color: var(--surface-soft); font-size: 9px; line-height: 1.6; }
 .highlights { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); border: 1px solid var(--line); border-radius: 12px; padding: 22px 0; margin-top: 20px; background: var(--paper); }
@@ -97,7 +97,7 @@
 .futureGrid a { display: inline-flex; gap: 8px; align-items: center; color: var(--muted); font-size: 10px; min-height: 44px; margin-top: 8px; }
 .process { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 15px; list-style: none; padding: 0; margin: 25px 0 0; counter-reset: none; }
 .process li { border: 1px solid var(--line); border-radius: 10px; padding: 23px; }
-.process li > span { display: inline-grid; place-items: center; width: 32px; height: 32px; background: var(--brand-red); border-radius: 50%; color: var(--brand-blue); font-size: 10px; }
+.process li > span { display: inline-grid; place-items: center; width: 32px; height: 32px; background: var(--brand-teal); border-radius: 50%; color: var(--brand-blue); font-size: 10px; }
 .process h3 { color: var(--brand-blue); font-size: 15px; font-weight: 500; margin: 17px 0 10px; }
 .process p { color: var(--muted); font-size: 11px; line-height: 1.8; }
 .faq details { border-bottom: 1px solid var(--line); }
@@ -119,6 +119,7 @@
 .relatedGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); gap: 28px; }
 .notice { background: var(--surface-soft); color: var(--muted); border-left: 2px solid var(--brand-blue); padding: 20px; font-size: 12px; line-height: 1.9; }
 .page a:focus-visible, .page summary:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 4px; }
+.stage a:focus-visible, .finalCallout a:focus-visible { outline-color: var(--brand-mint); }
 .mobileApply { display: none; }
 @media (max-width: 1100px) { .readingLayout { grid-template-columns: 175px minmax(0,1fr); gap: 26px; } .pairedSections { grid-template-columns: 1fr; } .package { padding: 27px 25px; } .packageFacts { gap: 13px; } .highlights > div { padding-inline: 17px; gap: 9px; } .highlights strong { font-size: 10px; } .futureGrid { gap: 15px; } }
 @media (max-width: 800px) { .stage { grid-template-columns: 1fr; } .photo { min-height: 360px; } .package { padding: 30px; } .package > h2 br { display: none; } .package > h2 em { margin-left: 8px; } .packageFacts { justify-content: flex-start; gap: 40px; } .highlights { grid-template-columns: repeat(2,minmax(0,1fr)); padding-block: 12px; gap: 20px 0; } .highlights > div:nth-child(2) { border: 0; } .readingLayout { grid-template-columns: 1fr; padding-top: 30px; gap: 25px; } .sectionNav { position: static; } .sectionNav > .kicker, .questionLink { display: none; } .sectionNav nav { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 7px; } .sectionNav nav a { flex: 0 0 auto; gap: 8px; border: 1px solid var(--line); padding: 10px 13px; border-radius: 7px; } .pairedSections { grid-template-columns: repeat(2,minmax(0,1fr)); } .page { padding-bottom: 110px; } .mobileApply { display: flex; position: fixed; inset: auto 0 0; z-index: 45; align-items: center; justify-content: space-between; gap: 18px; background: color-mix(in srgb, var(--paper) 96%, transparent); backdrop-filter: blur(14px); border-top: 1px solid var(--line); box-shadow: 0 -6px 24px color-mix(in srgb, var(--brand-navy) 5%, transparent); padding: 13px 20px calc(13px + env(safe-area-inset-bottom)); } .mobileApply > div { min-width: 0; display: grid; gap: 4px; } .mobileApply strong { font-size: 13px; font-weight: 500; color: var(--brand-blue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 47vw; } .mobileApply span { color: var(--muted); font-size: 10px; } .mobileApply > a { flex: 0 0 auto; background: var(--brand-navy); border-color: var(--brand-blue); color: #fff; border-radius: 8px; min-height: 44px; padding: 12px 17px; font-size: 11px; } }
@@ -137,8 +138,8 @@
 .compensation dd { color: var(--brand-blue); font-size: 13px; line-height: 1.7; }
 @media (max-width: 600px) { .compensation { grid-template-columns: 1fr; gap: 20px; } }
 .feeBadge, .applyButton, .process li > span { color: #fff; }
-.applyButton:hover { background: var(--brand-red-hover); }
-.package em, .finalCallout em { color: var(--red-soft); }
+.applyButton:hover { background: var(--brand-teal-hover); }
+.package em, .finalCallout em { color: var(--teal-soft); }
 .package :global(.job-pay-amount strong) { color: #fff; }
-.relatedHeading em, .intro h1 > span { color: var(--brand-red); }
-.mobileApply > a { background: var(--brand-red); border-color: var(--brand-red); }
+.relatedHeading em, .intro h1 > span { color: var(--brand-teal); }
+.mobileApply > a { background: var(--brand-teal); border-color: var(--brand-teal); }

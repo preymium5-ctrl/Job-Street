@@ -545,7 +545,7 @@
 }
 .finalCta h2 + p {
   margin-top: 24px;
-  color: #e1e2ff;
+  color: var(--teal-soft);
   font-size: 14px;
 }
 .finalCta > a {

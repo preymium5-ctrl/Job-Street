@@ -1,4 +1,4 @@
-/* Jobs Street Croatia — the interior-page layer of the red and blue brand palette.
+/* Jobs Street Croatia — the interior-page layer of the navy and teal brand palette.
    Module selectors retain their source component name and semantic class fragment
    so the copied application components keep their behavior and local styles. */
 
@@ -17,7 +17,7 @@
 
 .jobs-hero .subtle-text,
 .information-page .subtle-text {
-  color: var(--brand-red);
+  color: var(--brand-teal);
 }
 
 .jobs-hero .breadcrumb,
@@ -48,7 +48,7 @@
 
 .jobs-photo-tag {
   padding: 22px;
-  background: var(--brand-red);
+  background: var(--brand-teal);
   color: var(--brand-blue);
 }
 
@@ -100,20 +100,20 @@
 .directory-section .job-extra { font-size: 12px; }
 .directory-section .job-workers strong { font-weight: 500; }
 .directory-section .job-actions { border-color: var(--line); margin-top: 24px; padding-top: 20px; gap: 14px; }
-.directory-section .job-actions .button { background: var(--brand-red); border-color: var(--brand-red); color: var(--brand-blue); border-radius: 999px; font-size: 13px; padding: 15px 23px; }
-.directory-section .job-card-row:hover .job-actions .button { background: var(--brand-red); border-color: var(--brand-red); color: var(--brand-blue); }
+.directory-section .job-actions .button { background: var(--brand-teal); border-color: var(--brand-teal); color: var(--brand-blue); border-radius: 999px; font-size: 13px; padding: 15px 23px; }
+.directory-section .job-card-row:hover .job-actions .button { background: var(--brand-teal); border-color: var(--brand-teal); color: var(--brand-blue); }
 .directory-section .job-actions .text-link { color: var(--brand-blue); font-size: 13px; }
 .directory-section .image-job-label { border-radius: 999px; background: #fff; color: var(--brand-blue); }
-.directory-section .image-arrow { border-radius: 50%; background: var(--brand-red); color: var(--brand-blue); }
+.directory-section .image-arrow { border-radius: 50%; background: var(--brand-teal); color: var(--brand-blue); }
 .directory-end { margin-top: 40px; padding-top: 26px; font-size: 12px; border-color: var(--line); }
 .directory-end .text-link { font-size: 13px; }
 .empty-jobs h2 { font-weight: 400; }
 
 /* Shared recruitment details, salary panels, and the prominent fee message. */
 body [class*="EmploymentBenefits"][class*="fee"] {
-  border-color: var(--brand-red);
+  border-color: var(--brand-teal);
   border-radius: 999px;
-  background: var(--brand-red);
+  background: var(--brand-teal);
   color: var(--brand-blue);
   padding: 14px 20px;
 }
@@ -142,20 +142,20 @@ body [class*="JobDetails"][class*="page"] > section:first-child { background: va
 body [class*="JobDetails"][class*="breadcrumbs"] { color: var(--surface-soft); font-size: 13px; padding-bottom: 40px; }
 body [class*="JobDetails"][class*="heroGrid"] { gap: clamp(40px, 6vw, 90px); align-items: center; }
 body [class*="JobDetails"][class*="heroText"] h1 { color: var(--surface-soft); font-weight: 400; font-size: clamp(48px, 6.1vw, 96px); letter-spacing: -.05em; line-height: 1.03; }
-body [class*="JobDetails"][class*="titleDot"] { color: var(--brand-red); }
-body [class*="JobDetails"][class*="positionLabel"] { color: var(--brand-red); font-size: 11px; letter-spacing: .12em; }
-body [class*="JobDetails"][class*="positionLabel"] > span { background: var(--brand-red); }
+body [class*="JobDetails"][class*="titleDot"] { color: var(--brand-mint); }
+body [class*="JobDetails"][class*="positionLabel"] { color: var(--brand-mint); font-size: 11px; letter-spacing: .12em; }
+body [class*="JobDetails"][class*="positionLabel"] > span { background: var(--brand-mint); }
 body [class*="JobDetails"][class*="category"],
 body [class*="JobDetails"][class*="summary"],
 body [class*="JobDetails"][class*="metadata"],
 body [class*="JobDetails"][class*="workerCount"],
 body [class*="JobDetails"][class*="applicantNote"] { color: var(--surface-soft); }
 body [class*="JobDetails"][class*="summary"] { font-size: 16px; line-height: 1.75; }
-body [class*="JobDetails"][class*="applicantNote"] { border-color: var(--brand-red); }
+body [class*="JobDetails"][class*="applicantNote"] { border-color: var(--brand-teal); }
 body [class*="JobDetails"][class*="applicantNote"] strong { color: var(--surface-soft); }
 body [class*="JobDetails"][class*="heroImage"] { height: 640px; border-radius: 28px; }
 body [class*="JobDetails"][class*="heroFoot"] { color: var(--surface-soft); border-color: #ffffff26; font-size: 11px; padding-block: 26px; }
-body [class*="JobDetails"][class*="heroActions"] .button { background: var(--brand-red); border-color: var(--brand-red); color: var(--brand-blue); border-radius: 999px; }
+body [class*="JobDetails"][class*="heroActions"] .button { background: var(--brand-teal); border-color: var(--brand-teal); color: var(--brand-blue); border-radius: 999px; }
 body [class*="JobDetails"][class*="readLink"] { font-size: 13px; }
 body [class*="JobDetails"][class*="contentGrid"] { padding-block: 80px 100px; gap: clamp(40px, 7vw, 110px); }
 body [class*="JobDetails"][class*="sectionHeading"] h2 { color: var(--brand-blue); font-size: clamp(28px, 3vw, 39px); font-weight: 400; letter-spacing: -.035em; }
@@ -170,20 +170,20 @@ body [class*="JobDetails"][class*="applyPanel"] dl > div { border-color: var(--l
 body [class*="JobDetails"][class*="applyPanel"] .button { border-radius: 999px; }
 body [class*="JobDetails"][class*="page"] > section:last-of-type:not(:first-child) { background: var(--brand-navy); color: var(--surface-soft); }
 body [class*="JobDetails"][class*="relatedHeading"] h2 { color: var(--surface-soft); font-weight: 400; letter-spacing: -.045em; }
-body [class*="JobDetails"][class*="relatedHeading"] h2 span { color: var(--brand-red); }
+body [class*="JobDetails"][class*="relatedHeading"] h2 span { color: var(--brand-mint); }
 body [class*="JobDetails"][class*="relatedImage"] { border-radius: 20px; background: var(--brand-navy); }
 body [class*="JobDetails"][class*="relatedImage"] img { filter: none; }
 body [class*="JobDetails"][class*="relatedJob"] h3 { font-weight: 400; letter-spacing: -.03em; }
 body [class*="JobDetails"][class*="relatedCategory"],
 body [class*="JobDetails"][class*="relatedLocation"] { color: var(--surface-soft); }
-body [class*="JobDetails"][class*="relatedActions"] a:last-child { color: var(--brand-red); }
+body [class*="JobDetails"][class*="relatedActions"] a:last-child { color: var(--brand-mint); }
 body [class*="JobDetails"][class*="mobileApply"] { background: var(--paper); border-color: var(--line); }
 
 /* A calm, card-based application workspace in the same site theme. */
 body [class*="ApplicationForm"][class*="page"] { padding-block: 44px 100px; background: var(--paper); }
 body [class*="ApplicationForm"][class*="layout"] { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(40px, 5vw, 80px); align-items: start; }
 body [class*="ApplicationForm"][class*="sidebar"] h1 { color: var(--brand-blue); font-weight: 400; font-size: clamp(44px, 5.2vw, 76px); letter-spacing: -.05em; }
-body [class*="ApplicationForm"][class*="sidebar"] h1 span { color: var(--brand-red); }
+body [class*="ApplicationForm"][class*="sidebar"] h1 span { color: var(--brand-teal); }
 body [class*="ApplicationForm"][class*="jobImage"] { height: 300px; border-radius: 22px; }
 body [class*="ApplicationForm"][class*="jobMeta"] h2 { font-weight: 400; color: var(--brand-blue); font-size: 29px; }
 body [class*="ApplicationForm"][class*="formSection"] { background: #fff; border: 1px solid var(--line); border-radius: 28px; padding: 34px; }
@@ -369,8 +369,8 @@ body [class*="GoogleSheetsStatus"][class*="heading"] h2 { color: var(--brand-blu
   .legal-content h2 { font-size: 27px; }
 }
 
-/* White labels keep the red action and fee surfaces readable. */
+/* White labels keep the teal action and fee surfaces readable. */
 .jobs-photo-tag, .directory-section .job-actions .button, .directory-section .image-arrow,
 body [class*="EmploymentBenefits"][class*="fee"] { color: #fff; }
 body [class*="JobDetails"][class*="heroActions"] .button, .directory-section .job-card-row:hover .job-actions .button { color: #fff; }
-.active-filters button { background: var(--red-soft); color: var(--brand-red); border-color: var(--red-soft); }
+.active-filters button { background: var(--teal-soft); color: var(--brand-teal); border-color: var(--teal-soft); }

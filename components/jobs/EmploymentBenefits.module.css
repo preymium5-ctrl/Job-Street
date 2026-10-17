@@ -7,7 +7,7 @@
   max-width: 100%;
   padding: 15px 20px;
   margin-block: 18px;
-  border: 1px solid #D91F32;
+  border: 1px solid var(--brand-teal);
   border-radius: 4px;
   background: var(--accent);
   color: white;
@@ -25,8 +25,8 @@
   justify-content: space-between;
   gap: 20px;
   padding: 18px 26px;
-  border: 1px solid #D7E0EC;
-  background: #E6F0FA;
+  border: 1px solid var(--line);
+  background: var(--teal-soft);
 }
 .summary .fee { margin: 0; }
 .summary > span { display: flex; align-items: center; gap: 12px; font-size: 15px; }
@@ -37,10 +37,10 @@
 .future { margin-top: 34px; }
 .future > h3 { font-size: 23px; margin-bottom: 18px; line-height: 1.3; }
 .futureGrid { display: grid; gap: 12px; }
-.futureItem { border-left: 3px solid var(--accent); background: #E6F0FA; padding: 20px 22px; }
+.futureItem { border-left: 3px solid var(--accent); background: var(--teal-soft); padding: 20px 22px; }
 .futureItem h4 { font-size: 16px; margin: 0 0 8px; }
 .futureItem p { font-size: 14px; line-height: 1.75; }
-.futureItem a { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; color: var(--accent); font-size: 12px; font-weight: 700; }
+.futureItem a { display: inline-flex; align-items: center; gap: 5px; margin-top: 12px; color: var(--brand-teal-hover); font-size: 12px; font-weight: 700; }
 @media (max-width: 800px) {
   .summary { flex-wrap: wrap; justify-content: flex-start; padding: 20px; }
   .summary > .fee { flex-basis: 100%; }

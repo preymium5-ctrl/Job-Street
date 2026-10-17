@@ -3,13 +3,13 @@
 .eyebrow { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; line-height: 1.6; }
 .eyebrow > span { width: 5px; height: 5px; background: var(--brand-blue); border-radius: 50%; flex: 0 0 auto; }
 .heroCopy h1 { color: var(--brand-blue); font-size: clamp(55px,6.2vw,92px); line-height: .99; font-weight: 400; letter-spacing: -.055em; margin: 23px 0 22px; }
-.heroCopy h1 em { font-family: Georgia,"Times New Roman",serif; font-weight: 400; color: var(--brand-red); }
+.heroCopy h1 em { font-family: Georgia,"Times New Roman",serif; font-weight: 400; color: var(--brand-teal); }
 .heroCopy > p { max-width: 390px; color: var(--muted); font-size: 13px; line-height: 1.8; }
 .browse { display: inline-flex; align-items: center; gap: 40px; font-size: 11px; color: var(--brand-blue); margin-top: 22px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
 .heroVisual { position: relative; padding: 0 39px 22px 0; min-width: 0; }
 .heroImage { position: relative; height: 285px; border-radius: 120px 120px 15px 15px; overflow: hidden; }
 .heroImage img { object-fit: cover; object-position: center; }
-.roleCount { position: absolute; bottom: 42px; right: 0; background: var(--brand-red); color: #fff; padding: 21px 24px; border-radius: 10px; display: flex; align-items: center; gap: 17px; transform: rotate(-5deg); box-shadow: 0 8px 20px color-mix(in srgb, var(--brand-navy) 5%, transparent); }
+.roleCount { position: absolute; bottom: 42px; right: 0; background: var(--brand-teal); color: #fff; padding: 21px 24px; border-radius: 10px; display: flex; align-items: center; gap: 17px; transform: rotate(-5deg); box-shadow: 0 8px 20px color-mix(in srgb, var(--brand-navy) 5%, transparent); }
 .roleCount strong { font-size: 60px; line-height: 1; font-weight: 400; letter-spacing: -.06em; }
 .roleCount > span { font-size: 10px; line-height: 1.6; }
 .visualCaption { position: absolute; left: 0; bottom: 0; color: var(--muted); font-size: 9px; }

@@ -1,16 +1,16 @@
 .section { overflow: hidden; padding-block: 28px 34px; border-block: 1px solid var(--line); background: var(--surface-soft); }
 .socialHeading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
-.socialHeading h2 { color: var(--brand-red); }
+.socialHeading h2 { color: var(--brand-teal); }
 .socialHeading > span { font-size: 11px; color: var(--muted); }
 .socialWindow { overflow: hidden; mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent); }
 .track { display: flex; width: max-content; animation: community-drift 40s linear infinite; }
 .group { display: flex; align-items: center; flex: 0 0 auto; width: max-content; min-width: 100vw; justify-content: space-around; }
 .socialGroup { margin: 0; padding: 0; list-style: none; }
 .socialItem { display: flex; align-items: center; gap: 16px; padding-inline: 24px; color: var(--ink); font-size: clamp(24px, 2.3vw, 34px); font-weight: 600; line-height: 1.2; white-space: nowrap; }
-.socialIcon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 54px; height: 54px; border: 1px solid var(--line); border-radius: 50%; color: var(--brand-red); background: var(--paper); }
+.socialIcon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 54px; height: 54px; border: 1px solid var(--line); border-radius: 50%; color: var(--brand-teal); background: var(--paper); }
 .socialIcon img { object-fit: contain; }
 .screenReaderOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.separator { margin-left: 24px; color: var(--brand-red); font-size: 24px; font-weight: 400; }
+.separator { margin-left: 24px; color: var(--brand-teal); font-size: 24px; font-weight: 400; }
 @keyframes community-drift { to { transform: translateX(-50%); } }
 @media (max-width: 700px) {
  .section { padding-block: 25px 28px; }

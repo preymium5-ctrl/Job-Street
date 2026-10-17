@@ -4,9 +4,9 @@
   gap: 14px;
   margin: 26px 0 38px;
   padding: 23px 26px;
-  border: 1px solid #D7E0EC;
+  border: 1px solid var(--line);
   border-left: 3px solid var(--accent);
-  background: #E6F0FA;
+  background: var(--surface-soft);
   font-size: 14px;
   line-height: 1.6;
 }

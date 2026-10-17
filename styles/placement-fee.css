@@ -1,11 +1,11 @@
-/* Every fee message shares the same red pulse; badge sizing stays with its component. */
+/* The ribbon brand's teal pulse is shared by every fee message. */
 [data-fee-glow="badge"] {
   isolation: isolate;
   overflow: hidden;
-  border: 1px solid #d91f32;
-  background-color: #b91529;
+  border: 1px solid var(--brand-teal);
+  background-color: var(--brand-teal-hover);
   color: #fff;
-  box-shadow: 0 4px 18px #d91f3259, 0 0 12px #d91f324d, 0 0 0 0 #f43f5e00;
+  box-shadow: 0 4px 18px #007f7659, 0 0 12px #00c6a74d, 0 0 0 0 #00c6a700;
 }
 
 body [data-fee-glow="badge"] :is(strong, svg) { color: #fff; }
@@ -19,7 +19,7 @@ body [data-fee-glow="badge"] :is(strong, svg) { color: #fff; }
   transform: translateX(-130%);
 }
 
-[data-fee-glow="text"] { text-shadow: 0 0 6px #d91f3240, 0 0 14px #f43f5e30; }
+[data-fee-glow="text"] { text-shadow: 0 0 6px #007f7640, 0 0 14px #00c6a730; }
 .street-hero-line[data-fee-glow="text"] { overflow: visible; }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -29,14 +29,14 @@ body [data-fee-glow="badge"] :is(strong, svg) { color: #fff; }
 }
 
 @keyframes placement-fee-glow {
-  0%, 100% { background-color: #b91529; border-color: #d91f32; box-shadow: 0 4px 18px #d91f3259, 0 0 12px #d91f324d, 0 0 0 0 #f43f5e00; }
-  50% { background-color: #d91f32; border-color: #ff8290; box-shadow: 0 6px 24px #d91f3299, 0 0 42px #f43f5ea6, 0 0 0 7px #f43f5e38; }
+  0%, 100% { background-color: var(--brand-teal-hover); border-color: var(--brand-teal); box-shadow: 0 4px 18px #007f7659, 0 0 12px #00c6a74d, 0 0 0 0 #00c6a700; }
+  50% { background-color: var(--brand-teal); border-color: #6ee7d2; box-shadow: 0 6px 24px #007f7699, 0 0 42px #00c6a7a6, 0 0 0 7px #00c6a738; }
 }
 
 @keyframes placement-fee-shine { 0%, 55% { transform: translateX(-130%); } 85%, 100% { transform: translateX(130%); } }
 @keyframes placement-fee-text-glow {
-  0%, 100% { text-shadow: 0 0 6px #d91f3240, 0 0 14px #f43f5e30; }
-  50% { text-shadow: 0 0 8px #f43f5e8c, 0 0 20px #f43f5e80; }
+  0%, 100% { text-shadow: 0 0 6px #007f7640, 0 0 14px #00c6a730; }
+  50% { text-shadow: 0 0 8px #00c6a78c, 0 0 20px #00c6a780; }
 }
 
 @media (prefers-reduced-motion: reduce) {

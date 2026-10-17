@@ -1,6 +1,6 @@
 .panel {
   border: 1px solid var(--line);
-  background: #E6F0FA;
+  background: var(--teal-soft);
   padding: 28px;
   margin-bottom: 32px;
   min-width: 0;
@@ -35,7 +35,7 @@
   min-height: 44px;
   font: inherit;
   font-size: 13px;
-  color: var(--accent);
+  color: var(--brand-teal-hover);
 }
 .heading a svg,
 .refresh svg {
