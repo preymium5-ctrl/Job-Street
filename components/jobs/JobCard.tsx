@@ -22,7 +22,7 @@ export function JobCard({ job, index = 0, featured = false, employer }: {
     <article className={`job-card ${styles.card}`} data-reveal aria-labelledby={`job-card-${job.slug}`}>
       <div className={styles.cover}>
         <Link href={`/jobs/${job.slug}`} className={styles.photo} tabIndex={-1} aria-hidden="true">
-          <Image src={job.image} alt={job.imageAlt} fill loading={index < 2 ? "eager" : "lazy"} sizes="(max-width: 600px) 100vw, (max-width: 1000px) 50vw, 33vw" style={{ objectPosition: job.imagePosition || "center 35%" }} />
+          <Image src={job.image} alt={job.imageAlt} fill loading={index < 2 ? "eager" : "lazy"} sizes="(max-width: 1100px) 100vw, (max-width: 1600px) 50vw, 33vw" style={{ objectPosition: job.imagePosition || "center 35%" }} />
         </Link>
         <span className={styles.fee}><ShieldCheck size={14} aria-hidden="true" />{noPlacementFee}</span>
         <div className={styles.coverTitle}>
