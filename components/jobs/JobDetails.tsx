@@ -56,7 +56,7 @@ export function JobDetails({ job, relatedJobs }: { job: Job; relatedJobs: Job[] 
           <div className={styles.photo}>
             <Image src={job.image} alt={job.imageAlt} fill loading="eager" fetchPriority="high" sizes="(max-width: 800px) 100vw, 60vw" style={{ objectPosition: job.imagePosition || "center 35%" }} />
             <div className={styles.feeBadge}><ShieldCheck size={22} aria-hidden="true" /><strong>{noPlacementFee}</strong></div>
-            <div className={styles.photoCaption}><span>Filipino talent. Croatian opportunities.</span><small>{job.salaryStatus === "proposed-net" ? "AI-generated role illustration" : "The people behind progress."}</small></div>
+            <div className={styles.photoCaption}><span>Filipino talent. Croatian opportunities.</span>{job.salaryStatus !== "proposed-net" && <small>The people behind progress.</small>}</div>
           </div>
           <aside className={styles.package} aria-label="Salary and application">
             <span className={styles.kicker}>Your next chapter starts here</span>

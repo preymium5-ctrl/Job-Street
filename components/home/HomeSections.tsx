@@ -47,7 +47,6 @@ export function Introduction() {
             sizes="(max-width: 700px) 100vw, 60vw"
             data-parallax
           />
-          <span className="image-note">Filipino skills. AI-generated illustration.</span>
         </div>
         <div className="intro-manifesto" data-reveal>
           <BrandMark className="brand-spark" />
@@ -382,7 +381,6 @@ export function FinalCta() {
             Explore open positions
           </ActionLink>
         </div>
-        <p className="final-cta-caption">AI-generated illustration</p>
       </div>
     </section>
   );

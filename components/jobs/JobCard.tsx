@@ -29,7 +29,7 @@ export function JobCard({ job, index = 0, featured = false, employer }: {
           <span>{job.category}</span>
           <h3 id={`job-card-${job.slug}`}><Link href={`/jobs/${job.slug}`}>{job.title}</Link></h3>
         </div>
-        {(job.isExample || job.salaryStatus === "proposed-net") && <span className={styles.imageNote}>{job.isExample ? "Example vacancy" : "AI-generated role illustration"}</span>}
+        {job.isExample && <span className={styles.imageNote}>Example vacancy</span>}
       </div>
       <div className={styles.body}>
         <div className={styles.locationRow}>

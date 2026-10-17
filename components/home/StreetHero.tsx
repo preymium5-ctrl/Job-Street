@@ -82,7 +82,6 @@ export function StreetHero() {
           <a className="street-hero-scroll" href="#opportunities">
             <ArrowDown aria-hidden="true" /> Discover your next opportunity
           </a>
-          <span className="street-hero-caption">AI-generated illustration</span>
           <span className="street-hero-index" aria-hidden="true">
             {String(activeIndex + 1).padStart(2, "0")} <span>/ {String(slides.length).padStart(2, "0")}</span>
           </span>

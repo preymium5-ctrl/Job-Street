@@ -1,34 +1,25 @@
-.section { padding-top: 52px; overflow: hidden; border-top: 1px solid var(--line); background: var(--paper); }
-.heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
-.heading > div > span { color: var(--muted); }
-.heading h2 { margin-top: 12px; font-size: clamp(26px, 3.1vw, 46px); line-height: 1.15; letter-spacing: var(--font-heading-tracking); color: var(--brand-blue); }
-.heading h2 span { color: var(--accent); }
-.socialWindow { overflow: hidden; mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent); }
-.track, .group { display: flex; width: max-content; align-items: center; }
-.track { animation: community-drift 38s linear infinite reverse; }
-.group { flex: 0 0 auto; min-width: 100vw; justify-content: space-around; }
-.socialSection { padding-block: 26px 28px; background: var(--surface-soft); border-block: 1px solid var(--line); }
-.socialHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--accent); }
+.section { overflow: hidden; padding-block: 28px 34px; border-block: 1px solid var(--line); background: var(--surface-soft); }
+.socialHeading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.socialHeading h2 { color: var(--brand-red); }
 .socialHeading > span { font-size: 11px; color: var(--muted); }
-.socialTrack { animation-duration: 38s; }
-.socialGroup { margin: 0; padding: 24px 0 0; list-style: none; }
-.socialItem { display: flex; align-items: center; gap: 14px; padding-right: 34px; color: var(--ink); font-size: clamp(23px, 2.3vw, 34px); font-weight: 600; line-height: 1.2; white-space: nowrap; }
-.socialIcon { display: inline-flex; align-items: center; justify-content: center; width: 54px; height: 54px; border: 1px solid var(--line); border-radius: 50%; color: var(--accent); background: var(--paper); }
+.socialWindow { overflow: hidden; mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent); }
+.track { display: flex; width: max-content; animation: community-drift 40s linear infinite; }
+.group { display: flex; align-items: center; flex: 0 0 auto; width: max-content; min-width: 100vw; justify-content: space-around; }
+.socialGroup { margin: 0; padding: 0; list-style: none; }
+.socialItem { display: flex; align-items: center; gap: 16px; padding-inline: 24px; color: var(--ink); font-size: clamp(24px, 2.3vw, 34px); font-weight: 600; line-height: 1.2; white-space: nowrap; }
+.socialIcon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 54px; height: 54px; border: 1px solid var(--line); border-radius: 50%; color: var(--brand-red); background: var(--paper); }
 .socialIcon img { object-fit: contain; }
 .screenReaderOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.separator { margin-left: 20px; color: var(--accent); font-size: 22px; font-weight: 500; }
-.socialWindow:hover .track { animation-play-state: paused; }
+.separator { margin-left: 24px; color: var(--brand-red); font-size: 24px; font-weight: 400; }
 @keyframes community-drift { to { transform: translateX(-50%); } }
 @media (max-width: 700px) {
- .section { padding-top: 32px; }
- .heading { align-items: flex-start; }
- .heading h2 { max-width: 310px; }
- .socialHeading { align-items: flex-start; }
- .socialHeading > span { max-width: 145px; text-align: right; }
- .socialItem { gap: 10px; padding-right: 24px; }
+ .section { padding-block: 25px 28px; }
+ .socialHeading { gap: 18px; margin-bottom: 22px; align-items: flex-start; }
+ .socialHeading > span { max-width: 150px; font-size: 10px; text-align: right; }
+ .socialItem { gap: 12px; padding-inline: 16px; }
  .socialIcon { width: 46px; height: 46px; }
- .socialIcon img, .socialIcon svg { width: 23px; height: 23px; }
- .separator { margin-left: 14px; }
+ .socialIcon img, .socialIcon svg { width: 25px; height: 25px; }
+ .separator { margin-left: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
  .track { animation: none; transform: none; width: 100%; }
@@ -36,6 +27,6 @@
  .socialWindow { mask-image: none; }
  .group { width: 100%; min-width: 0; flex-wrap: wrap; justify-content: center; }
  .socialGroup { gap: 24px; padding-inline: var(--space); }
- .socialItem { padding: 0; }
+ .socialItem { padding: 0; font-size: 22px; }
  .separator { display: none; }
 }

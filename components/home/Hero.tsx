@@ -116,9 +116,6 @@ export function Hero({
         <Link href="#introduction" className="hero-scroll">
           Scroll to discover <ArrowDown size={16} />
         </Link>
-        <div className="hero-image-tag">
-          <span className="tag-line" /> AI-generated illustration / 01
-        </div>
       </div>
       <div className="hero-bottom">
         <span>For the doers. The builders. The next generation.</span>

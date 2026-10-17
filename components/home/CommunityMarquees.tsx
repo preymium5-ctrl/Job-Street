@@ -35,23 +35,14 @@ function SocialIcons({ duplicate = false }: { duplicate?: boolean }) {
 export function CommunityMarquees() {
   return (
     <section id="community" className={styles.section} aria-labelledby="community-heading">
-      <div className={`container ${styles.heading}`}>
-        <div>
-          <span className="eyebrow">People. Skills. Possibilities.</span>
-          <h2 id="community-heading">Connections that <span>move us forward.</span></h2>
-        </div>
+      <div className={`container ${styles.socialHeading}`}>
+        <h2 id="community-heading" className="eyebrow">Around the web</h2>
+        <span>Our social channels are coming soon.</span>
       </div>
-
-      <div className={styles.socialSection}>
-        <div className={`container ${styles.socialHeading}`}>
-          <h3 className="eyebrow">Around the web</h3>
-          <span>Our social channels are coming soon.</span>
-        </div>
-        <div className={styles.socialWindow} aria-label="Social channels">
-          <div className={`${styles.track} ${styles.socialTrack}`}>
-            <SocialIcons />
-            <SocialIcons duplicate />
-          </div>
+      <div className={styles.socialWindow} aria-label="Social channels">
+        <div className={styles.track}>
+          <SocialIcons />
+          <SocialIcons duplicate />
         </div>
       </div>
     </section>
