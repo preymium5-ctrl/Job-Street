@@ -133,12 +133,13 @@ body { background: var(--street-paper); font-weight: 400; }
 .street-benefits { background: var(--street-blue); color: white; }
 .street-benefits .street-kicker { color: var(--surface-soft); }
 .street-benefits em { color: var(--street-accent); }
-.street-fee-banner { display: flex; gap: 25px; align-items: center; border: 1px solid #ffffff40; border-radius: 20px; padding: 25px 30px; margin: 50px 0 38px; }
-.street-fee-banner > svg { color: var(--street-accent); }
-.street-fee-banner > div { display: flex; flex-direction: column; gap: 5px; }
+.street-fee-banner { position: relative; isolation: isolate; overflow: hidden; display: flex; gap: 25px; align-items: center; border: 1px solid #ffffff40; border-radius: 20px; padding: 32px 36px; margin: 50px 0 38px; box-shadow: 0 4px 18px #d91f3259, 0 0 12px #d91f324d, 0 0 0 0 #f43f5e00; }
+.street-fee-banner::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(110deg, transparent 30%, #ffffff1a 48%, transparent 66%); transform: translateX(-130%); }
+.street-fee-banner > svg { color: var(--street-accent); flex-shrink: 0; }
+.street-fee-banner > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .street-fee-banner > div > span { font-size: 11px; color: var(--surface-soft); }
-.street-fee-banner strong { color: var(--street-accent); font-size: clamp(22px, 2.7vw, 38px); font-weight: 400; letter-spacing: -.035em; line-height: 1.2; }
-.street-fee-banner > span { margin-left: auto; font-size: 12px; line-height: 1.5; color: var(--surface-soft); }
+.street-fee-banner strong { color: var(--street-accent); font-size: clamp(36px, 4.5vw, 64px); font-weight: 600; letter-spacing: -.035em; line-height: 1.1; }
+.street-fee-banner > span { margin-left: auto; flex-shrink: 0; font-size: 12px; line-height: 1.5; color: var(--surface-soft); }
 .street-benefit-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; }
 .street-benefit-grid article { border-top: 1px solid #ffffff30; padding-top: 25px; }
 .street-benefit-grid article > svg { color: var(--street-accent); margin-bottom: 32px; }
@@ -265,9 +266,9 @@ body { background: var(--street-paper); font-weight: 400; }
   .street-role .job-pay-amount strong { font-size: 24px; }
   .street-role .salary-conversion-amount { font-size: 12px; }
   .street-role-category { font-size: 10px; }
-  .street-fee-banner { margin-block: 34px; padding: 22px; gap: 17px; }
+  .street-fee-banner { margin-block: 34px; padding: 26px 22px; gap: 17px; }
   .street-fee-banner > span { display: none; }
-  .street-fee-banner strong { font-size: 24px; }
+  .street-fee-banner strong { font-size: clamp(30px, 6vw, 42px); }
   .street-fee-banner > div > span { font-size: 9px; }
   .street-benefit-grid { gap: 30px 22px; }
   .street-benefit-grid h3 { font-size: 22px; }
@@ -314,7 +315,7 @@ body { background: var(--street-paper); font-weight: 400; }
 .street-intro h2, .street-section-top h2, .street-process h2, .street-faq h2, .street-industry h3, .street-steps h3 { color: var(--brand-blue); }
 .street-hero-headline em, .street-benefits em, .street-final em, .street-role-fee { color: var(--red-soft); }
 .street-benefits .street-section-top h2 { color: #fff; }
-.street-fee-banner { background: var(--brand-red); border-color: var(--brand-red); }
+.street-fee-banner { background: #b91529; border-color: var(--brand-red); }
 .street-fee-banner strong, .street-fee-banner > svg, .street-benefit-grid article > svg { color: #fff; }
 .street-fee-banner > div > span, .street-fee-banner > span { color: var(--red-soft); }
 .street-industry:hover .street-industry-arrow, .street-role-top > a:hover { color: #fff; }

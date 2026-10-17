@@ -27,6 +27,8 @@
 .street-role:hover .street-role-top > a, .street-industry:hover .street-industry-arrow { transform: rotate(45deg); }
 
 @media (prefers-reduced-motion: no-preference) {
+  .street-fee-banner { animation: street-fee-glow 2s ease-in-out infinite; }
+  .street-fee-banner::after { animation: street-fee-shine 4s ease-in-out infinite; }
   .street-hero-message .street-hero-line > span { animation: street-headline-rise .85s cubic-bezier(.2, .7, .2, 1) both; }
   .street-hero-message .street-hero-line:nth-child(2) > span { animation-delay: .075s; }
   .street-hero-message .street-hero-line:nth-child(3) > span { animation-delay: .15s; }
@@ -34,6 +36,11 @@
   .street-hero-message .street-hero-copy { animation-delay: .12s; }
   .street-hero-message .street-hero-actions { animation-delay: .2s; }
 }
+@keyframes street-fee-glow {
+  0%, 100% { background-color: #b91529; border-color: #d91f32; box-shadow: 0 4px 18px #d91f3259, 0 0 12px #d91f324d, 0 0 0 0 #f43f5e00; }
+  50% { background-color: #d91f32; border-color: #ff8290; box-shadow: 0 6px 24px #d91f3299, 0 0 42px #f43f5ea6, 0 0 0 7px #f43f5e38; }
+}
+@keyframes street-fee-shine { 0%, 55% { transform: translateX(-130%); } 85%, 100% { transform: translateX(130%); } }
 @keyframes street-headline-rise { from { transform: translateY(18%); opacity: .65; } to { transform: translateY(0); opacity: 1; } }
 @keyframes street-copy-rise { from { transform: translateY(12px); opacity: .65; } to { transform: translateY(0); opacity: 1; } }
 @media (min-width: 1200px) and (hover: hover) and (pointer: fine) {
@@ -51,6 +58,7 @@
   .street-section-top { padding-bottom: 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
+  .street-fee-banner::after { display: none; }
   .street-hero-scene, .street-hero-scene .street-hero-image, .street-hero-dots button::before, .street-role-top > a, .street-industry-arrow, .street-text-link svg, .street-hero-secondary svg, .street-roles { transition: none; }
   .street-hero-scene .street-hero-image { transform: none; }
   .street-role:hover .street-role-top > a, .street-industry:hover .street-industry-arrow, .street-text-link:hover svg, .street-hero-secondary:hover svg { transform: none; }
