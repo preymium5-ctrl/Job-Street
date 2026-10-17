@@ -1,0 +1,43 @@
+{
+  "name": "jobs-street-croatia",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack --hostname 127.0.0.1 --port 3001",
+    "build": "next build --webpack",
+    "start": "next start --hostname 127.0.0.1 --port 3001",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "icons:generate": "node scripts/generate-icons.mjs",
+    "test": "tsx --test tests/*.test.ts",
+    "admin:setup": "tsx scripts/setup-admin.ts",
+    "applications:sync": "tsx scripts/sync-applications.ts",
+    "sheets:prepare": "tsx scripts/prepare-google-sheets.ts",
+    "sheets:configure": "tsx scripts/configure-google-sheets.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "latest",
+    "@electric-sql/pglite": "latest",
+    "drizzle-orm": "latest",
+    "gsap": "latest",
+    "lucide-react": "latest",
+    "next": "latest",
+    "postgres": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "server-only": "latest",
+    "sharp": "^0.35.5",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "tailwindcss": "latest",
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}

@@ -1,0 +1,48 @@
+.proposed-terms-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin: 26px 0 38px;
+  padding: 23px 26px;
+  border: 1px solid #D7E0EC;
+  border-left: 3px solid var(--accent);
+  background: #E6F0FA;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.proposed-terms-notice > .status-dot { flex: 0 0 auto; margin-top: 7px; }
+.proposed-terms-notice strong { font-weight: 700; }
+.proposed-terms-notice p { margin: 4px 0 0; color: var(--muted); }
+.job-pay { margin: 22px 0 0; min-width: 0; }
+.job-pay-label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; opacity: .75; }
+.job-pay-amount { display: flex; flex-wrap: wrap; gap: 5px 12px; align-items: baseline; margin-top: 5px; }
+.job-pay-amount strong { font-size: clamp(23px, 2.4vw, 32px); font-weight: 700; line-height: 1.2; letter-spacing: -.01em; }
+.job-pay-amount > span { font-size: 12px; font-weight: 500; opacity: .75; white-space: nowrap; }
+.job-pay-compact { margin-top: 0; }
+.job-pay-compact .job-pay-amount strong { font-size: 21px; }
+.salary-conversion { display: grid; gap: 5px; margin-top: 9px; }
+.salary-conversion-amount { font-size: 17px; font-weight: 600; line-height: 1.45; }
+.salary-conversion-amount small { font-size: 11px; font-weight: 500; white-space: nowrap; }
+.salary-conversion-rate { width: fit-content; font-size: 10px; font-weight: 500; line-height: 1.6; opacity: .8; text-decoration: underline; text-underline-offset: 3px; }
+.job-pay-compact .salary-conversion-amount { font-size: 14px; }
+.job-workers { display: flex; align-items: baseline; gap: 6px; margin-top: 18px; font-size: 13px; color: var(--muted); }
+.job-workers strong { font-size: 23px; font-weight: 700; color: var(--ink); }
+.job-fair-context { display: flex; flex-wrap: wrap; gap: 5px 16px; margin-top: 17px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.job-fair-context a { color: var(--accent); font-weight: 700; }
+.job-fair-banner-wrap { margin-top: 24px; margin-bottom: 36px; }
+.filter-fields label, .filter-fields select { min-width: 0; }
+.industry-grid-five { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.industry-grid-five .industry-tile { grid-column: span 2; }
+.industry-grid-five .industry-tile:nth-last-child(-n+2) { grid-column: span 3; }
+@media (max-width: 1000px) {
+  .industry-grid-five { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .industry-grid-five .industry-tile,
+  .industry-grid-five .industry-tile:nth-last-child(-n+2) { grid-column: auto; }
+  .industry-grid-five .industry-tile:last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .filter-fields-four label:first-child { grid-column: auto; }
+  .proposed-terms-notice { padding: 18px; font-size: 13px; }
+  .industry-grid-five { grid-template-columns: minmax(0, 1fr); }
+  .job-pay-amount strong { font-size: 27px; }
+}

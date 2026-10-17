@@ -1,0 +1,26 @@
+.page { background: var(--paper); }
+.hero { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(0,.8fr); gap: 60px; padding-block: 52px 48px; align-items: center; }
+.eyebrow { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; line-height: 1.6; }
+.eyebrow > span { width: 5px; height: 5px; background: var(--brand-blue); border-radius: 50%; flex: 0 0 auto; }
+.heroCopy h1 { color: var(--brand-blue); font-size: clamp(55px,6.2vw,92px); line-height: .99; font-weight: 400; letter-spacing: -.055em; margin: 23px 0 22px; }
+.heroCopy h1 em { font-family: Georgia,"Times New Roman",serif; font-weight: 400; color: var(--brand-red); }
+.heroCopy > p { max-width: 390px; color: var(--muted); font-size: 13px; line-height: 1.8; }
+.browse { display: inline-flex; align-items: center; gap: 40px; font-size: 11px; color: var(--brand-blue); margin-top: 22px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.heroVisual { position: relative; padding: 0 39px 22px 0; min-width: 0; }
+.heroImage { position: relative; height: 285px; border-radius: 120px 120px 15px 15px; overflow: hidden; }
+.heroImage img { object-fit: cover; object-position: center; }
+.roleCount { position: absolute; bottom: 42px; right: 0; background: var(--brand-red); color: #fff; padding: 21px 24px; border-radius: 10px; display: flex; align-items: center; gap: 17px; transform: rotate(-5deg); box-shadow: 0 8px 20px color-mix(in srgb, var(--brand-navy) 5%, transparent); }
+.roleCount strong { font-size: 60px; line-height: 1; font-weight: 400; letter-spacing: -.06em; }
+.roleCount > span { font-size: 10px; line-height: 1.6; }
+.visualCaption { position: absolute; left: 0; bottom: 0; color: var(--muted); font-size: 9px; }
+.promiseStrip { display: flex; align-items: center; flex-wrap: wrap; gap: 16px 35px; padding-block: 22px; border-block: 1px solid var(--line); }
+.promiseStrip > span { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 10px; }
+.promiseStrip strong { font-weight: 500; color: var(--brand-blue); }
+.promiseStrip svg { color: var(--brand-blue); }
+.promiseStrip .total { margin-left: auto; font-size: 9px; }
+.total i { width: 3px; height: 3px; border-radius: 50%; background: var(--brand-blue); margin-inline: 2px; }
+.exampleNotice { padding-block: 20px; color: var(--muted); font-size: 12px; }
+.bottomNote { display: flex; justify-content: space-between; gap: 20px; padding-block: 25px 50px; color: var(--muted); font-size: 12px; }
+.bottomNote a { color: var(--brand-blue); }
+@media (max-width: 1000px) { .hero { gap: 35px; grid-template-columns: minmax(0,1.2fr) minmax(0,.8fr); } .heroImage { height: 265px; } .roleCount { padding: 17px; } .roleCount strong { font-size: 52px; } .promiseStrip { gap: 16px 25px; } .promiseStrip .total { margin-left: 0; } }
+@media (max-width: 700px) { .hero { grid-template-columns: 1fr; gap: 35px; padding-top: 36px; } .heroCopy h1 { font-size: clamp(56px,10vw,76px); } .heroVisual { display: none; } .heroCopy > p { font-size: 14px; } .promiseStrip { gap: 14px 20px; } .promiseStrip > span { font-size: 10px; } .promiseStrip .total { width: 100%; padding-top: 5px; } .bottomNote { flex-direction: column; font-size: 11px; gap: 12px; } }

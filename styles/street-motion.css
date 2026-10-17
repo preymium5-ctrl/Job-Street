@@ -1,0 +1,57 @@
+/* Content has no hidden initial state; motion only enhances the layout. */
+.street-hero-scenes { position: absolute; inset: 0; z-index: -3; overflow: hidden; }
+.street-hero-scene { position: absolute; inset: 0; opacity: 0; transition: opacity 1s cubic-bezier(.22, .61, .36, 1); }
+.street-hero-scene.is-active { opacity: 1; }
+.street-hero-scene .street-hero-image { z-index: 0; animation: none; transform: scale(1.065); transition: transform 1.7s cubic-bezier(.2, .65, .3, 1); }
+.street-hero-scene.is-active .street-hero-image { transform: scale(1); }
+.street-hero-line { overflow: hidden; padding-bottom: .1em; margin-bottom: -.1em; }
+.street-hero-line > span { display: block; }
+.street-hero-dots { gap: 1px; right: calc(var(--space) - 12px); }
+.street-hero-dots button { position: relative; width: 44px; height: 44px; border: 0; background: transparent; }
+.street-hero-dots button::before { content: ""; width: 14px; height: 14px; border: 1px solid #ffffff85; border-radius: 50%; transition: transform .35s, background .35s, border-color .35s; }
+.street-hero-dots button[aria-pressed="true"] { background: transparent; }
+.street-hero-dots button[aria-pressed="true"]::before { background: var(--street-accent); border-color: var(--street-accent); transform: scale(1.2); }
+.street-hero-dots button:hover::before { border-color: var(--street-accent); }
+.street-hero-dots button:focus-visible { outline: 2px solid var(--street-accent); outline-offset: 0; }
+.street-hero-dots button span { position: absolute; }
+.street-hero-index { font-variant-numeric: tabular-nums; }
+.street-section-top { position: relative; padding-bottom: 29px; }
+.street-section-top::after { content: ""; position: absolute; inset: auto 0 0; height: 1px; background: currentColor; opacity: .17; transform: scaleX(var(--street-rule-progress, 1)); transform-origin: left; }
+.street-stats strong { font-variant-numeric: tabular-nums; }
+.street-stats strong > .street-count-visual { font: inherit; color: inherit; letter-spacing: inherit; }
+.street-stats strong > .sr-only { font-size: 1px; }
+.street-pill, .street-text-link, .street-hero-secondary { position: relative; }
+.street-text-link svg, .street-hero-secondary svg { transition: transform .35s cubic-bezier(.2, .65, .3, 1); }
+.street-text-link:hover svg, .street-hero-secondary:hover svg { transform: translate(3px, -3px); }
+.street-role-top > a, .street-industry-arrow { transition: background .3s, color .3s, transform .45s cubic-bezier(.2, .65, .3, 1); }
+.street-role:hover .street-role-top > a, .street-industry:hover .street-industry-arrow { transform: rotate(45deg); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .street-hero-message .street-hero-line > span { animation: street-headline-rise .85s cubic-bezier(.2, .7, .2, 1) both; }
+  .street-hero-message .street-hero-line:nth-child(2) > span { animation-delay: .075s; }
+  .street-hero-message .street-hero-line:nth-child(3) > span { animation-delay: .15s; }
+  .street-hero-message .street-hero-eyebrow, .street-hero-message .street-hero-copy, .street-hero-message .street-hero-actions { animation: street-copy-rise .8s cubic-bezier(.2, .7, .2, 1) both; }
+  .street-hero-message .street-hero-copy { animation-delay: .12s; }
+  .street-hero-message .street-hero-actions { animation-delay: .2s; }
+}
+@keyframes street-headline-rise { from { transform: translateY(18%); opacity: .65; } to { transform: translateY(0); opacity: 1; } }
+@keyframes street-copy-rise { from { transform: translateY(12px); opacity: .65; } to { transform: translateY(0); opacity: 1; } }
+@media (min-width: 1200px) and (hover: hover) and (pointer: fine) {
+  .street-roles { transition: grid-template-columns .7s cubic-bezier(.22, .61, .36, 1); }
+  .street-roles:has(.street-role:nth-child(1):is(:hover, :focus-within)) { grid-template-columns: 1.65fr 1fr 1fr 1fr; }
+  .street-roles:has(.street-role:nth-child(2):is(:hover, :focus-within)) { grid-template-columns: 1fr 1.65fr 1fr 1fr; }
+  .street-roles:has(.street-role:nth-child(3):is(:hover, :focus-within)) { grid-template-columns: 1fr 1fr 1.65fr 1fr; }
+  .street-roles:has(.street-role:nth-child(4):is(:hover, :focus-within)) { grid-template-columns: 1fr 1fr 1fr 1.65fr; }
+  .street-role-top > a:focus-visible { outline: 2px solid var(--street-accent); outline-offset: 4px; }
+}
+@media (max-width: 700px) {
+  .street-hero-dots { right: 2px; gap: 0; }
+  .street-hero-dots button { width: 44px; height: 44px; }
+  .street-hero-dots button::before { width: 11px; height: 11px; }
+  .street-section-top { padding-bottom: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .street-hero-scene, .street-hero-scene .street-hero-image, .street-hero-dots button::before, .street-role-top > a, .street-industry-arrow, .street-text-link svg, .street-hero-secondary svg, .street-roles { transition: none; }
+  .street-hero-scene .street-hero-image { transform: none; }
+  .street-role:hover .street-role-top > a, .street-industry:hover .street-industry-arrow, .street-text-link:hover svg, .street-hero-secondary:hover svg { transform: none; }
+}

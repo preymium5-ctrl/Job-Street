@@ -1,0 +1,51 @@
+.card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: #fff; color: var(--brand-blue); transition: border-color .3s, box-shadow .3s; }
+.card:hover { border-color: var(--line); box-shadow: 0 12px 32px color-mix(in srgb, var(--brand-navy) 7%, transparent); }
+.cover { position: relative; isolation: isolate; height: 265px; flex: 0 0 auto; background: var(--brand-navy); }
+.photo { position: absolute; inset: 0; overflow: hidden; }
+.photo img { object-fit: cover; transition: transform .8s; }
+.card:hover .photo img { transform: scale(1.035); }
+.cover::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg,color-mix(in srgb, var(--brand-navy) 19%, transparent),transparent 30%,color-mix(in srgb, var(--brand-navy) 54%, transparent) 62%,color-mix(in srgb, var(--brand-navy) 98%, transparent)); }
+.fee { position: absolute; z-index: 2; left: 17px; top: 17px; display: flex; align-items: center; gap: 6px; border-radius: 6px; padding: 8px 10px; background: var(--brand-red); color: var(--brand-blue); font-size: 9px; font-weight: 600; letter-spacing: .025em; text-transform: uppercase; }
+.coverTitle { position: absolute; z-index: 2; bottom: 37px; left: 23px; right: 23px; color: #fff; }
+.coverTitle > span { display: block; font-size: 9px; line-height: 1.5; color: var(--surface-soft); margin-bottom: 10px; }
+.card .coverTitle h3 { color: #fff; font-size: clamp(24px, 2.35vw, 34px); line-height: 1.08; letter-spacing: -.035em; font-weight: 500; overflow-wrap: anywhere; }
+.coverTitle a:hover { color: var(--brand-red); }
+.imageNote { position: absolute; z-index: 2; bottom: 13px; left: 23px; font-size: 8px; color: var(--surface-soft); }
+.body { display: flex; flex-direction: column; flex: 1; min-width: 0; padding: 21px 23px 15px; }
+.locationRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 10px; color: var(--muted); }
+.locationRow > span { display: inline-flex; align-items: center; gap: 5px; }
+.openings { border-radius: 4px; background: var(--paper); padding: 5px 8px; }
+.openings strong { color: var(--brand-blue); font-weight: 600; }
+.salary { margin-top: 17px; padding: 17px 0 18px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.salary :global(.job-pay) { margin: 0; }
+.salary :global(.job-pay-label) { font-size: 9px; letter-spacing: .08em; color: var(--muted); opacity: 1; }
+.salary :global(.job-pay-amount) { margin-top: 7px; gap: 4px 8px; }
+.salary :global(.job-pay-amount strong) { color: var(--brand-blue); font-size: clamp(24px, 2.15vw, 32px); font-weight: 500; letter-spacing: -.04em; }
+.salary :global(.job-pay-amount > span) { font-size: 9px; color: var(--muted); }
+.salary :global(.salary-conversion-amount) { color: var(--brand-blue); font-size: 12px; font-weight: 500; }
+.salary :global(.salary-conversion-amount small) { font-size: 8px; }
+.salary :global(.salary-conversion-rate) { color: var(--muted); font-size: 8px; opacity: 1; }
+.experience { display: flex; align-items: flex-start; gap: 7px; color: var(--muted); font-size: 10px; line-height: 1.6; margin: 17px 0 8px; }
+.experience svg { flex: 0 0 auto; margin-top: 1px; }
+.employer { font-size: 10px; line-height: 1.6; color: var(--brand-blue); }
+.employer > span { color: var(--muted); }
+.summary { font-size: 12px; line-height: 1.7; color: var(--muted); margin: 12px 0 19px; }
+.actions { margin-top: auto; display: grid; grid-template-columns: 1fr 1.15fr; gap: 9px; }
+.actions a { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; border-radius: 8px; padding: 11px 13px; font-size: 11px; font-weight: 500; }
+.details { color: var(--brand-blue); border: 1px solid var(--line); }
+.details:hover { background: var(--paper); }
+.apply { background: var(--brand-navy); color: var(--surface-soft); border: 1px solid var(--brand-blue); }
+.apply svg { color: var(--brand-red); }
+.apply:hover { background: var(--brand-blue); }
+.listed { margin-top: 11px; text-align: center; color: var(--muted); font-size: 8px; }
+.card a:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 4px; }
+@media (min-width: 1480px) { .cover { height: 245px; } .card .coverTitle h3 { font-size: 28px; } }
+@media (max-width: 1100px) { .body { padding-inline: 18px; } .coverTitle { left: 18px; right: 18px; } .card .coverTitle h3 { font-size: 28px; } }
+@media (max-width: 600px) { .cover { height: 285px; } .body { padding: 23px 22px 16px; } .coverTitle { left: 22px; right: 22px; } .card .coverTitle h3 { font-size: 32px; } .salary :global(.job-pay-amount strong) { font-size: 31px; } .summary { font-size: 13px; } }
+@media (prefers-reduced-motion: reduce) { .card, .photo img { transition: none; } .card:hover .photo img { transform: none; } }
+
+.fee { color: #fff; }
+.coverTitle a:hover { color: var(--red-soft); }
+.apply { background: var(--brand-red); border-color: var(--brand-red); color: #fff; }
+.apply svg { color: #fff; }
+.apply:hover { background: var(--brand-red-hover); }

@@ -1,0 +1,21 @@
+{
+  "timeZone": "Asia/Manila",
+  "exceptionLogging": "NONE",
+  "runtimeVersion": "V8",
+  "dependencies": {
+    "enabledAdvancedServices": [
+      { "userSymbol": "Drive", "version": "v3", "serviceId": "drive" },
+      { "userSymbol": "Sheets", "version": "v4", "serviceId": "sheets" }
+    ]
+  },
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/script.external_request"
+  ],
+  "urlFetchWhitelist": [
+    "https://www.googleapis.com/drive/v3/",
+    "https://www.googleapis.com/upload/drive/v3/",
+    "https://sheets.googleapis.com/v4/"
+  ]
+}

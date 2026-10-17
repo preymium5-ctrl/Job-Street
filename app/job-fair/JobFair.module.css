@@ -1,0 +1,904 @@
+.page {
+  padding-bottom: 70px;
+}
+.breadcrumb {
+  padding-top: 30px;
+  margin-bottom: 58px;
+}
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.16fr) minmax(0, .84fr);
+  gap: clamp(35px, 6vw, 100px);
+  align-items: center;
+  padding-bottom: 74px;
+}
+.heroCopy,
+.heroVisual {
+  min-width: 0;
+}
+.title {
+  margin-top: 25px;
+  font-size: clamp(64px, 7.4vw, 112px);
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: var(--font-heading-tracking);
+  overflow-wrap: anywhere;
+}
+.year {
+  display: block;
+  color: var(--accent);
+}
+.intro {
+  margin-top: 30px;
+  font-size: 23px;
+  line-height: 1.45;
+}
+.heroDescription {
+  max-width: 410px;
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.75;
+}
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px 30px;
+  margin-top: 30px;
+}
+.anchorLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.heroVisual {
+  padding-top: 22px;
+}
+.imageWrap {
+  position: relative;
+  aspect-ratio: .93;
+  isolation: isolate;
+  background: var(--surface-soft);
+}
+.heroImage {
+  object-fit: cover;
+}
+.imageWrap::after {
+  content: "";
+  position: absolute;
+  inset: 65% 0 0;
+  background: linear-gradient(transparent, #0008);
+  pointer-events: none;
+}
+.imageLabel {
+  position: absolute;
+  z-index: 1;
+  left: 18px;
+  bottom: 16px;
+  color: #fff;
+  font-size: 10px;
+}
+.imageSpark {
+  position: absolute;
+  z-index: 1;
+  right: -24px;
+  top: -25px;
+  width: 83px;
+  height: 83px;
+  color: var(--accent);
+}
+.dateCard {
+  position: relative;
+  margin: -28px 24px 0 -28px;
+  z-index: 2;
+  padding: 28px 30px;
+  color: #fff;
+  background: var(--ink);
+}
+.dateCard > p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  margin-top: 14px;
+  font-size: clamp(35px, 3.6vw, 54px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: var(--font-heading-tracking);
+}
+.dateCard > p > span {
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.dateCard > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  color: var(--surface-soft);
+  font-size: 12px;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding-block: 38px;
+  border-block: 1px solid var(--line);
+}
+.stats > div {
+  display: grid;
+  gap: 8px;
+  border-right: 1px solid var(--line);
+  padding-left: 32px;
+}
+.stats > div:first-child {
+  padding-left: 0;
+}
+.stats > div:last-child {
+  border: 0;
+}
+.stats strong {
+  font-size: clamp(38px, 4vw, 58px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: var(--font-heading-tracking);
+}
+.stats span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.details {
+  display: grid;
+  grid-template-columns: minmax(0, .74fr) minmax(0, 1.26fr);
+  gap: 60px;
+  padding-block: 116px;
+}
+.heading {
+  margin-top: 22px;
+  font-size: clamp(40px, 4.5vw, 68px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: var(--font-heading-tracking);
+  overflow-wrap: anywhere;
+}
+.detailsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 38px 28px;
+}
+.fact {
+  min-width: 0;
+}
+.fact > svg {
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+.fact > span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+.fact > h3 {
+  margin-top: 9px;
+  font-size: 20px;
+  line-height: 1.35;
+}
+.fact > p {
+  margin-top: 11px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.75;
+}
+.fact:last-child {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--line);
+  padding-top: 27px;
+}
+.fact:last-child > p {
+  max-width: 500px;
+}
+.employers {
+  padding-block: 105px;
+  background: var(--paper);
+}
+.sectionTop {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 50px;
+  margin-bottom: 50px;
+}
+.sectionIntro {
+  width: 315px;
+  max-width: 40%;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.75;
+}
+.employerGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.employerCard {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--paper);
+  padding: 28px;
+}
+.employerHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+.employerIndex {
+  color: var(--muted);
+  font-size: 11px;
+}
+.workerCount {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.workerCount strong {
+  color: var(--accent);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+}
+.employerCard h3 {
+  min-height: 66px;
+  margin-top: 26px;
+  font-size: 23px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.roleList {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0 32px;
+}
+.roleList li {
+  border-top: 1px solid var(--line);
+}
+.roleList li:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.roleList a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 49px;
+  gap: 14px;
+  padding-block: 13px;
+  font-size: 12px;
+  line-height: 1.5;
+  transition: color 180ms ease;
+}
+.roleList a:hover {
+  color: var(--accent);
+}
+.roleEnd {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 12px;
+}
+.roleEnd b {
+  min-width: 15px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.testingNote {
+  margin-top: auto;
+}
+.testingNote > span {
+  display: block;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.testingNote > p {
+  margin-top: 9px;
+  font-size: 12px;
+  line-height: 1.75;
+}
+.sourceNote {
+  margin-top: 25px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.75;
+}
+.journey,
+.welder {
+  padding-block: 116px;
+}
+.timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 30px;
+}
+.timeline li {
+  min-width: 0;
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.stageNumber {
+  display: block;
+  font-size: 13px;
+  color: var(--accent);
+  margin-bottom: 46px;
+}
+.stageDate {
+  min-height: 35px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.timeline h3 {
+  margin-top: 12px;
+  font-size: 23px;
+  line-height: 1.3;
+}
+.stageCopy {
+  margin-top: 17px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+}
+.documents {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  gap: 70px;
+  border-block: 1px solid var(--line);
+  padding-block: 100px;
+}
+.documentDescription {
+  margin-top: 26px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.75;
+}
+.documentList {
+  list-style: none;
+  padding: 0;
+  margin: 28px 0;
+}
+.documentList li {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  margin-block: 14px;
+  font-size: 15px;
+}
+.documentList svg {
+  margin-top: 3px;
+  color: var(--accent);
+}
+.optionalDocument {
+  margin-top: -10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.documentCallout {
+  border-left: 3px solid var(--accent);
+  padding: 2px 0 2px 20px;
+  margin-top: 32px;
+}
+.documentCallout strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+.documentCallout p {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.75;
+}
+.privacyCopy {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.75;
+  margin-top: 24px;
+}
+.certificatePanel {
+  align-self: start;
+  min-width: 0;
+  padding: 30px;
+  background: var(--paper);
+}
+.certificatePanel > h3 {
+  font-size: 24px;
+  line-height: 1.3;
+}
+.certificatePanel > h3 + p {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.tableWrap {
+  margin-top: 27px;
+}
+.nc2Table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.nc2Table thead {
+  background: var(--ink);
+  color: white;
+}
+.nc2Table th,
+.nc2Table td {
+  padding: 13px 12px;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+.nc2Table thead th {
+  font-size: 10px;
+  font-weight: 600;
+}
+.nc2Table thead th:first-child {
+  width: 55%;
+}
+.nc2Table tbody th,
+.nc2Table tbody td {
+  border-bottom: 1px solid var(--line);
+}
+.nc2Table tbody th {
+  font-weight: 500;
+}
+.nc2Table tbody td {
+  color: var(--accent);
+  font-weight: 600;
+}
+.tableFootnote {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.8;
+}
+.profileNote {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+.profileNote strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+.profileNote p {
+  margin-top: 9px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.welderSteps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.welderSteps li {
+  border: 1px solid var(--line);
+  padding: 28px;
+  margin-left: -1px;
+}
+.welderSteps li:first-child {
+  margin-left: 0;
+}
+.welderSteps li > span {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  color: white;
+  background: var(--accent);
+  border-radius: 50%;
+  font-size: 11px;
+}
+.welderSteps h3 {
+  margin-top: 28px;
+  font-size: 19px;
+  line-height: 1.35;
+}
+.welderSteps p {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.finalCta {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 40px;
+  overflow: hidden;
+  padding: 60px;
+  background: var(--accent);
+  color: white;
+  isolation: isolate;
+}
+.finalCta h2 {
+  margin-top: 24px;
+  font-size: clamp(38px, 5vw, 72px);
+  line-height: 1.1;
+  letter-spacing: var(--font-heading-tracking);
+}
+.finalCta h2 + p {
+  margin-top: 24px;
+  color: #e1e2ff;
+  font-size: 14px;
+}
+.finalCta > a {
+  flex-shrink: 0;
+}
+.ctaSpark {
+  position: absolute;
+  right: 20px;
+  top: -28px;
+  width: 200px;
+  height: 200px;
+  opacity: .13;
+  z-index: -1;
+}
+.faqSection {
+  padding: clamp(64px, 8vw, 112px) 0;
+  border-top: 1px solid var(--line);
+}
+.faqSection > div > p {
+  margin-top: 20px;
+  margin-bottom: 24px;
+}
+.pageSource {
+  max-width: 950px;
+  margin-top: 24px;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+@media (min-width: 1600px) {
+  .title {
+    font-size: 112px;
+  }
+}
+@media (max-width: 1100px) {
+  .hero {
+    gap: 45px;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
+  }
+  .title {
+    font-size: clamp(60px, 7.3vw, 85px);
+  }
+  .employerGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .documents {
+    gap: 35px;
+  }
+  .certificatePanel {
+    padding: 24px;
+  }
+  .timeline,
+  .welderSteps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px;
+  }
+  .stageNumber {
+    margin-bottom: 30px;
+  }
+  .stageDate {
+    min-height: auto;
+  }
+  .welderSteps {
+    gap: 0;
+  }
+  .welderSteps li:nth-child(3) {
+    margin-left: 0;
+  }
+  .welderSteps li:nth-child(n + 3) {
+    margin-top: -1px;
+  }
+}
+@media (max-width: 850px) {
+  .title {
+    font-size: clamp(54px, 7.3vw, 68px);
+  }
+  .hero {
+    gap: 35px;
+    align-items: start;
+  }
+  .heroVisual {
+    padding-top: 55px;
+  }
+  .intro {
+    font-size: 20px;
+  }
+  .heroDescription {
+    font-size: 14px;
+  }
+  .dateCard {
+    margin: -20px 0 0 -20px;
+    padding: 24px;
+  }
+  .dateCard > p {
+    font-size: 36px;
+  }
+  .dateCard > p > span {
+    font-size: 13px;
+  }
+  .dateCard > div {
+    font-size: 10px;
+    gap: 8px;
+  }
+  .dateCard > span {
+    font-size: 8px;
+  }
+  .details {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+    padding-block: 85px;
+  }
+  .detailsGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .fact:last-child {
+    grid-column: auto;
+    border-top: 0;
+    padding-top: 0;
+  }
+  .sectionTop {
+    gap: 30px;
+  }
+  .sectionIntro {
+    font-size: 14px;
+  }
+  .documents {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 45px;
+    padding-block: 80px;
+  }
+  .documentIntro > p,
+  .documentCallout,
+  .documentList {
+    max-width: 570px;
+  }
+  .journey,
+  .welder {
+    padding-block: 85px;
+  }
+  .employers {
+    padding-block: 85px;
+  }
+  .finalCta {
+    align-items: start;
+    padding: 38px;
+    flex-direction: column;
+    gap: 28px;
+  }
+}
+@media (max-width: 700px) {
+  .breadcrumb {
+    margin-bottom: 38px;
+    padding-top: 22px;
+  }
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+    padding-bottom: 55px;
+  }
+  .title {
+    margin-top: 22px;
+    font-size: clamp(58px, 13.3vw, 89px);
+  }
+  .intro {
+    margin-top: 24px;
+    font-size: 22px;
+  }
+  .heroDescription {
+    font-size: 15px;
+  }
+  .heroVisual {
+    padding: 10px 12px 0;
+  }
+  .imageWrap {
+    aspect-ratio: 1.2;
+  }
+  .imageSpark {
+    width: 64px;
+    height: 64px;
+    right: -16px;
+    top: -20px;
+  }
+  .dateCard {
+    margin: -20px 8px 0 -12px;
+    padding: 26px;
+  }
+  .dateCard > p {
+    font-size: 44px;
+  }
+  .dateCard > p > span {
+    font-size: 15px;
+  }
+  .dateCard > span {
+    font-size: 9px;
+  }
+  .dateCard > div {
+    font-size: 12px;
+  }
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 26px 0;
+    padding-block: 30px;
+  }
+  .stats > div {
+    padding-left: 22px;
+  }
+  .stats > div:nth-child(odd) {
+    padding-left: 0;
+  }
+  .stats > div:nth-child(even) {
+    border-right: 0;
+  }
+  .stats strong {
+    font-size: 40px;
+  }
+  .stats span {
+    font-size: 11px;
+  }
+  .details,
+  .journey,
+  .welder {
+    padding-block: 70px;
+  }
+  .heading {
+    margin-top: 18px;
+    font-size: clamp(38px, 9.5vw, 60px);
+  }
+  .detailsGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 25px;
+  }
+  .fact {
+    padding-top: 23px;
+    border-top: 1px solid var(--line);
+  }
+  .fact:last-child {
+    border-top: 1px solid var(--line);
+    padding-top: 23px;
+  }
+  .fact > svg {
+    float: right;
+    margin: 0;
+  }
+  .fact > h3 {
+    font-size: 21px;
+  }
+  .fact > p {
+    font-size: 14px;
+  }
+  .sectionTop {
+    display: block;
+    margin-bottom: 35px;
+  }
+  .sectionIntro {
+    max-width: 100%;
+    width: 100%;
+    margin-top: 24px;
+    font-size: 15px;
+  }
+  .employers {
+    padding-block: 70px;
+  }
+  .employerGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .employerCard {
+    padding: 26px;
+  }
+  .employerCard h3 {
+    min-height: auto;
+    margin-top: 20px;
+    font-size: 25px;
+  }
+  .roleList a {
+    font-size: 13px;
+  }
+  .testingNote > p {
+    font-size: 13px;
+  }
+  .timeline {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+  .timeline li {
+    display: grid;
+    grid-template-columns: 25px minmax(0, 1fr);
+    gap: 20px;
+    padding-top: 26px;
+  }
+  .stageNumber {
+    margin: 0;
+  }
+  .timeline h3 {
+    font-size: 25px;
+    margin-top: 12px;
+  }
+  .stageCopy {
+    margin-top: 14px;
+    font-size: 14px;
+  }
+  .documents {
+    padding-block: 70px;
+    gap: 36px;
+  }
+  .certificatePanel {
+    padding: 23px 18px;
+  }
+  .certificatePanel > h3 {
+    font-size: 22px;
+  }
+  .nc2Table {
+    font-size: 11px;
+  }
+  .nc2Table th,
+  .nc2Table td {
+    padding: 13px 10px;
+  }
+  .welderSteps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .welderSteps li {
+    margin: -1px 0 0;
+    padding: 26px;
+  }
+  .welderSteps li:first-child {
+    margin-top: 0;
+  }
+  .welderSteps h3 {
+    font-size: 22px;
+    margin-top: 22px;
+  }
+  .welderSteps p {
+    font-size: 14px;
+  }
+  .finalCta {
+    padding: 34px 26px;
+  }
+  .finalCta h2 {
+    font-size: 38px;
+    overflow-wrap: anywhere;
+  }
+  .finalCta h2 + p {
+    font-size: 13px;
+  }
+  .ctaSpark {
+    width: 160px;
+    height: 160px;
+    right: -34px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .roleList a {
+    transition: none;
+  }
+}

@@ -1,0 +1,139 @@
+/* THICCCBOI: bold headlines, medium body copy and open spacing,
+   based on the measured TopMercury type hierarchy. */
+.hero-title {
+  font-size: clamp(72px, 8.7vw, 132px);
+  font-weight: 700;
+  line-height: 1.06;
+  letter-spacing: var(--font-heading-tracking);
+  min-width: 0;
+}
+.section-heading,
+.page-heading {
+  font-weight: 700;
+  line-height: 1.13;
+}
+.desktop-nav > a,
+.nav-contact {
+  font-size: 16px;
+  font-weight: 500;
+}
+.button {
+  font-size: 16px;
+  font-weight: 700;
+}
+.nav-cta {
+  font-size: 14px;
+}
+.text-link {
+  font-size: 14px;
+  font-weight: 600;
+}
+.hero-intro p,
+.intro-copy .muted,
+.section-side-copy,
+.job-summary,
+.job-card-row .job-summary,
+.timeline-step p,
+.why-intro,
+.why-item p,
+.trust-inner p {
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.67;
+}
+.faq-item > p {
+  font-size: 17px;
+  line-height: 1.75;
+}
+.hero-intro {
+  width: 320px;
+}
+.hero-heading-row {
+  gap: 40px;
+}
+.job-actions .button,
+.job-card-row .job-actions .button,
+.job-actions .text-link,
+.job-card-row .job-actions .text-link {
+  font-size: 14px;
+}
+.wordmark {
+  letter-spacing: -0.03em;
+}
+@media (min-width: 1600px) {
+  .hero-title {
+    font-size: 132px;
+  }
+}
+@media (max-width: 1150px) {
+  .desktop-nav {
+    gap: 23px;
+  }
+  .desktop-nav > a {
+    font-size: 14px;
+  }
+  .hero-intro {
+    width: 280px;
+  }
+  .hero-intro p {
+    font-size: 17px;
+  }
+  .hero-heading-row {
+    gap: 30px;
+  }
+}
+@media (max-width: 900px) {
+  .hero-title {
+    font-size: clamp(64px, 9.4vw, 85px);
+  }
+  .hero-intro {
+    width: 225px;
+  }
+  .hero-intro p {
+    font-size: 15px;
+  }
+  .job-actions {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 700px) {
+  .hero-title {
+    font-size: clamp(61px, 15.2vw, 104px);
+  }
+  .hero-heading-row {
+    gap: 25px;
+  }
+  .hero-intro {
+    width: 100%;
+  }
+  .hero-intro p {
+    font-size: 17px;
+  }
+  .hero-intro .button,
+  .job-actions .button,
+  .job-card-row .job-actions .button,
+  .job-actions .text-link,
+  .job-card-row .job-actions .text-link {
+    font-size: 14px;
+  }
+  .intro-copy .muted,
+  .section-side-copy,
+  .job-summary,
+  .job-card-row .job-summary,
+  .timeline-step p,
+  .why-intro,
+  .why-item p,
+  .trust-inner p,
+  .faq-item > p {
+    font-size: 16px;
+  }
+  .section-heading,
+  .page-heading {
+    overflow-wrap: anywhere;
+  }
+}
+@media (max-width: 380px) {
+  .hero-title {
+    font-size: 58px;
+  }
+}
