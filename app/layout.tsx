@@ -12,6 +12,7 @@ import "../styles/brand.css";
 import "../styles/street.css";
 import "../styles/street-interior.css";
 import "../styles/street-motion.css";
+import "../styles/placement-fee.css";
 const thicccboi = localFont({
   src: [
     {

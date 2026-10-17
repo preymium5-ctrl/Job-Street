@@ -22,7 +22,7 @@ export default function About() {
         <aside className="information-side" data-reveal>
           <BrandMark className="brand-spark" />
           <h2>Every next<br />step matters.</h2>
-          <p>Clear requirements. Practical support. No placement fee.</p>
+          <p>Clear requirements. Practical support. <span data-fee-glow="text">No placement fee.</span></p>
           <ActionLink href="/jobs">Explore jobs in Croatia</ActionLink>
         </aside>
         <div>

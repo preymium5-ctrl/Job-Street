@@ -4,7 +4,7 @@ import styles from "./EmploymentBenefits.module.css";
 
 export function NoPlacementFee({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`${styles.fee} ${compact ? styles.compact : ""}`}>
+    <div className={`${styles.fee} ${compact ? styles.compact : ""}`} data-fee-glow="badge">
       <ShieldCheck aria-hidden="true" />
       <strong>{noPlacementFee}</strong>
     </div>

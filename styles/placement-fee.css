@@ -1,0 +1,44 @@
+/* Every fee message shares the same red pulse; badge sizing stays with its component. */
+[data-fee-glow="badge"] {
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid #d91f32;
+  background-color: #b91529;
+  color: #fff;
+  box-shadow: 0 4px 18px #d91f3259, 0 0 12px #d91f324d, 0 0 0 0 #f43f5e00;
+}
+
+body [data-fee-glow="badge"] :is(strong, svg) { color: #fff; }
+
+[data-fee-glow="badge"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, #ffffff1a 48%, transparent 66%);
+  transform: translateX(-130%);
+}
+
+[data-fee-glow="text"] { text-shadow: 0 0 6px #d91f3240, 0 0 14px #f43f5e30; }
+.street-hero-line[data-fee-glow="text"] { overflow: visible; }
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-fee-glow="badge"] { animation: placement-fee-glow 2s ease-in-out infinite; }
+  [data-fee-glow="badge"]::after { animation: placement-fee-shine 4s ease-in-out infinite; }
+  [data-fee-glow="text"] { animation: placement-fee-text-glow 2s ease-in-out infinite; }
+}
+
+@keyframes placement-fee-glow {
+  0%, 100% { background-color: #b91529; border-color: #d91f32; box-shadow: 0 4px 18px #d91f3259, 0 0 12px #d91f324d, 0 0 0 0 #f43f5e00; }
+  50% { background-color: #d91f32; border-color: #ff8290; box-shadow: 0 6px 24px #d91f3299, 0 0 42px #f43f5ea6, 0 0 0 7px #f43f5e38; }
+}
+
+@keyframes placement-fee-shine { 0%, 55% { transform: translateX(-130%); } 85%, 100% { transform: translateX(130%); } }
+@keyframes placement-fee-text-glow {
+  0%, 100% { text-shadow: 0 0 6px #d91f3240, 0 0 14px #f43f5e30; }
+  50% { text-shadow: 0 0 8px #f43f5e8c, 0 0 20px #f43f5e80; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-fee-glow="badge"]::after { display: none; }
+}

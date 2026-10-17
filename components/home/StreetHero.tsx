@@ -32,6 +32,8 @@ const slides = [
 export function StreetHero() {
   const [activeIndex, setActiveIndex] = useState(0);
   const slide = slides[activeIndex];
+  const feePhrase = "no placement fee";
+  const feePhraseIndex = slide.copy.indexOf(feePhrase);
 
   return (
     <section className="street-hero" aria-labelledby="street-hero-heading">
@@ -49,9 +51,9 @@ export function StreetHero() {
           <p className="street-hero-eyebrow">Philippines <span aria-hidden="true">→</span> Croatia</p>
           <h1 id="street-hero-heading" className="street-hero-headline">
             {slide.lines.map((line) => <span className="street-hero-line" key={line}><span>{line}</span></span>)}
-            <em className="street-hero-line"><span>{slide.emphasis}</span></em>
+            <em className="street-hero-line" data-fee-glow={slide.emphasis === "No placement fee." ? "text" : undefined}><span>{slide.emphasis}</span></em>
           </h1>
-          <p className="street-hero-copy">{slide.copy}</p>
+          <p className="street-hero-copy">{feePhraseIndex < 0 ? slide.copy : <>{slide.copy.slice(0, feePhraseIndex)}<span data-fee-glow="text">{feePhrase}</span>{slide.copy.slice(feePhraseIndex + feePhrase.length)}</>}</p>
           <div className="street-hero-actions">
             <Link className="street-pill" href="/jobs">
               Explore available jobs

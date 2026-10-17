@@ -80,7 +80,7 @@ export function JobDirectory({ jobs }: { jobs: Job[] }) {
           </details>
           <div className={styles.help}>
             <ShieldCheck size={28} aria-hidden="true" />
-            <h3>Big opportunities.<br />Zero placement fee.</h3>
+            <h3>Big opportunities.<br /><span data-fee-glow="text">Zero placement fee.</span></h3>
             <p>For Filipino workers ready to build their future in Croatia.</p>
             <Link href="/contact">Have a question? <ArrowUpRight size={15} aria-hidden="true" /></Link>
           </div>

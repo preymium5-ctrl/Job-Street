@@ -15,6 +15,7 @@
 .visualCaption { position: absolute; left: 0; bottom: 0; color: var(--muted); font-size: 9px; }
 .promiseStrip { display: flex; align-items: center; flex-wrap: wrap; gap: 16px 35px; padding-block: 22px; border-block: 1px solid var(--line); }
 .promiseStrip > span { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 10px; }
+.promiseStrip > [data-fee-glow="badge"] { position: relative; padding: 10px 14px; border-radius: 8px; color: #fff; font-size: 14px; }
 .promiseStrip strong { font-weight: 500; color: var(--brand-blue); }
 .promiseStrip svg { color: var(--brand-blue); }
 .promiseStrip .total { margin-left: auto; font-size: 9px; }

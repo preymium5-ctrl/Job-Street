@@ -39,7 +39,7 @@ export default async function JobsPage() {
         </div>
       </section>
       <div className={`container ${styles.promiseStrip}`}>
-        <span><ShieldCheck size={18} aria-hidden="true" /><strong>No placement fee</strong></span>
+        <span data-fee-glow="badge"><ShieldCheck size={18} aria-hidden="true" /><strong>No placement fee</strong></span>
         <span><House size={17} aria-hidden="true" />Free accommodation</span>
         <span><BusFront size={18} aria-hidden="true" />Free transportation</span>
         <span className={styles.total}>{workers.toLocaleString("en-US")} positions <i /> {industries} industries</span>

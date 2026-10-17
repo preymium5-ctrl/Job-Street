@@ -128,13 +128,13 @@ body { background: var(--street-paper); font-weight: 400; }
 .street-role .salary-conversion { color: var(--surface-soft); }
 .street-role .salary-conversion-amount { font-size: 11px; color: var(--surface-soft); }
 .street-role .salary-conversion-rate { color: var(--surface-soft); font-size: 8px; }
-.street-role-fee { display: flex; align-items: center; gap: 6px; font-size: 9px; color: var(--street-accent); margin-top: 15px; text-transform: uppercase; letter-spacing: .055em; }
+.street-role-fee { position: relative; display: flex; align-items: center; gap: 6px; width: fit-content; max-width: 100%; border-radius: 8px; padding: 8px 10px; font-size: 11px; color: #fff; margin-top: 15px; text-transform: uppercase; letter-spacing: .055em; }
+.street-role-fee svg { flex-shrink: 0; }
 .street-image-note { font-size: 9px; color: var(--muted); margin-top: 20px; }
 .street-benefits { background: var(--street-blue); color: white; }
 .street-benefits .street-kicker { color: var(--surface-soft); }
 .street-benefits em { color: var(--street-accent); }
-.street-fee-banner { position: relative; isolation: isolate; overflow: hidden; display: flex; gap: 25px; align-items: center; border: 1px solid #ffffff40; border-radius: 20px; padding: 32px 36px; margin: 50px 0 38px; box-shadow: 0 4px 18px #d91f3259, 0 0 12px #d91f324d, 0 0 0 0 #f43f5e00; }
-.street-fee-banner::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(110deg, transparent 30%, #ffffff1a 48%, transparent 66%); transform: translateX(-130%); }
+.street-fee-banner { position: relative; display: flex; gap: 25px; align-items: center; border-radius: 20px; padding: 32px 36px; margin: 50px 0 38px; }
 .street-fee-banner > svg { color: var(--street-accent); flex-shrink: 0; }
 .street-fee-banner > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .street-fee-banner > div > span { font-size: 11px; color: var(--surface-soft); }
@@ -183,7 +183,7 @@ body { background: var(--street-paper); font-weight: 400; }
 .street-footer { background: var(--surface-soft); color: var(--street-blue); }
 .street-footer-top { display: grid; grid-template-columns: .9fr 1.5fr; gap: 65px; padding-top: 65px; padding-bottom: 60px; }
 .street-footer-top > div > p { font-size: 12px; color: var(--muted); margin-top: 24px; line-height: 1.8; }
-.street-footer-fee { display: inline-block; font-size: 9px; letter-spacing: .08em; border: 1px solid var(--line); border-radius: 100px; padding: 6px 11px; margin-top: 20px; }
+.street-footer-fee { position: relative; display: inline-block; max-width: 100%; font-size: 12px; font-weight: 600; letter-spacing: .04em; border-radius: 8px; padding: 10px 14px; margin-top: 20px; }
 .street-footer-nav { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 40px; }
 .street-footer-nav > div { display: flex; flex-direction: column; gap: 10px; }
 .street-footer-nav > div > span { font-size: 11px; margin-bottom: 13px; font-weight: 600; }
@@ -313,10 +313,9 @@ body { background: var(--street-paper); font-weight: 400; }
 .street-footer .brand-name-country { color: var(--brand-red); }
 .street-brand-dot, .street-intro em { color: var(--brand-red); }
 .street-intro h2, .street-section-top h2, .street-process h2, .street-faq h2, .street-industry h3, .street-steps h3 { color: var(--brand-blue); }
-.street-hero-headline em, .street-benefits em, .street-final em, .street-role-fee { color: var(--red-soft); }
+.street-hero-headline em, .street-benefits em, .street-final em { color: var(--red-soft); }
 .street-benefits .street-section-top h2 { color: #fff; }
-.street-fee-banner { background: #b91529; border-color: var(--brand-red); }
 .street-fee-banner strong, .street-fee-banner > svg, .street-benefit-grid article > svg { color: #fff; }
-.street-fee-banner > div > span, .street-fee-banner > span { color: var(--red-soft); }
+.street-fee-banner > div > span, .street-fee-banner > span { color: #fff; }
 .street-industry:hover .street-industry-arrow, .street-role-top > a:hover { color: #fff; }
 .street-stats strong > span, .street-role h3 a:hover, .street-hero-secondary:hover { color: #fff; }

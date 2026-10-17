@@ -24,7 +24,7 @@ export function JobCard({ job, index = 0, featured = false, employer }: {
         <Link href={`/jobs/${job.slug}`} className={styles.photo} tabIndex={-1} aria-hidden="true">
           <Image src={job.image} alt={job.imageAlt} fill loading={index < 2 ? "eager" : "lazy"} sizes="(max-width: 1100px) 100vw, (max-width: 1600px) 50vw, 33vw" style={{ objectPosition: job.imagePosition || "center 35%" }} />
         </Link>
-        <span className={styles.fee}><ShieldCheck size={14} aria-hidden="true" />{noPlacementFee}</span>
+        <span className={styles.fee} data-fee-glow="badge"><ShieldCheck size={14} aria-hidden="true" />{noPlacementFee}</span>
         <div className={styles.coverTitle}>
           <span>{job.category}</span>
           <h3 id={`job-card-${job.slug}`}><Link href={`/jobs/${job.slug}`}>{job.title}</Link></h3>
