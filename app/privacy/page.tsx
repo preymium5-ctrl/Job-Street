@@ -30,11 +30,15 @@ export default function Privacy() {
         <h2>Information you choose to provide</h2>
         <p>
           The application form collects your name, email address, telephone
-          number, country of residence, professional background, resume,
+          number, nationality, residential address, date and place of birth,
+          English proficiency, country of residence, professional background, resume,
           employer preference, NC2 certificate details, optional driver’s license
           details and a license copy for applicable roles, optional diploma
           or education certificates and other supporting documents, and optional
-          cover letter. A license number is not needed. Please do not include bank
+          cover letter. You can also choose to provide your gender, Telegram
+          contact, parents’ names, other positions of interest, how you discovered
+          the website, a passport copy, residence ID, or certificate of employment.
+          A license number is not needed. Please do not include bank
           information, medical records, or other unnecessary sensitive
           information.
         </p>
@@ -61,7 +65,10 @@ export default function Privacy() {
           Supporting documents are optional. You can attach an NC2 certificate,
           diploma or education certificate, NBI clearance, Form 18a, a driver’s
           license copy for applicable roles, and another document relevant
-          to your application. Requests for correction
+          to your application. The additional personal questions, passport copy,
+          residence ID, and certificate of employment are retained in the website’s
+          private application records and are not included in the current Google
+          tracker export. Requests for correction
           or deletion should include your reference so staff can locate both
           website and Google records.
         </p>
@@ -101,7 +108,7 @@ export default function Privacy() {
           information. No application is sold or sent to an employer by this
           preview.
         </p>
-        <p>Preview notice updated 16 October 2026.</p>
+        <p>Preview notice updated 20 October 2026.</p>
       </div>
     </div>
   );

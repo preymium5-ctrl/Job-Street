@@ -5,6 +5,9 @@ export const supportingDocumentTypes = [
   { id: "form18a", label: "Form 18a" },
   { id: "other", label: "Other supporting document" },
   { id: "driver-license", label: "Driver’s license copy" },
+  { id: "passport", label: "Valid passport copy" },
+  { id: "residence-id", label: "Residence ID (front & back)" },
+  { id: "employment-certificate", label: "Certificate of employment" },
 ] as const;
 export type SupportingDocumentCategory = (typeof supportingDocumentTypes)[number]["id"];
 export const MAX_SUPPORTING_DOCUMENT_BYTES = 3 * 1024 * 1024;

@@ -1,9 +1,27 @@
 import { z } from "zod";
-import { applicationStatuses, discoverySources, documentStatuses } from "./types";
+import { applicantGenders, applicationStatuses, discoverySources, documentStatuses } from "./types";
 import { minimumExperienceYears } from "../data/employment";
 
 const shortText = (maximum = 160) =>
   z.string().trim().min(2, "Enter at least 2 characters.").max(maximum);
+const applicantDetailsSchema = z.object({
+  firstName: z.string().trim().min(1, "Enter your first name.").max(60),
+  lastName: z.string().trim().min(1, "Enter your last name.").max(60),
+  nationality: shortText(80),
+  currentAddress: shortText(500),
+  dateOfBirth: z.iso.date({ error: "Enter a valid date of birth." }).refine(
+    (value) => value <= new Date().toISOString().slice(0, 10),
+    "Date of birth cannot be in the future.",
+  ),
+  placeOfBirth: shortText(160),
+  englishProficiency: z.enum(["Yes", "No"], { error: "Select Yes or No." }),
+  gender: z.enum([...applicantGenders, ""], { error: "Select a listed gender option." }).optional(),
+  telegram: z.string().trim().max(80).optional(),
+  fatherName: z.string().trim().max(120).optional(),
+  motherName: z.string().trim().max(120).optional(),
+  secondaryPosition: z.string().trim().max(160).optional(),
+  otherPosition: z.string().trim().max(160).optional(),
+}).strict();
 export const applicationSchema = z
   .object({
     jobId: z.string().trim().min(1).max(100),
@@ -26,6 +44,7 @@ export const applicationSchema = z
       ),
     country: shortText(80),
     discoverySource: z.enum([...discoverySources, ""], { error: "Choose an option from the list." }).optional(),
+    applicantDetails: applicantDetailsSchema.optional(),
     recentJobTitle: shortText(160),
     experienceYears: z.number().min(minimumExperienceYears, "At least 3 years of relevant work experience is required.").max(60),
     skills: shortText(2000),
@@ -47,6 +66,13 @@ export const applicationSchema = z
   })
   .strict()
   .superRefine((value, context) => {
+    if (value.applicantDetails) {
+      const combinedName = `${value.applicantDetails.firstName} ${value.applicantDetails.lastName}`;
+      if (combinedName.length > 120)
+        context.addIssue({ code: "custom", path: ["applicantDetails", "firstName"], message: "Keep your first and last names together within 120 characters." });
+      else if (value.fullName !== combinedName)
+        context.addIssue({ code: "custom", path: ["applicantDetails", "firstName"], message: "Your full name must match your first and last names." });
+    }
     if (value.documentReadiness?.nc2 === "ready" && value.nc2Certificate.length < 2)
       context.addIssue({ code: "custom", path: ["nc2Certificate"], message: "Enter the name or category of your NC2 certificate." });
   });

@@ -179,40 +179,6 @@ body [class*="JobDetails"][class*="relatedLocation"] { color: var(--surface-soft
 body [class*="JobDetails"][class*="relatedActions"] a:last-child { color: var(--brand-mint); }
 body [class*="JobDetails"][class*="mobileApply"] { background: var(--paper); border-color: var(--line); }
 
-/* A calm, card-based application workspace in the same site theme. */
-body [class*="ApplicationForm"][class*="page"] { padding-block: 44px 100px; background: var(--paper); }
-body [class*="ApplicationForm"][class*="layout"] { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(40px, 5vw, 80px); align-items: start; }
-body [class*="ApplicationForm"][class*="sidebar"] h1 { color: var(--brand-blue); font-weight: 400; font-size: clamp(44px, 5.2vw, 76px); letter-spacing: -.05em; }
-body [class*="ApplicationForm"][class*="sidebar"] h1 span { color: var(--brand-teal); }
-body [class*="ApplicationForm"][class*="jobImage"] { height: 300px; border-radius: 22px; }
-body [class*="ApplicationForm"][class*="jobMeta"] h2 { font-weight: 400; color: var(--brand-blue); font-size: 29px; }
-body [class*="ApplicationForm"][class*="formSection"] { background: #fff; border: 1px solid var(--line); border-radius: 28px; padding: 34px; }
-body [class*="ApplicationForm"][class*="steps"] { margin-bottom: 34px; gap: 8px; border-color: var(--line); }
-body [class*="ApplicationForm"][class*="steps"] li { color: var(--muted); font-size: 11px; }
-body [class*="ApplicationForm"][class*="steps"] li > span { border-color: var(--line); }
-body [class*="ApplicationForm"][class*="steps"] [class*="current"] { color: var(--brand-blue); }
-body [class*="ApplicationForm"][class*="steps"] [class*="current"]::after { background: var(--brand-navy); }
-body [class*="ApplicationForm"][class*="steps"] [class*="current"] > span { background: var(--brand-navy); color: var(--surface-soft); border-color: var(--brand-blue); }
-body [class*="ApplicationForm"][class*="formHeading"] h2 { color: var(--brand-blue); font-size: clamp(31px, 3vw, 44px); font-weight: 400; letter-spacing: -.035em; }
-body [class*="ApplicationForm"][class*="field"] > input,
-body [class*="ApplicationForm"][class*="field"] > select,
-body [class*="ApplicationForm"][class*="field"] > textarea { border-color: var(--line); border-radius: 12px; background: var(--paper); color: var(--brand-blue); }
-body [class*="ApplicationForm"][class*="field"] > input:focus,
-body [class*="ApplicationForm"][class*="field"] > select:focus,
-body [class*="ApplicationForm"][class*="field"] > textarea:focus { border-color: var(--brand-blue); outline: 3px solid color-mix(in srgb, var(--brand-blue) 8%, transparent); background: #fff; }
-body [class*="ApplicationForm"][class*="field"] > [aria-invalid="true"] { border-color: #ba293a; }
-body [class*="ApplicationForm"][class*="fieldError"] { color: #a11f30; }
-body [class*="ApplicationForm"][class*="requirements"] h3,
-body [class*="ApplicationForm"][class*="reviewJob"] h3 { font-weight: 400; color: var(--brand-blue); letter-spacing: -.025em; }
-body [class*="ApplicationForm"][class*="upload"]:not([class*="uploadError"]) { border-color: var(--line); background: var(--paper); border-radius: 18px; }
-body [class*="ApplicationForm"][class*="uploadError"] { border-color: #ba293a; background: #fdf1f2; border-radius: 18px; }
-body [class*="ApplicationForm"][class*="file"]:not([class*="fileHint"]) { background: var(--paper); border-radius: 12px; }
-body [class*="ApplicationForm"][class*="documentUpload"] { border-color: var(--line); background: var(--paper); border-radius: 14px; }
-body [class*="ApplicationForm"][class*="reviewJob"] { background: var(--paper); border-color: var(--line); border-radius: 16px; }
-body [class*="ApplicationForm"][class*="actions"] .button { border-radius: 999px; }
-body [class*="ApplicationForm"][class*="example"] { background: var(--paper); color: var(--brand-blue); border-color: var(--brand-blue); border-radius: 12px; }
-body [class*="ApplicationForm"][class*="error"] { background: #fcebed; color: #a11f30; border-color: #ba293a; border-radius: 12px; }
-body [class*="ApplicationForm"][class*="success"] h2 { color: var(--brand-blue); font-weight: 400; letter-spacing: -.04em; }
 
 /* About, practical help, privacy and terms. */
 .information-page { padding-bottom: 110px; }
@@ -274,8 +240,6 @@ body [class*="GoogleSheetsStatus"][class*="heading"] h2 { color: var(--brand-blu
   .directory-section .job-card-row { gap: 30px; }
   .directory-section .job-card-row .job-image { min-height: 400px; }
   body [class*="JobDetails"][class*="heroImage"] { height: 590px; }
-  body [class*="ApplicationForm"][class*="layout"] { grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); gap: 32px; }
-  body [class*="ApplicationForm"][class*="formSection"] { padding: 26px; }
   .information-side,
   .help-panel { padding: 27px; }
 }
@@ -303,9 +267,6 @@ body [class*="GoogleSheetsStatus"][class*="heading"] h2 { color: var(--brand-blu
   body [class*="JobDetails"][class*="heroText"] h1 { font-size: clamp(48px, 8vw, 76px); max-width: 650px; }
   body [class*="JobDetails"][class*="heroFoot"] { font-size: 10px; }
   body [class*="JobDetails"][class*="contentGrid"] { padding-block: 48px 60px; }
-  body [class*="ApplicationForm"][class*="layout"] { grid-template-columns: 1fr; gap: 30px; }
-  body [class*="ApplicationForm"][class*="sidebar"] h1 { max-width: 650px; font-size: 58px; }
-  body [class*="ApplicationForm"][class*="formSection"] { padding: 30px; }
   .information-body,
   .help-grid { grid-template-columns: 1fr; gap: 40px; margin-top: 48px; }
   .information-side { max-width: none; }
@@ -351,15 +312,6 @@ body [class*="GoogleSheetsStatus"][class*="heading"] h2 { color: var(--brand-blu
   body [class*="JobDetails"][class*="contentGrid"] { padding-top: 35px; }
   body [class*="JobDetails"][class*="sectionHeading"] h2 { font-size: 29px; }
   body [class*="JobDetails"][class*="relatedHeading"] h2 { font-size: 48px; }
-  body [class*="ApplicationForm"][class*="page"] { padding-block: 25px 60px; }
-  body [class*="ApplicationForm"][class*="sidebar"] h1 { font-size: 45px; }
-  body [class*="ApplicationForm"][class*="formSection"] { padding: 24px 18px; border-radius: 20px; }
-  body [class*="ApplicationForm"][class*="steps"] { gap: 7px; }
-  body [class*="ApplicationForm"][class*="steps"] li { font-size: 10px; }
-  body [class*="ApplicationForm"][class*="formHeading"] h2 { font-size: 32px; }
-  body [class*="ApplicationForm"][class*="grid"] { grid-template-columns: 1fr; gap: 24px; }
-  body [class*="ApplicationForm"][class*="actions"] { flex-wrap: wrap; }
-  body [class*="ApplicationForm"][class*="actions"] .button { min-width: 160px; }
   .information-page { padding-bottom: 65px; }
   .information-body h2 { font-size: 34px; }
   .information-side,

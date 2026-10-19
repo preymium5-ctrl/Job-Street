@@ -57,6 +57,22 @@ export const discoverySources = [
   "Other",
 ] as const;
 export type DiscoverySource = (typeof discoverySources)[number];
+export const applicantGenders = ["Male", "Female", "Prefer not to say"] as const;
+export interface ApplicantDetails {
+  firstName: string;
+  lastName: string;
+  nationality: string;
+  currentAddress: string;
+  dateOfBirth: string;
+  placeOfBirth: string;
+  englishProficiency: "Yes" | "No";
+  gender?: (typeof applicantGenders)[number] | "";
+  telegram?: string;
+  fatherName?: string;
+  motherName?: string;
+  secondaryPosition?: string;
+  otherPosition?: string;
+}
 export interface ApplicationInput {
   jobId: string;
   fullName: string;
@@ -64,6 +80,7 @@ export interface ApplicationInput {
   phone: string;
   country: string;
   discoverySource?: DiscoverySource | "";
+  applicantDetails?: ApplicantDetails;
   recentJobTitle: string;
   experienceYears: number;
   skills: string;

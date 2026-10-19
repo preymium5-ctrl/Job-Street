@@ -12,6 +12,7 @@ import { administrators, audits } from "../lib/schema";
 import { hashPassword } from "../lib/auth";
 import { readObject, validateSupportingDocument } from "../lib/storage";
 import { drainSheetsQueue } from "../lib/sheets-queue";
+import type { ApplicationDocument } from "../lib/types";
 import { POST as submit } from "../app/api/applications/route";
 import { POST as signIn } from "../app/api/admin/session/route";
 import { GET as download } from "../app/api/admin/applications/[id]/documents/[documentId]/route";
@@ -44,27 +45,31 @@ test("supporting uploads validate real bytes and sanitize scans", async () => {
   assert.equal((await sharp(image.bytes).metadata()).format, "jpeg");
 });
 
-test("applications retain diploma and other files, reject changed retries, authorize downloads and queue private Google delivery", async () => {
+test("applications privately retain optional identity and work documents while legacy Google exports keep supported files", async () => {
   const job = (await getJobs())[0];
   const input = { jobId: job.id, fullName: "Document Test Applicant", email: "documents@example.test", phone: "+639171234567", country: "Philippines", recentJobTitle: "Fabricator", experienceYears: 3, skills: "Fabrication", education: "School diploma", summary: "", coverLetter: "", driverLicenseDetails: "Non-professional license, Philippines", consent: true };
   const key = randomUUID();
-  function request(changed = false, duplicate = false) {
+  function request(changed?: "driver-license" | "passport", duplicate = false) {
     const form = new FormData(); form.set("payload", JSON.stringify(input)); form.set("idempotencyKey", key); form.set("resume", new File([pdf], "cv.pdf"));
     form.append("document:diploma", new File([pdf], "diploma.pdf"));
     form.append("document:other", new File([pdf], "training.pdf"));
-    form.append("document:driver-license", new File([changed ? Buffer.from("%PDF-1.4\nchanged\n%%EOF") : pdf], "driver-license.pdf"));
-    if (duplicate) form.append("document:other", new File([pdf], "extra.pdf"));
+    form.append("document:driver-license", new File([changed === "driver-license" ? Buffer.from("%PDF-1.4\nchanged\n%%EOF") : pdf], "driver-license.pdf"));
+    form.append("document:passport", new File([changed === "passport" ? Buffer.from("%PDF-1.4\nchanged\n%%EOF") : pdf], "passport.pdf"));
+    form.append("document:residence-id", new File([pdf], "residence-front-and-back.pdf"));
+    form.append("document:employment-certificate", new File([pdf], "employment-certificate.pdf"));
+    if (duplicate) form.append("document:passport", new File([pdf], "extra-passport.pdf"));
     return new NextRequest(`${origin}/api/applications`, { method: "POST", headers: { origin }, body: form });
   }
-  assert.equal((await submit(request(false, true))).status, 422);
+  assert.equal((await submit(request(undefined, true))).status, 422);
   assert.equal((await getApplications()).length, 0);
   const accepted = await submit(request()); assert.equal(accepted.status, 201);
   const receipt = await accepted.json();
   assert.equal((await submit(request())).status, 200);
-  assert.equal((await submit(request(true))).status, 409);
+  assert.equal((await submit(request("driver-license"))).status, 409);
+  assert.equal((await submit(request("passport"))).status, 409);
   const records = await getApplications(); assert.equal(records.length, 1);
   const application = records[0]; assert.equal(application.reference, receipt.reference);
-  assert.equal(application.documents?.length, 3);
+  assert.equal(application.documents?.length, 6);
   assert.equal(application.driverLicenseDetails, input.driverLicenseDetails);
   const diploma = application.documents![0]; assert.equal(diploma.category, "diploma");
   assert.deepEqual(await readObject(diploma.key), pdf);
@@ -85,12 +90,25 @@ test("applications retain diploma and other files, reject changed retries, autho
   const licenseDownload = await download(new NextRequest(url, { headers: { cookie } }), licenseParams);
   assert.equal(licenseDownload.status, 200);
   assert.deepEqual(Buffer.from(await licenseDownload.arrayBuffer()), pdf);
+  for (const category of ["passport", "residence-id", "employment-certificate"] as const) {
+    const document: ApplicationDocument | undefined = application.documents!.find((item) => item.category === category);
+    assert.ok(document, `${category} is retained in the application`);
+    assert.deepEqual(await readObject(document.key), pdf);
+    const documentUrl: string = `${origin}/api/admin/applications/${application.id}/documents/${document.id}`;
+    const documentParams: { params: Promise<{ id: string; documentId: string }> } = { params: Promise.resolve({ id: application.id, documentId: document.id }) };
+    assert.equal((await download(new NextRequest(documentUrl), documentParams)).status, 401);
+    const privateDownload = await download(new NextRequest(documentUrl, { headers: { cookie } }), documentParams);
+    assert.equal(privateDownload.status, 200);
+    assert.match(privateDownload.headers.get("cache-control")!, /no-store/);
+    assert.deepEqual(Buffer.from(await privateDownload.arrayBuffer()), pdf);
+  }
   assert.equal((await download(new NextRequest(url, { headers: { cookie } }), { params: Promise.resolve({ id: application.id, documentId: randomUUID() }) })).status, 404);
   assert.ok((await (await getDatabase()).select().from(audits)).some((row) => row.action === "document.downloaded" && row.details.documentId === diploma.id));
   const delivered = await drainSheetsQueue({ applicationId: application.id }, { transport: async (payload) => {
     assert.equal(payload.version, 2); assert.equal(payload.documents?.length, 3);
     assert.equal(payload.application.driverLicenseDetails, input.driverLicenseDetails);
     assert.ok(payload.documents?.some((document) => document.category === "driver-license"));
+    assert.ok(payload.documents?.every((document) => !["passport", "residence-id", "employment-certificate"].includes(document.category)));
     assert.equal("documents" in payload.application, false);
     assert.ok(!JSON.stringify(payload).includes(diploma.key));
     assert.equal(payload.documents![0].base64, pdf.toString("base64"));

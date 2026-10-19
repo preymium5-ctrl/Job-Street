@@ -15,8 +15,8 @@ import {
   saveJob,
 } from "../lib/repository";
 import { administrators, audits } from "../lib/schema";
-import { applicationSchema } from "../lib/validation";
-import { discoverySources } from "../lib/types";
+import { applicationSchema, fieldErrors } from "../lib/validation";
+import { applicantGenders, discoverySources, type ApplicantDetails } from "../lib/types";
 import {
   decodeSession,
   hashPassword,
@@ -101,6 +101,14 @@ function applicant(jobId: string) {
     summary: "",
     coverLetter: "",
     consent: true,
+  };
+}
+function applicantProfile(): ApplicantDetails {
+  return {
+    firstName: "Test", lastName: "Applicant", nationality: "Filipino",
+    currentAddress: "Synthetic test address", dateOfBirth: "1992-02-29", placeOfBirth: "Test city",
+    englishProficiency: "No", gender: "Prefer not to say", telegram: "@synthetic_test",
+    fatherName: "Test Father", motherName: "Test Mother", secondaryPosition: "Test alternate role", otherPosition: "Test other role",
   };
 }
 function applicationRequest(
@@ -198,6 +206,68 @@ test("discovery source accepts listed options, stays optional, and rejects unlis
     const result = applicationSchema.safeParse({ ...input, discoverySource });
     assert.equal(result.success, false);
     if (!result.success) assert.ok(result.error.issues.some((issue) => issue.path[0] === "discoverySource"));
+  }
+});
+
+test("optional applicant profiles retain legacy compatibility, normalize names and accept English No without an age filter", () => {
+  const input = applicant("test");
+  assert.equal(applicationSchema.parse(input).applicantDetails, undefined);
+  for (const englishProficiency of ["Yes", "No"] as const) {
+    for (const gender of [undefined, "" as const, ...applicantGenders]) {
+      const result = applicationSchema.parse({ ...input, fullName: "  Test Applicant  ", applicantDetails: {
+        ...applicantProfile(), firstName: " Test ", lastName: " Applicant ", englishProficiency, gender,
+      } });
+      assert.equal(result.fullName, "Test Applicant");
+      assert.equal(result.applicantDetails?.firstName, "Test");
+      assert.equal(result.applicantDetails?.lastName, "Applicant");
+      assert.equal(result.applicantDetails?.englishProficiency, englishProficiency);
+    }
+  }
+  for (const dateOfBirth of ["1900-01-01", "1992-02-29", new Date().toISOString().slice(0, 10)]) {
+    assert.equal(applicationSchema.safeParse({ ...input, applicantDetails: { ...applicantProfile(), dateOfBirth } }).success, true);
+  }
+  const withBlanks = applicationSchema.parse({ ...input, applicantDetails: {
+    ...applicantProfile(), gender: "", telegram: "  ", fatherName: "", motherName: "", secondaryPosition: "", otherPosition: "",
+  } });
+  assert.equal(withBlanks.applicantDetails?.telegram, "");
+  assert.equal(applicationSchema.safeParse({ ...input, fullName: "A B", applicantDetails: { ...applicantProfile(), firstName: "A", lastName: "B" } }).success, true);
+});
+
+test("applicant profiles reject invalid calendar dates, missing answers, inconsistent names and unbounded or unexpected fields", () => {
+  const input = applicant("test");
+  const profile = applicantProfile();
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  for (const dateOfBirth of ["2023-02-29", "2024-02-30", "2024-13-01", "2024-1-01", "not-a-date", "", tomorrow]) {
+    const result = applicationSchema.safeParse({ ...input, applicantDetails: { ...profile, dateOfBirth } });
+    assert.equal(result.success, false);
+    if (!result.success) assert.ok(fieldErrors(result.error)["applicantDetails.dateOfBirth"]);
+  }
+  for (const key of ["firstName", "lastName", "nationality", "currentAddress", "dateOfBirth", "placeOfBirth", "englishProficiency"] as const) {
+    const { [key]: _missing, ...incomplete } = profile;
+    void _missing;
+    const result = applicationSchema.safeParse({ ...input, applicantDetails: incomplete });
+    assert.equal(result.success, false);
+    if (!result.success) assert.ok(fieldErrors(result.error)[`applicantDetails.${key}`]);
+  }
+  const boundedFields = { firstName: 60, lastName: 60, nationality: 80, currentAddress: 500, placeOfBirth: 160,
+    telegram: 80, fatherName: 120, motherName: 120, secondaryPosition: 160, otherPosition: 160 };
+  for (const [key, maximum] of Object.entries(boundedFields)) {
+    const changedProfile = { ...profile, [key]: "x".repeat(maximum + 1) };
+    assert.equal(applicationSchema.safeParse({ ...input, fullName: `${changedProfile.firstName} ${changedProfile.lastName}`, applicantDetails: changedProfile }).success, false);
+  }
+  for (const required of ["firstName", "lastName", "nationality", "currentAddress", "placeOfBirth"]) {
+    assert.equal(applicationSchema.safeParse({ ...input, applicantDetails: { ...profile, [required]: " " } }).success, false);
+  }
+  const mismatch = applicationSchema.safeParse({ ...input, fullName: "Different Applicant", applicantDetails: profile });
+  assert.equal(mismatch.success, false);
+  if (!mismatch.success) assert.ok(fieldErrors(mismatch.error)["applicantDetails.firstName"]);
+  const tooLongTogether = applicationSchema.safeParse({ ...input, applicantDetails: { ...profile, firstName: "a".repeat(60), lastName: "b".repeat(60) } });
+  assert.equal(tooLongTogether.success, false);
+  if (!tooLongTogether.success) assert.match(fieldErrors(tooLongTogether.error)["applicantDetails.firstName"], /120/);
+  const longestName = `${"a".repeat(60)} ${"b".repeat(59)}`;
+  assert.equal(applicationSchema.safeParse({ ...input, fullName: longestName, applicantDetails: { ...profile, firstName: "a".repeat(60), lastName: "b".repeat(59) } }).success, true);
+  for (const applicantDetails of [null, [], { ...profile, englishProficiency: "Maybe" }, { ...profile, gender: "Unlisted" }, { ...profile, unexpected: "extra" }]) {
+    assert.equal(applicationSchema.safeParse({ ...input, applicantDetails }).success, false);
   }
 });
 
@@ -326,7 +396,7 @@ test("job edits survive database restart and record an audit", async () => {
 });
 test("applications persist once; invalid uploads, bots and closed jobs never return success", async () => {
   const [job] = await getJobs();
-  const payload = { ...applicant(job.id), discoverySource: "Instagram" as const };
+  const payload = { ...applicant(job.id), discoverySource: "Instagram" as const, applicantDetails: applicantProfile() };
   const key = randomUUID();
   const first = await submit(applicationRequest(payload, key));
   assert.equal(first.status, 201, JSON.stringify(await first.clone().json()));
@@ -337,13 +407,23 @@ test("applications persist once; invalid uploads, bots and closed jobs never ret
   assert.deepEqual(await retry.json(), accepted);
   assert.equal((await getApplications()).length, 1);
   assert.equal((await getApplications())[0].discoverySource, "Instagram");
+  assert.deepEqual((await getApplications())[0].applicantDetails, payload.applicantDetails);
+  assert.equal((await getApplications())[0].status, "New");
+  const changedProfile = await submit(applicationRequest({ ...payload, applicantDetails: { ...payload.applicantDetails, englishProficiency: "Yes" } }, key));
+  assert.equal(changedProfile.status, 409);
+  const invalidProfile = await submit(applicationRequest({ ...payload, applicantDetails: { ...payload.applicantDetails, dateOfBirth: "2023-02-29" } }));
+  assert.equal(invalidProfile.status, 422);
+  assert.ok((await invalidProfile.json()).fieldErrors["applicantDetails.dateOfBirth"]);
+  const inconsistentProfile = await submit(applicationRequest({ ...payload, applicantDetails: { ...payload.applicantDetails, firstName: "Different" } }));
+  assert.equal(inconsistentProfile.status, 422);
+  assert.ok((await inconsistentProfile.json()).fieldErrors["applicantDetails.firstName"]);
   const changedSource = await submit(applicationRequest({ ...payload, discoverySource: "Reddit" }, key));
   assert.equal(changedSource.status, 409);
   const invalidSource = await submit(applicationRequest({ ...payload, discoverySource: "Unlisted channel" }));
   assert.equal(invalidSource.status, 422);
   assert.ok((await invalidSource.json()).fieldErrors.discoverySource);
   const changed = await submit(
-    applicationRequest({ ...payload, fullName: "Another Applicant" }, key),
+    applicationRequest({ ...payload, fullName: "Another Applicant", applicantDetails: { ...payload.applicantDetails, firstName: "Another" } }, key),
   );
   assert.equal(changed.status, 409);
   assert.equal(
@@ -372,6 +452,10 @@ test("applications persist once; invalid uploads, bots and closed jobs never ret
   await closeDatabase();
   assert.equal((await getApplications())[0].reference, accepted.reference);
   assert.equal((await getApplications())[0].discoverySource, "Instagram");
+  assert.deepEqual((await getApplications())[0].applicantDetails, payload.applicantDetails);
+  const restartedRetry = await submit(applicationRequest(payload, key));
+  assert.equal(restartedRetry.status, 200);
+  assert.deepEqual(await restartedRetry.json(), accepted);
   const existing = (await getApplications())[0];
   await assert.rejects(
     createApplication(
@@ -440,6 +524,9 @@ test("staff-only applicants, private downloads, status audits and session revoca
     cookie: `${SESSION_COOKIE}=${value}`,
     "content-type": "application/json",
   };
+  const privateApplications = await listApplications(new NextRequest(`${origin}/api/admin/applications`, { headers }));
+  assert.equal(privateApplications.status, 200);
+  assert.deepEqual((await privateApplications.json()).applications.find((item: { id: string }) => item.id === application.id).applicantDetails, applicantProfile());
   const photo = await sharp({
     create: { width: 400, height: 300, channels: 3, background: "blue" },
   })
@@ -515,6 +602,7 @@ test("staff-only applicants, private downloads, status audits and session revoca
   );
   assert.equal(update.status, 200);
   assert.equal((await getApplications())[0].status, "Shortlisted");
+  assert.deepEqual((await getApplications())[0].applicantDetails, applicantProfile());
   const events = await (
     await getDatabase()
   )

@@ -13,6 +13,7 @@ import { buildSheetsPayload, sendApplicationToSheets, sheetsConfiguration, Sheet
 import { applicationSchema } from "../lib/validation";
 import { discoverySources, type Application, type Job } from "../lib/types";
 import { getJobFairRole } from "../data/job-fair";
+import { type SupportingDocumentCategory } from "../lib/document-uploads";
 import { NextRequest } from "next/server";
 import { POST as submit } from "../app/api/applications/route";
 import { GET as integrationStatus, POST as integrationRetry } from "../app/api/admin/integrations/google-sheets/route";
@@ -94,6 +95,46 @@ test("Sheets payload preserves each discovery answer independently of receiver c
   for (const discoverySource of ["" as const, ...discoverySources]) {
     const payload = buildSheetsPayload({ ...applicant(), discoverySource }, resume, job);
     assert.equal(payload.application.discoverySource, discoverySource);
+  }
+});
+
+test("expanded applicant details and identity uploads stay out of strict legacy Sheets payloads", async () => {
+  const application = {
+    ...applicant(),
+    discoverySource: "TikTok" as const,
+    applicantDetails: { firstName: "Private", lastName: "Applicant", currentAddress: "Private address", dateOfBirth: "1990-01-01", nationality: "Filipino", placeOfBirth: "Private birthplace", englishProficiency: "Yes" as const },
+    unexpectedFutureAnswer: "Keep future fields private too",
+  };
+  const newCategories: SupportingDocumentCategory[] = ["passport", "residence-id", "employment-certificate"];
+  const documents = newCategories.map((category) => ({ id: randomUUID(), category, name: `${category}.pdf`, mime: "application/pdf", base64: resume.toString("base64") }));
+  const payload = buildSheetsPayload(application, resume, job, documents);
+  assert.equal(payload.version, 1);
+  assert.equal(Object.hasOwn(payload, "documents"), false);
+  assert.equal(Object.hasOwn(payload.application, "applicantDetails"), false);
+  assert.equal(Object.hasOwn(payload.application, "unexpectedFutureAnswer"), false);
+  assert.equal(payload.application.discoverySource, "TikTok");
+  assert.equal(application.applicantDetails.currentAddress, "Private address");
+  assert.equal(documents.length, 3);
+  assert.ok(!JSON.stringify(payload).includes("Private address"));
+
+  const diploma = { id: randomUUID(), category: "diploma" as const, name: "diploma.pdf", mime: "application/pdf", base64: resume.toString("base64") };
+  const mixed = buildSheetsPayload(application, resume, job, [...documents, diploma]);
+  assert.equal(mixed.version, 2);
+  assert.deepEqual(mixed.documents, [diploma]);
+  for (const schemaVersion of [3, 4]) {
+    await withWebhook(async () => {
+      globalThis.fetch = async (_url, init) => {
+        if (init?.method === "GET") return Response.json({ ok: true, service: "chapter-applications", version: 1, schemaVersion, columns: schemaVersion === 4 ? 30 : 29 });
+        const sent = JSON.parse(JSON.parse(String(init?.body)).payload);
+        assert.equal(sent.version, 1);
+        assert.equal(Object.hasOwn(sent, "documents"), false);
+        assert.equal(Object.hasOwn(sent.application, "applicantDetails"), false);
+        assert.equal(Object.hasOwn(sent.application, "unexpectedFutureAnswer"), false);
+        assert.equal(sent.application.discoverySource, schemaVersion === 4 ? "TikTok" : undefined);
+        return Response.json({ ok: true, applicationId: application.id, reference: application.reference, row: 2, duplicate: false });
+      };
+      assert.equal((await sendApplicationToSheets(payload)).row, 2);
+    });
   }
 });
 

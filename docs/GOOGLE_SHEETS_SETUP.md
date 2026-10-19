@@ -1,5 +1,30 @@
 # Google Sheets receiver and discovery source
 
+## Expanded application profile and optional identity documents
+
+The reference-style application form stores its additional personal and English
+proficiency answers in `applicantDetails`. Optional passport, residence ID
+(front and back combined in one file), and certificate of employment uploads use
+the `passport`, `residence-id`, and `employment-certificate` categories. The CV
+remains required; these and all other supporting documents are optional. The
+existing 3 MB per supporting file and 15 MB combined application limit still apply.
+These answers and files are retained in the website's application database and
+private storage, available through authenticated staff review and download.
+
+Receiver schemas 3 and 4 accept only their established application fields and six
+document categories. The export builder explicitly selects the supported fields
+and excludes `applicantDetails` and future unknown fields. It also excludes the
+three new upload categories from Google Sheets and Google Drive delivery. Existing
+CV and supported-document exports continue unchanged; an application with only
+the new optional documents exports as version 1 (CV only), without unsupported
+document entries. Discovery answers retain the capability check described below.
+
+Exporting the additional questions or new document types requires a separately
+reviewed receiver schema and owner deployment. No live receiver, tracker columns,
+or access permissions are changed by the form update. A delivery acknowledged by
+the current receiver is considered synced for its supported fields; future
+receiver upgrades do not automatically backfill the omitted answers or files.
+
 The website stores applications and their optional `discoverySource` answer before
 exporting them. The signed Apps Script receiver writes recruiter rows and private
 CV/document links; its HMAC secret does not authorize editing or deploying the

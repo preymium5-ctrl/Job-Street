@@ -44,6 +44,24 @@ export default function ApplicationsPanel({
   const selected = applications.find(
     (application) => application.id === selectedId,
   );
+  const profile = selected?.applicantDetails;
+  const personalProfile: [string, string][] = profile ? [
+    ["First name", profile.firstName],
+    ["Last name", profile.lastName],
+    ["Gender", profile.gender || ""],
+    ["Nationality", profile.nationality],
+    ["Current address", profile.currentAddress],
+    ["Date of birth", profile.dateOfBirth],
+    ["Place of birth", profile.placeOfBirth],
+    ["Telegram", profile.telegram || ""],
+    ["Father’s full name", profile.fatherName || ""],
+    ["Mother’s full name", profile.motherName || ""],
+  ] : [];
+  const professionalProfile: [string, string][] = profile ? [
+    ["Basic English: speaking, reading and writing", profile.englishProficiency],
+    ["Additional position with experience", profile.secondaryPosition || ""],
+    ["Other position of interest", profile.otherPosition || ""],
+  ] : [];
   const visible = applications.filter(
     (application) =>
       (!status || application.status === status) &&
@@ -231,8 +249,9 @@ export default function ApplicationsPanel({
                 items={[
                   ["Full name", selected.fullName],
                   ["Email", selected.email],
-                  ["Phone", selected.phone],
-                  ["Country of residence", selected.country],
+                  ["WhatsApp / contact number", selected.phone],
+                  ["Current country", selected.country],
+                  ...personalProfile.filter(([, value]) => Boolean(value)),
                   ["Discovered us through", selected.discoverySource || "Not provided"],
                 ]}
               />
@@ -242,6 +261,7 @@ export default function ApplicationsPanel({
                   ["Most recent role", selected.recentJobTitle],
                   ["Relevant experience", `${selected.experienceYears} years`],
                   ["Skills", selected.skills],
+                  ...professionalProfile.filter(([, value]) => Boolean(value)),
                   [
                     "Education / certifications",
                     selected.education || "Not provided",

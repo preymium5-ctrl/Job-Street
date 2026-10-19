@@ -10,9 +10,16 @@ export class SheetsDeliveryError extends Error {
   constructor(public readonly code: SheetsErrorCode) { super(code); }
 }
 export interface SheetsDocument { id: string; category: SupportingDocumentCategory; name: string; mime: string; base64: string; }
+const receiverDocumentCategories = new Set<SupportingDocumentCategory>(["diploma", "nc2", "nbi", "form18a", "other", "driver-license"]);
+type ReceiverApplication = Pick<Application,
+  "id" | "reference" | "jobId" | "jobTitle" | "fullName" | "email" | "phone" | "country" |
+  "discoverySource" | "recentJobTitle" | "experienceYears" | "skills" | "education" | "summary" |
+  "coverLetter" | "consent" | "nc2Certificate" | "driverLicenseDetails" | "documentReadiness" |
+  "preferredEmployer" | "status" | "submittedAt"
+>;
 export interface SheetsPayload {
   version: 1 | 2;
-  application: Omit<Application, "resumeKey" | "resumeName" | "resumeMime" | "isExample" | "documents"> & {
+  application: ReceiverApplication & {
     expectedNc2: string;
     employers: { name: string; workers: number }[];
   };
@@ -47,25 +54,42 @@ export function sheetsConfiguration(env: Record<string, string | undefined> = pr
 }
 
 export function buildSheetsPayload(application: Application, resume: Buffer, job?: Job, documents: SheetsDocument[] = []): SheetsPayload {
-  const { resumeKey: _key, resumeName, resumeMime, isExample: _example, documents: _documents, ...details } = application;
-  void _documents;
-  void _key;
-  void _example;
   const fair = job ? getJobFairRole(job) : undefined;
+  // Receiver schemas 3/4 reject unknown keys and document categories. Keep the
+  // expanded applicant profile and identity documents in private website records.
+  const receiverDocuments = documents.filter(({ category }) => receiverDocumentCategories.has(category));
   return {
-    version: documents.length ? 2 : 1,
-    ...(documents.length ? { documents } : {}),
+    version: receiverDocuments.length ? 2 : 1,
+    ...(receiverDocuments.length ? { documents: receiverDocuments } : {}),
     application: {
-      ...details,
-      nc2Certificate: details.nc2Certificate || "",
-      preferredEmployer: details.preferredEmployer || "",
-      documentReadiness: details.documentReadiness || {
+      id: application.id,
+      reference: application.reference,
+      jobId: application.jobId,
+      jobTitle: application.jobTitle,
+      fullName: application.fullName,
+      email: application.email,
+      phone: application.phone,
+      country: application.country,
+      ...(application.discoverySource !== undefined ? { discoverySource: application.discoverySource } : {}),
+      recentJobTitle: application.recentJobTitle,
+      experienceYears: application.experienceYears,
+      skills: application.skills,
+      education: application.education,
+      summary: application.summary,
+      coverLetter: application.coverLetter,
+      consent: application.consent,
+      ...(application.driverLicenseDetails !== undefined ? { driverLicenseDetails: application.driverLicenseDetails } : {}),
+      status: application.status,
+      submittedAt: application.submittedAt,
+      nc2Certificate: application.nc2Certificate || "",
+      preferredEmployer: application.preferredEmployer || "",
+      documentReadiness: application.documentReadiness || {
         nc2: "not-yet", diploma: "not-yet", nbi: "not-yet", form18a: "not-yet",
       },
       expectedNc2: fair?.nc2 || "",
       employers: fair?.employers.map(({ name, workers }) => ({ name, workers })) || [],
     },
-    resume: { name: resumeName, mime: resumeMime, base64: resume.toString("base64") },
+    resume: { name: application.resumeName, mime: application.resumeMime, base64: resume.toString("base64") },
   };
 }
 
