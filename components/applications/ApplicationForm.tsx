@@ -16,6 +16,8 @@ import {
   X,
 } from "lucide-react";
 import { applicantGenders, discoverySources, type ApplicantDetails, type ApplicationInput, type DiscoverySource, type Job } from "@/lib/types";
+import { formatApplicantAddress } from "@/lib/applicant-address";
+import { ApplicationRequirements } from "./ApplicationRequirements";
 import { BrandLockup } from "@/components/ui/Brand";
 import { proposedJobs } from "@/data/jobs";
 import { JobSalary } from "@/components/jobs/JobSalary";
@@ -31,6 +33,7 @@ const steps = [
   "Review & submit",
 ];
 const maxResumeBytes = 5 * 1024 * 1024;
+const addressFields = ["street", "city", "province", "postalCode"] as const;
 function validate(
   values: ApplicationInput,
   step: number,
@@ -45,7 +48,14 @@ function validate(
       if (`${details.firstName.trim()} ${details.lastName.trim()}`.length > 120)
         errors["applicantDetails.firstName"] = "Keep your combined first and last names within 120 characters.";
       if (details.nationality.trim().length < 2) errors["applicantDetails.nationality"] = "Enter your nationality.";
-      if (details.currentAddress.trim().length < 2) errors["applicantDetails.currentAddress"] = "Enter your current address.";
+      if (addressFields.some((key) => details[key] !== undefined)) {
+        const labels = { street: "street address", city: "city", province: "province / region", postalCode: "postal code" };
+        for (const key of addressFields) {
+          if (!details[key]?.trim()) errors[`applicantDetails.${key}`] = `Enter your ${labels[key]}.`;
+        }
+        if (details.postalCode?.trim() && !/^[\p{L}\p{N} -]+$/u.test(details.postalCode.trim()))
+          errors["applicantDetails.postalCode"] = "Use letters, numbers, spaces or hyphens for your postal code.";
+      } else if (details.currentAddress.trim().length < 2) errors["applicantDetails.currentAddress"] = "Enter your current address.";
       if (details.placeOfBirth.trim().length < 2) errors["applicantDetails.placeOfBirth"] = "Enter your place of birth.";
       const birthDate = new Date(`${details.dateOfBirth}T00:00:00Z`);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(details.dateOfBirth) || !Number.isFinite(birthDate.getTime()) ||
@@ -113,7 +123,8 @@ export default function ApplicationForm({ job }: { job: Job }) {
     discoverySource: "",
     applicantDetails: {
       firstName: "", lastName: "", gender: "", nationality: "", telegram: "",
-      currentAddress: "", dateOfBirth: "", placeOfBirth: "", fatherName: "", motherName: "",
+      currentAddress: "", street: "", city: "", province: "", postalCode: "",
+      dateOfBirth: "", placeOfBirth: "", fatherName: "", motherName: "",
       secondaryPosition: "", otherPosition: "", englishProficiency: "" as ApplicantDetails["englishProficiency"],
     },
     recentJobTitle: "",
@@ -159,11 +170,13 @@ export default function ApplicationForm({ job }: { job: Job }) {
     idempotencyRef.current = null;
     setValues((current) => {
       const applicantDetails = { ...current.applicantDetails!, [key]: value };
+      if (addressFields.some((field) => field === key)) applicantDetails.currentAddress = formatApplicantAddress(applicantDetails);
       return { ...current, applicantDetails,
         fullName: `${applicantDetails.firstName.trim()} ${applicantDetails.lastName.trim()}`.trim() };
     });
     setErrors((current) => ({ ...current, [`applicantDetails.${key}`]: undefined, fullName: undefined,
-      ...(key === "firstName" || key === "lastName" ? { "applicantDetails.firstName": undefined, "applicantDetails.lastName": undefined } : {}) }));
+      ...(key === "firstName" || key === "lastName" ? { "applicantDetails.firstName": undefined, "applicantDetails.lastName": undefined } : {}),
+      ...(addressFields.some((field) => field === key) ? { "applicantDetails.currentAddress": undefined } : {}) }));
   }
 
   function goTo(next: number) {
@@ -411,6 +424,7 @@ export default function ApplicationForm({ job }: { job: Job }) {
     const errorKey = `applicantDetails.${key}` as const;
     const limits: Partial<Record<keyof ApplicantDetails, number>> = {
       firstName: 60, lastName: 60, nationality: 80, telegram: 80, currentAddress: 500,
+      street: 200, city: 100, province: 100, postalCode: 20,
       placeOfBirth: 160, fatherName: 120, motherName: 120, otherPosition: 160,
     };
     const props = {
@@ -543,7 +557,15 @@ export default function ApplicationForm({ job }: { job: Job }) {
                               {detailInput("nationality", "Nationality", { placeholder: "e.g. Filipino" })}
                               {input("phone", "WhatsApp number", { placeholder: "+63 912 345 6789", type: "tel", autoComplete: "tel" })}
                               {detailInput("telegram", "Telegram number / username", { placeholder: "Your active Telegram contact", optional: true })}
-                              {detailInput("currentAddress", "Current address", { placeholder: "Street, city, province / region and postal code", autoComplete: "street-address", wide: true, textarea: true })}
+                              <fieldset className={`${styles.addressGroup} ${styles.full}`}>
+                                <legend>Current address</legend>
+                                <div className={styles.grid}>
+                                  {detailInput("street", "Street address", { placeholder: "House / building number, street and barangay", autoComplete: "street-address" })}
+                                  {detailInput("city", "City / municipality", { placeholder: "e.g. Quezon City", autoComplete: "address-level2" })}
+                                  {detailInput("province", "Province / region", { placeholder: "e.g. Metro Manila", autoComplete: "address-level1" })}
+                                  {detailInput("postalCode", "Postal code", { placeholder: "e.g. 1100", autoComplete: "postal-code" })}
+                                </div>
+                              </fieldset>
                               {input("country", "Country you currently live or work in", { placeholder: "e.g. Philippines", autoComplete: "country-name", wide: true })}
                               {detailInput("dateOfBirth", "Date of birth", { type: "date", autoComplete: "bday" })}
                               {detailInput("placeOfBirth", "Place of birth", { placeholder: "City / province and country" })}
@@ -602,6 +624,7 @@ export default function ApplicationForm({ job }: { job: Job }) {
 
                           <section id="application-documents" className={styles.sectionCard} aria-labelledby="application-documents-heading">
                             <SectionHeading number="03" id="application-documents-heading" title="Share your documents" description="Upload an updated CV. You can also include clear scans or photos of the supporting documents you have ready." />
+                            <ApplicationRequirements job={job} />
                             <div className={styles.field}>
                               <label htmlFor="resume">Your CV / resume <span aria-label="required">*</span></label>
                               <div className={`${styles.upload} ${errors.resume ? styles.uploadError : ""}`}
@@ -651,7 +674,8 @@ export default function ApplicationForm({ job }: { job: Job }) {
                             ["Full name", values.fullName], ["Gender", values.applicantDetails?.gender || "Not provided"],
                             ["Nationality", values.applicantDetails?.nationality || "Not provided"], ["Email", values.email],
                             ["WhatsApp", values.phone], ["Telegram", values.applicantDetails?.telegram || "Not provided"],
-                            ["Current address", values.applicantDetails?.currentAddress || "Not provided"], ["Current country", values.country],
+                            ["Street address", values.applicantDetails?.street || "Not provided"], ["City / municipality", values.applicantDetails?.city || "Not provided"],
+                            ["Province / region", values.applicantDetails?.province || "Not provided"], ["Postal code", values.applicantDetails?.postalCode || "Not provided"], ["Current country", values.country],
                             ["Date of birth", values.applicantDetails?.dateOfBirth || "Not provided"], ["Place of birth", values.applicantDetails?.placeOfBirth || "Not provided"],
                             ["Father’s name", values.applicantDetails?.fatherName || "Not provided"], ["Mother’s name", values.applicantDetails?.motherName || "Not provided"],
                             ["Discovered us through", values.discoverySource || "Not provided"],

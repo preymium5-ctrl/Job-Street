@@ -6,7 +6,7 @@ import path from "node:path";
 import { eq } from "drizzle-orm";
 import { proposedJobs, proposalV1Jobs, previousRecruitmentJobs } from "../data/jobs";
 import { maximumAgeRequirement, maximumApplicantAge, minimumExperienceRequirement, recruitmentBenefits } from "../data/employment";
-import { fairDocuments, getJobFairRole, jobFair, nc2ElectricalNote } from "../data/job-fair";
+import { fairDocuments, fairDocumentTiming, fairNc2Requirements, getJobFairRole, jobFair, nc2ElectricalNote } from "../data/job-fair";
 import { hiringAllocations, hiringWorkerTotal } from "../data/hiring-allocations";
 import {
   legacyExampleJobIds,
@@ -166,6 +166,27 @@ test("certificate and trade-test guidance follows the source without inventing m
   assert.match(tig, /Visual inspection \(VT\)/);
   assert.match(tig, /radiographic testing \(RT\) is not required/);
   assert.deepEqual(role("pipe-fitter").testing, ["Written exam for Đuro Đaković Montaža pipe fitters."]);
+});
+
+test("the application NC2 table matches confirmed role guidance and leaves unspecified categories out", () => {
+  assert.equal(fairNc2Requirements.length, 8);
+  const coveredSlugs = new Set<string>();
+  for (const requirement of fairNc2Requirements) {
+    assert.equal(requirement.electrical, requirement.nc2.includes("Electrical"), requirement.position);
+    for (const slug of requirement.slugs) {
+      assert.equal(coveredSlugs.has(slug), false, `Duplicate NC2 table role: ${slug}`);
+      coveredSlugs.add(slug);
+      const job = proposedJobs.find((item) => item.slug === slug);
+      assert.ok(job, `Missing catalog role for ${requirement.position}: ${slug}`);
+      assert.equal(getJobFairRole(job)!.nc2, requirement.nc2, job.title);
+      assert.equal(getJobFairRole({ ...job, id: "unrelated-staff-job" }), undefined);
+    }
+  }
+  assert.equal(coveredSlugs.size, 14);
+  for (const job of proposedJobs.filter(({ slug }) => !coveredSlugs.has(slug)))
+    assert.match(getJobFairRole(job)!.nc2, /category to be confirmed/, job.title);
+  assert.match(fairDocumentTiming, /do not have to be ready on the testing day/);
+  assert.match(fairDocumentTiming, /must obtain them so the work permit application can be filed/);
 });
 
 test("catalog migration preserves applications and custom jobs, resolves old slugs, and runs once", async () => {

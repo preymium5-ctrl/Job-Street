@@ -45,12 +45,17 @@ export default function ApplicationsPanel({
     (application) => application.id === selectedId,
   );
   const profile = selected?.applicantDetails;
+  const addressProfile: [string, string][] = profile ? (
+    profile.street?.trim() && profile.city?.trim() && profile.province?.trim() && profile.postalCode?.trim()
+      ? [["Street", profile.street], ["City", profile.city], ["Province / state", profile.province], ["Postal code", profile.postalCode]]
+      : [["Current address", profile.currentAddress]]
+  ) : [];
   const personalProfile: [string, string][] = profile ? [
     ["First name", profile.firstName],
     ["Last name", profile.lastName],
     ["Gender", profile.gender || ""],
     ["Nationality", profile.nationality],
-    ["Current address", profile.currentAddress],
+    ...addressProfile,
     ["Date of birth", profile.dateOfBirth],
     ["Place of birth", profile.placeOfBirth],
     ["Telegram", profile.telegram || ""],

@@ -103,9 +103,21 @@ export const fairDocuments = [
 
 export const fairOptionalDocument = "A driving licence is a plus.";
 export const fairDocumentTiming =
-  "You can apply with your CV and attach the supporting documents you have available. The recruitment team will confirm which documents must be ready before a work permit application is filed.";
+  "Documents do not have to be ready on the testing day — candidates must obtain them so the work permit application can be filed.";
 export const nc2ElectricalNote =
   "The plan accepts NC2 Electrical categories related to electricians, including industrial electrician, building wiring installation and maintenance, power distribution, lineman, electrical installer and electrical assembler. Vertiv's work profile specifically calls for industrial electricians.";
+
+/** Published certificate groups; roles without a confirmed category stay unlisted. */
+export const fairNc2Requirements = [
+  { position: "Fabricators", nc2: "NC2 Fabricator", electrical: false, slugs: ["fabricator"] },
+  { position: "Welders", nc2: "NC2 Welding", electrical: false, slugs: ["tig-rel-welder", "mig-mag-tig-rel-welder", "welder", "mig-mag-tig-welder"] },
+  { position: "Electrical assemblers/installers", nc2: "NC2 Electrical", electrical: true, slugs: ["electrical-assembler", "electrical-installer"] },
+  { position: "Motor & generator winding", nc2: "NC2 Fabricator or Electrical", electrical: true, slugs: ["mg-winding-insulator", "mg-winding-production-worker", "mg-winding-processing-worker"] },
+  { position: "Motor & generator fitters/assemblers", nc2: "NC2 Electrical", electrical: true, slugs: ["mg-assembly-fitter"] },
+  { position: "CNC operators", nc2: "NC2 Fabricator", electrical: false, slugs: ["cnc-operator"] },
+  { position: "Industrial spray painters", nc2: "NC2 Fabricator", electrical: false, slugs: ["industrial-spray-painter"] },
+  { position: "Grinders", nc2: "NC2 Fabricator", electrical: false, slugs: ["grinder-and-cleaner"] },
+] as const;
 
 export const jobFairFaqs: [string, string][] = [
   ["What is Job Fair Philippines 2026?", "It is a recruitment and skills-assessment plan for Filipino applicants exploring work abroad in Croatia. The plan lists 248 workers across 17 role types and six employer groups."],

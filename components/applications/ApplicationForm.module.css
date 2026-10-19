@@ -104,6 +104,8 @@
 .sectionIntro + .grid, .sectionIntro + .uploadsGrid { margin-top: 24px; }
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .full, .wide { grid-column: 1 / -1; }
+.addressGroup { min-width: 0; margin: 0; padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+.addressGroup > legend { padding-inline: 8px; color: var(--brand-navy); font-size: 16px; font-weight: 700; }
 .field { min-width: 0; margin: 0; padding: 0; border: 0; }
 .field > label { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 9px; color: var(--brand-navy); font-size: 14px; font-weight: 700; line-height: 1.5; }
 .field > label span { flex-shrink: 0; color: var(--muted); font-size: 12px; font-weight: 400; }
@@ -283,6 +285,7 @@
   .formHeading h2 { font-size: 28px; }
   .formBody { gap: 20px; }
   .sectionCard { padding: 22px 18px; border-radius: 13px; }
+  .addressGroup { padding: 18px 14px; }
   .sectionHeading { gap: 11px; margin-bottom: 22px; }
   .sectionNumber { width: 32px; height: 32px; border-radius: 8px; font-size: 12px; }
   .sectionTitle { font-size: 20px; }

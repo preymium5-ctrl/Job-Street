@@ -63,6 +63,10 @@ export interface ApplicantDetails {
   lastName: string;
   nationality: string;
   currentAddress: string;
+  street?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
   dateOfBirth: string;
   placeOfBirth: string;
   englishProficiency: "Yes" | "No";

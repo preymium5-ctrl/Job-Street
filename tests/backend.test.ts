@@ -17,6 +17,7 @@ import {
 import { administrators, audits } from "../lib/schema";
 import { applicationSchema, fieldErrors } from "../lib/validation";
 import { applicantGenders, discoverySources, type ApplicantDetails } from "../lib/types";
+import { formatApplicantAddress } from "../lib/applicant-address";
 import {
   decodeSession,
   hashPassword,
@@ -110,6 +111,10 @@ function applicantProfile(): ApplicantDetails {
     englishProficiency: "No", gender: "Prefer not to say", telegram: "@synthetic_test",
     fatherName: "Test Father", motherName: "Test Mother", secondaryPosition: "Test alternate role", otherPosition: "Test other role",
   };
+}
+function structuredApplicantProfile(): ApplicantDetails {
+  const address = { street: "123 Synthetic Street", city: "Test City", province: "Test Province", postalCode: "T1A 2B3" };
+  return { ...applicantProfile(), ...address, currentAddress: formatApplicantAddress(address) };
 }
 function applicationRequest(
   payload: unknown,
@@ -271,6 +276,62 @@ test("applicant profiles reject invalid calendar dates, missing answers, inconsi
   }
 });
 
+test("structured applicant addresses format consistently and preserve legacy single-address profiles", () => {
+  assert.equal(formatApplicantAddress(undefined), "");
+  assert.equal(formatApplicantAddress({}), "");
+  assert.equal(formatApplicantAddress({ postalCode: "  T1A 2B3 ", street: "  123 Test Street  ", province: "  Test Province ", city: " Test City " }),
+    "123 Test Street, Test City, Test Province, T1A 2B3");
+  assert.equal(formatApplicantAddress({ street: " Test Street ", city: "  ", province: undefined, postalCode: " 12345 " }), "Test Street, 12345");
+  const legacy = applicationSchema.parse({ ...applicant("test"), applicantDetails: applicantProfile() });
+  assert.equal(legacy.applicantDetails?.currentAddress, applicantProfile().currentAddress);
+  assert.equal(Object.hasOwn(legacy.applicantDetails!, "street"), false);
+  const padded = { ...structuredApplicantProfile(), street: " 123 Synthetic Street ", city: " Test City ", province: " Test Province ", postalCode: " T1A 2B3 " };
+  assert.deepEqual(applicationSchema.parse({ ...applicant("test"), applicantDetails: padded }).applicantDetails, structuredApplicantProfile());
+  for (const postalCode of ["SW1A 1AA", "H2X-1Y4", "12345", "101-0047", "No postal code"]) {
+    const profile = { ...structuredApplicantProfile(), postalCode };
+    profile.currentAddress = formatApplicantAddress(profile);
+    assert.equal(applicationSchema.safeParse({ ...applicant("test"), applicantDetails: profile }).success, true);
+  }
+  const maximumAddress = { ...structuredApplicantProfile(), street: "a".repeat(200), city: "b".repeat(100), province: "c".repeat(100), postalCode: "d".repeat(20) };
+  maximumAddress.currentAddress = formatApplicantAddress(maximumAddress);
+  assert.equal(maximumAddress.currentAddress.length, 426);
+  assert.equal(applicationSchema.safeParse({ ...applicant("test"), applicantDetails: maximumAddress }).success, true);
+  const minimumAddress = { ...structuredApplicantProfile(), street: "1", city: "A", province: "B", postalCode: "C" };
+  minimumAddress.currentAddress = formatApplicantAddress(minimumAddress);
+  assert.equal(applicationSchema.safeParse({ ...applicant("test"), applicantDetails: minimumAddress }).success, true);
+});
+
+test("structured addresses require every component, reject invalid postal syntax and enforce the derived canonical address", () => {
+  const input = applicant("test");
+  const profile = structuredApplicantProfile();
+  const limits = { street: 200, city: 100, province: 100, postalCode: 20 };
+  for (const [key, maximum] of Object.entries(limits)) {
+    for (const invalid of [undefined, "", "   ", null, 123]) {
+      const result = applicationSchema.safeParse({ ...input, applicantDetails: { ...profile, [key]: invalid } });
+      assert.equal(result.success, false);
+      if (!result.success) assert.ok(fieldErrors(result.error)[`applicantDetails.${key}`]);
+    }
+    const tooLong = { ...profile, [key]: "x".repeat(maximum + 1) };
+    tooLong.currentAddress = formatApplicantAddress(tooLong);
+    const result = applicationSchema.safeParse({ ...input, applicantDetails: tooLong });
+    assert.equal(result.success, false);
+    if (!result.success) assert.ok(fieldErrors(result.error)[`applicantDetails.${key}`]);
+    const optedIn = applicationSchema.safeParse({ ...input, applicantDetails: { ...applicantProfile(), [key]: undefined } });
+    assert.equal(optedIn.success, false);
+    if (!optedIn.success) assert.ok(fieldErrors(optedIn.error)["applicantDetails.street"]);
+  }
+  for (const postalCode of ["123/45", "<code>", "123\n456"]) {
+    const invalid = { ...profile, postalCode };
+    invalid.currentAddress = formatApplicantAddress(invalid);
+    const result = applicationSchema.safeParse({ ...input, applicantDetails: invalid });
+    assert.equal(result.success, false);
+    if (!result.success) assert.ok(fieldErrors(result.error)["applicantDetails.postalCode"]);
+  }
+  const mismatch = applicationSchema.safeParse({ ...input, applicantDetails: { ...profile, currentAddress: "An unrelated address" } });
+  assert.equal(mismatch.success, false);
+  if (!mismatch.success) assert.ok(fieldErrors(mismatch.error)["applicantDetails.street"]);
+});
+
 test("resume validation checks actual bytes, size, archives and filenames", async () => {
   assert.throws(
     () =>
@@ -396,7 +457,7 @@ test("job edits survive database restart and record an audit", async () => {
 });
 test("applications persist once; invalid uploads, bots and closed jobs never return success", async () => {
   const [job] = await getJobs();
-  const payload = { ...applicant(job.id), discoverySource: "Instagram" as const, applicantDetails: applicantProfile() };
+  const payload = { ...applicant(job.id), discoverySource: "Instagram" as const, applicantDetails: structuredApplicantProfile() };
   const key = randomUUID();
   const first = await submit(applicationRequest(payload, key));
   assert.equal(first.status, 201, JSON.stringify(await first.clone().json()));
@@ -411,6 +472,16 @@ test("applications persist once; invalid uploads, bots and closed jobs never ret
   assert.equal((await getApplications())[0].status, "New");
   const changedProfile = await submit(applicationRequest({ ...payload, applicantDetails: { ...payload.applicantDetails, englishProficiency: "Yes" } }, key));
   assert.equal(changedProfile.status, 409);
+  const changedAddress = { ...payload.applicantDetails, street: "456 Different Test Street" };
+  changedAddress.currentAddress = formatApplicantAddress(changedAddress);
+  const addressRetry = await submit(applicationRequest({ ...payload, applicantDetails: changedAddress }, key));
+  assert.equal(addressRetry.status, 409);
+  const incompleteAddress = await submit(applicationRequest({ ...payload, applicantDetails: { ...payload.applicantDetails, city: "" } }));
+  assert.equal(incompleteAddress.status, 422);
+  assert.ok((await incompleteAddress.json()).fieldErrors["applicantDetails.city"]);
+  const inconsistentAddress = await submit(applicationRequest({ ...payload, applicantDetails: { ...payload.applicantDetails, currentAddress: "An unrelated address" } }));
+  assert.equal(inconsistentAddress.status, 422);
+  assert.ok((await inconsistentAddress.json()).fieldErrors["applicantDetails.street"]);
   const invalidProfile = await submit(applicationRequest({ ...payload, applicantDetails: { ...payload.applicantDetails, dateOfBirth: "2023-02-29" } }));
   assert.equal(invalidProfile.status, 422);
   assert.ok((await invalidProfile.json()).fieldErrors["applicantDetails.dateOfBirth"]);
@@ -526,7 +597,7 @@ test("staff-only applicants, private downloads, status audits and session revoca
   };
   const privateApplications = await listApplications(new NextRequest(`${origin}/api/admin/applications`, { headers }));
   assert.equal(privateApplications.status, 200);
-  assert.deepEqual((await privateApplications.json()).applications.find((item: { id: string }) => item.id === application.id).applicantDetails, applicantProfile());
+  assert.deepEqual((await privateApplications.json()).applications.find((item: { id: string }) => item.id === application.id).applicantDetails, structuredApplicantProfile());
   const photo = await sharp({
     create: { width: 400, height: 300, channels: 3, background: "blue" },
   })
@@ -602,7 +673,7 @@ test("staff-only applicants, private downloads, status audits and session revoca
   );
   assert.equal(update.status, 200);
   assert.equal((await getApplications())[0].status, "Shortlisted");
-  assert.deepEqual((await getApplications())[0].applicantDetails, applicantProfile());
+  assert.deepEqual((await getApplications())[0].applicantDetails, structuredApplicantProfile());
   const events = await (
     await getDatabase()
   )

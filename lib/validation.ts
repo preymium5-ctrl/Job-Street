@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { applicantGenders, applicationStatuses, discoverySources, documentStatuses } from "./types";
 import { minimumExperienceYears } from "../data/employment";
+import { formatApplicantAddress } from "./applicant-address";
 
 const shortText = (maximum = 160) =>
   z.string().trim().min(2, "Enter at least 2 characters.").max(maximum);
@@ -9,6 +10,10 @@ const applicantDetailsSchema = z.object({
   lastName: z.string().trim().min(1, "Enter your last name.").max(60),
   nationality: shortText(80),
   currentAddress: shortText(500),
+  street: z.string().trim().max(200).optional(),
+  city: z.string().trim().max(100).optional(),
+  province: z.string().trim().max(100).optional(),
+  postalCode: z.string().trim().max(20).regex(/^[\p{L}\p{N} -]*$/u, "Use letters, numbers, spaces or hyphens for your postal code.").optional(),
   dateOfBirth: z.iso.date({ error: "Enter a valid date of birth." }).refine(
     (value) => value <= new Date().toISOString().slice(0, 10),
     "Date of birth cannot be in the future.",
@@ -21,7 +26,15 @@ const applicantDetailsSchema = z.object({
   motherName: z.string().trim().max(120).optional(),
   secondaryPosition: z.string().trim().max(160).optional(),
   otherPosition: z.string().trim().max(160).optional(),
-}).strict();
+}).strict().superRefine((value, context) => {
+  const addressFields = ["street", "city", "province", "postalCode"] as const;
+  if (!addressFields.some((key) => Object.hasOwn(value, key))) return;
+  for (const key of addressFields) {
+    if (!value[key]) context.addIssue({ code: "custom", path: [key], message: "Complete this part of your current address." });
+  }
+  if (addressFields.every((key) => Boolean(value[key])) && value.currentAddress !== formatApplicantAddress(value))
+    context.addIssue({ code: "custom", path: ["street"], message: "Your current address must match the street, city, province and postal code." });
+});
 export const applicationSchema = z
   .object({
     jobId: z.string().trim().min(1).max(100),
