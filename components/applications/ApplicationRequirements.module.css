@@ -2,8 +2,8 @@
 .heading { display: flex; align-items: flex-start; gap: 13px; }
 .heading > div { min-width: 0; }
 .headingIcon { display: inline-grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; border-radius: 11px; background: var(--teal-soft); color: var(--brand-teal-hover); }
-.heading h4, .nc2Heading h4 { margin: 0; color: var(--brand-navy); font-size: 19px; font-weight: 700; line-height: 1.4; letter-spacing: -.02em; }
-.heading p, .nc2Heading p { margin: 5px 0 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.heading h3 { margin: 0; color: var(--brand-navy); font-size: 19px; font-weight: 700; line-height: 1.4; letter-spacing: -.02em; }
+.heading p { margin: 5px 0 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
 .documentList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; list-style: none; margin: 23px 0 13px; padding: 0; }
 .documentList li { display: flex; align-items: flex-start; gap: 9px; min-width: 0; padding: 13px 14px; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: var(--brand-navy); font-size: 15px; line-height: 1.6; }
 .documentList svg { flex: 0 0 auto; margin-top: 3px; color: var(--brand-teal); }
@@ -13,41 +13,29 @@
 .timing > div { min-width: 0; }
 .timing strong { display: block; color: var(--brand-navy); font-size: 15px; line-height: 1.5; }
 .timing p { margin: 7px 0 0; color: var(--brand-navy); font-size: 16px; line-height: 1.75; }
-.applicationNote { display: flex; align-items: flex-start; gap: 10px; padding: 15px 1px 0; }
-.applicationNote svg { flex: 0 0 auto; margin-top: 3px; color: var(--brand-teal); }
-.applicationNote p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.8; }
-.applicationNote strong { color: var(--brand-navy); font-weight: 600; }
-.nc2Heading { margin: 27px 0 15px; padding-top: 24px; border-top: 1px solid var(--line); }
-.tableWrap { min-width: 0; border: 1px solid var(--line); border-radius: 11px; background: #fff; }
+.tableWrap { min-width: 0; margin-top: 24px; border: 1px solid var(--line); border-radius: 11px; background: #fff; }
 .table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 14px; line-height: 1.65; }
+.table caption { padding: 16px 15px; border-radius: 10px 10px 0 0; background: var(--paper); color: var(--brand-navy); font-size: 16px; font-weight: 700; line-height: 1.5; text-align: left; }
 .table th, .table td { padding: 12px 15px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
 .table thead th { background: var(--brand-navy); color: #fff; font-size: 14px; font-weight: 600; }
-.table thead th:first-child { width: 56%; border-radius: 10px 0 0 0; }
-.table thead th:last-child { border-radius: 0 10px 0 0; }
+.table thead th:first-child { width: 56%; }
 .table tbody th { color: var(--brand-navy); font-weight: 500; }
 .table tbody td { color: var(--brand-teal-hover); font-weight: 600; }
 .table tbody tr + tr > * { border-top: 1px solid var(--line); }
 .table tbody tr:nth-child(even) > * { background: var(--paper); }
 .table tbody tr:last-child > :first-child { border-bottom-left-radius: 10px; }
 .table tbody tr:last-child > :last-child { border-bottom-right-radius: 10px; }
-.table tbody tr.selectedRow > * { background: var(--teal-soft); }
-.rowHint { display: block; margin-top: 4px; color: var(--brand-teal-hover); font-size: 14px; font-weight: 700; }
 .electricalNote { margin: 14px 0 0; color: var(--muted); font-size: 14px; line-height: 1.8; }
 .electricalNote strong { color: var(--brand-navy); }
-.selectedRole { display: grid; gap: 5px; margin: 19px 0 0; padding: 15px 17px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
-.selectedRole > span { color: var(--muted); font-size: 14px; line-height: 1.6; }
-.selectedRole strong { color: var(--brand-navy); font-size: 16px; font-weight: 600; line-height: 1.65; overflow-wrap: anywhere; }
-.screenReaderOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 650px) {
   .requirements { padding: 19px 15px; border-radius: 11px; }
   .heading { gap: 10px; }
   .headingIcon { width: 34px; height: 34px; border-radius: 8px; }
-  .heading h4, .nc2Heading h4 { font-size: 18px; }
+  .heading h3 { font-size: 18px; }
   .documentList { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 19px; }
   .documentList li { padding: 12px; }
   .timing { padding: 16px 13px; gap: 10px; }
   .timing > svg { width: 20px; height: 20px; }
   .table th, .table td { padding: 11px 10px; }
   .table thead th:first-child { width: 54%; }
-  .selectedRole { padding: 13px; }
 }

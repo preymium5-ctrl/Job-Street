@@ -111,9 +111,9 @@ export const nc2ElectricalNote =
 export const fairNc2Requirements = [
   { position: "Fabricators", nc2: "NC2 Fabricator", electrical: false, slugs: ["fabricator"] },
   { position: "Welders", nc2: "NC2 Welding", electrical: false, slugs: ["tig-rel-welder", "mig-mag-tig-rel-welder", "welder", "mig-mag-tig-welder"] },
-  { position: "Electrical assemblers/installers", nc2: "NC2 Electrical", electrical: true, slugs: ["electrical-assembler", "electrical-installer"] },
+  { position: "Electrical assemblers / installers", nc2: "NC2 Electrical", electrical: true, slugs: ["electrical-assembler", "electrical-installer"] },
   { position: "Motor & generator winding", nc2: "NC2 Fabricator or Electrical", electrical: true, slugs: ["mg-winding-insulator", "mg-winding-production-worker", "mg-winding-processing-worker"] },
-  { position: "Motor & generator fitters/assemblers", nc2: "NC2 Electrical", electrical: true, slugs: ["mg-assembly-fitter"] },
+  { position: "Motor & generator fitters / assemblers", nc2: "NC2 Electrical", electrical: true, slugs: ["mg-assembly-fitter"] },
   { position: "CNC operators", nc2: "NC2 Fabricator", electrical: false, slugs: ["cnc-operator"] },
   { position: "Industrial spray painters", nc2: "NC2 Fabricator", electrical: false, slugs: ["industrial-spray-painter"] },
   { position: "Grinders", nc2: "NC2 Fabricator", electrical: false, slugs: ["grinder-and-cleaner"] },

@@ -10,9 +10,10 @@ import { closeDatabase, getDatabase } from "../lib/db";
 import { getApplications, getJobs, saveJob } from "../lib/repository";
 import { administrators, audits } from "../lib/schema";
 import { hashPassword } from "../lib/auth";
-import { readObject, validateSupportingDocument } from "../lib/storage";
+import { readObject, validateResume, validateSupportingDocument } from "../lib/storage";
 import { drainSheetsQueue } from "../lib/sheets-queue";
 import type { ApplicationDocument } from "../lib/types";
+import { MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, referenceApplicationUploads } from "../lib/document-uploads";
 import { POST as submit } from "../app/api/applications/route";
 import { POST as signIn } from "../app/api/admin/session/route";
 import { GET as download } from "../app/api/admin/applications/[id]/documents/[documentId]/route";
@@ -132,4 +133,80 @@ test("driver license collection is restricted to the PDF roles, including attach
     assert.match((await response.json()).fieldErrors.driverLicenseDetails, /this position/);
   }
   assert.equal((await getApplications()).length, count);
+});
+
+test("reference form requires three private uploads, enforces its smaller limits and preserves exact retries", async () => {
+  const job = (await getJobs())[0];
+  const input = {
+    applicationFormVersion: 2, destinationCountry: "Croatia", termsAccepted: true,
+    jobId: job.id, fullName: "Modern Applicant", email: "modern-documents@example.test", phone: "+639171234567", country: "Philippines", consent: true,
+    applicantDetails: { firstName: "Modern", lastName: "Applicant", gender: "Male", nationality: "Filipino",
+      street: "123 Test Street", city: "Test City", province: "Test Province", postalCode: "1234",
+      currentAddress: "123 Test Street, Test City, Test Province, 1234", dateOfBirth: "1992-02-29", placeOfBirth: "Test city", secondaryPosition: "No other position", englishProficiency: "No" },
+  };
+  const key = randomUUID();
+  function request(files: Record<string, Buffer | undefined> = {}, requestKey = key, duplicatePassport = false, jobId = job.id) {
+    const form = new FormData();
+    form.set("payload", JSON.stringify({ ...input, jobId }));
+    form.set("idempotencyKey", requestKey);
+    const uploads = { resume: pdf, "document:passport": pdf, "document:residence-id": pdf, ...files };
+    for (const [field, bytes] of Object.entries(uploads)) if (bytes !== undefined) form.append(field, new File([new Uint8Array(bytes)], `${field.replace(":", "-")}.pdf`));
+    if (duplicatePassport) form.append("document:passport", new File([pdf], "second-passport.pdf"));
+    return new NextRequest(`${origin}/api/applications`, { method: "POST", headers: { origin }, body: form });
+  }
+  function sizedPdf(size: number) {
+    const bytes = Buffer.alloc(size, " "); bytes.write("%PDF-1.4\n"); bytes.write("\n%%EOF\n", size - 8); return bytes;
+  }
+  assert.equal(MAX_REFERENCE_UPLOAD_BYTES, 4 * 1024 * 1024);
+  assert.deepEqual(referenceApplicationUploads.filter(({ required }) => required).map(({ id }) => id), ["resume", "passport", "residence-id"]);
+  const beforeCount = (await getApplications()).length;
+  for (const field of ["resume", "document:passport", "document:residence-id"]) {
+    const response = await submit(request({ [field]: undefined }));
+    assert.equal(response.status, 422);
+    assert.ok((await response.json()).fieldErrors[field]);
+  }
+  const oversized = sizedPdf(MAX_REFERENCE_FILE_BYTES + 1);
+  assert.equal((await validateResume(new File([new Uint8Array(oversized)], "legacy-cv.pdf"))).bytes.length, oversized.length);
+  for (const field of ["resume", "document:passport"]) {
+    const response = await submit(request({ [field]: oversized }));
+    assert.equal(response.status, 422);
+    assert.match((await response.json()).fieldErrors[field], /3 MB/);
+  }
+  const totalLimit = await submit(request({ resume: sizedPdf(2 * 1024 * 1024), "document:passport": sizedPdf(2 * 1024 * 1024) }));
+  assert.equal(totalLimit.status, 422);
+  assert.match((await totalLimit.json()).fieldErrors.documents, /4 MB/);
+  const other = await submit(request({ "document:other": pdf }));
+  assert.equal(other.status, 422);
+  assert.match((await other.json()).fieldErrors.documents, /not collected/);
+  const duplicate = await submit(request({}, key, true));
+  assert.equal(duplicate.status, 422);
+  assert.match((await duplicate.json()).fieldErrors["document:passport"], /one file/);
+  assert.equal((await getApplications()).length, beforeCount);
+
+  const accepted = await submit(request()); assert.equal(accepted.status, 201);
+  const receipt = await accepted.json();
+  assert.equal((await submit(request())).status, 200);
+  assert.equal((await submit(request({ "document:passport": Buffer.from("%PDF-1.4\nchanged passport\n%%EOF\n") }))).status, 409);
+  const application = (await getApplications()).find((record) => record.reference === receipt.reference)!;
+  assert.equal(application.applicationFormVersion, 2);
+  assert.equal(application.recentJobTitle, ""); assert.equal(application.skills, ""); assert.equal(application.experienceYears, 0);
+  assert.deepEqual(application.documents?.map(({ category }) => category), ["passport", "residence-id"]);
+  for (const document of application.documents || []) {
+    assert.deepEqual(await readObject(document.key), pdf);
+    const url = `${origin}/api/admin/applications/${application.id}/documents/${document.id}`;
+    assert.equal((await download(new NextRequest(url), { params: Promise.resolve({ id: application.id, documentId: document.id }) })).status, 401);
+  }
+  const delivered = await drainSheetsQueue({ applicationId: application.id }, { transport: async (payload) => {
+    assert.equal(payload.version, 1); assert.equal(payload.documents, undefined);
+    for (const field of ["applicationFormVersion", "destinationCountry", "termsAccepted", "applicantDetails"]) assert.equal(Object.hasOwn(payload.application, field), false);
+    assert.equal(payload.application.recentJobTitle, "Not collected by this form");
+    assert.equal(payload.application.skills, "Not collected by this form");
+    return { ok: true, applicationId: application.id, reference: application.reference, row: 3, duplicate: false };
+  } });
+  assert.equal(delivered.delivered, 1);
+
+  const customId = randomUUID();
+  await saveJob({ ...job, id: customId, slug: `modern-custom-${customId}`, title: "Modern custom role" }, "test-staff", true);
+  const optionalLicense = await submit(request({ "document:driver-license": pdf }, randomUUID(), false, customId));
+  assert.equal(optionalLicense.status, 201);
 });

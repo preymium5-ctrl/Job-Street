@@ -18,6 +18,7 @@ import { administrators, audits } from "../lib/schema";
 import { applicationSchema, fieldErrors } from "../lib/validation";
 import { applicantGenders, discoverySources, type ApplicantDetails } from "../lib/types";
 import { formatApplicantAddress } from "../lib/applicant-address";
+import { additionalPositionOptions, currentWorkCountries, nationalityOptions } from "../data/application-options";
 import {
   decodeSession,
   hashPassword,
@@ -116,6 +117,14 @@ function structuredApplicantProfile(): ApplicantDetails {
   const address = { street: "123 Synthetic Street", city: "Test City", province: "Test Province", postalCode: "T1A 2B3" };
   return { ...applicantProfile(), ...address, currentAddress: formatApplicantAddress(address) };
 }
+function modernApplicant(jobId: string) {
+  return {
+    applicationFormVersion: 2 as const, destinationCountry: "Croatia" as const, termsAccepted: true,
+    jobId, fullName: "Test Applicant", email: "modern-applicant@example.test", phone: "+63 917 123 4567",
+    country: "Philippines", consent: true,
+    applicantDetails: { ...structuredApplicantProfile(), gender: "Female" as const, secondaryPosition: "No other position" },
+  };
+}
 function applicationRequest(
   payload: unknown,
   key = randomUUID(),
@@ -178,11 +187,8 @@ function wordArchive(entries: Record<string, string>) {
   return Buffer.concat([...local, central, end]);
 }
 test("server validation rejects invalid contact details and missing consent", () => {
-  assert.equal(
-    applicationSchema.safeParse({ ...applicant("test"), consent: false })
-      .success,
-    false,
-  );
+  for (const consent of [false, undefined, null, 0, "true"])
+    assert.equal(applicationSchema.safeParse({ ...applicant("test"), consent }).success, false);
   assert.equal(
     applicationSchema.safeParse({ ...applicant("test"), phone: "letters" })
       .success,
@@ -330,6 +336,113 @@ test("structured addresses require every component, reject invalid postal syntax
   const mismatch = applicationSchema.safeParse({ ...input, applicantDetails: { ...profile, currentAddress: "An unrelated address" } });
   assert.equal(mismatch.success, false);
   if (!mismatch.success) assert.ok(fieldErrors(mismatch.error)["applicantDetails.street"]);
+});
+
+test("version 2 matches the captured form choices and defaults uncollected background fields only on the server", () => {
+  const input = modernApplicant("test");
+  const parsed = applicationSchema.parse(input);
+  assert.equal(parsed.applicationFormVersion, 2);
+  assert.equal(parsed.destinationCountry, "Croatia");
+  assert.equal(parsed.termsAccepted, true);
+  assert.equal(parsed.consent, true);
+  assert.equal(parsed.applicantDetails?.englishProficiency, "No");
+  assert.equal(parsed.applicantDetails?.secondaryPosition, "No other position");
+  assert.deepEqual([parsed.recentJobTitle, parsed.skills, parsed.education, parsed.summary, parsed.coverLetter, parsed.experienceYears], ["", "", "", "", "", 0]);
+  assert.equal(Object.hasOwn(input, "recentJobTitle"), false);
+  assert.equal(Object.hasOwn(input, "skills"), false);
+  assert.equal(Object.hasOwn(input, "experienceYears"), false);
+  for (const nationality of nationalityOptions)
+    assert.equal(applicationSchema.safeParse({ ...input, applicantDetails: { ...input.applicantDetails, nationality } }).success, true, nationality);
+  for (const country of currentWorkCountries)
+    assert.equal(applicationSchema.safeParse({ ...input, country }).success, true, country);
+  for (const secondaryPosition of additionalPositionOptions)
+    assert.equal(applicationSchema.safeParse({ ...input, applicantDetails: { ...input.applicantDetails, secondaryPosition, otherPosition: "" } }).success, true, secondaryPosition);
+  assert.equal(applicationSchema.safeParse({ ...input, applicantDetails: { ...input.applicantDetails, gender: "Male", englishProficiency: "Yes" } }).success, true);
+});
+
+test("version 2 requires its profile, gender, structured address, captured selections and both acknowledgements", () => {
+  const input = modernApplicant("test");
+  const invalid: [string, unknown][] = [
+    ["termsAccepted", { ...input, termsAccepted: undefined }],
+    ["termsAccepted", { ...input, termsAccepted: false }],
+    ["consent", { ...input, consent: false }],
+    ["destinationCountry", { ...input, destinationCountry: undefined }],
+    ["destinationCountry", { ...input, destinationCountry: "Germany" }],
+    ["country", { ...input, country: "Unlisted country" }],
+    ["applicantDetails.firstName", { ...input, applicantDetails: undefined }],
+    ["applicantDetails.gender", { ...input, applicantDetails: { ...input.applicantDetails, gender: "Prefer not to say" } }],
+    ["applicantDetails.gender", { ...input, applicantDetails: { ...input.applicantDetails, gender: "" } }],
+    ["applicantDetails.gender", { ...input, applicantDetails: { ...input.applicantDetails, gender: undefined } }],
+    ["applicantDetails.nationality", { ...input, applicantDetails: { ...input.applicantDetails, nationality: "filipino" } }],
+    ["applicantDetails.secondaryPosition", { ...input, applicantDetails: { ...input.applicantDetails, secondaryPosition: "" } }],
+    ["applicantDetails.secondaryPosition", { ...input, applicantDetails: { ...input.applicantDetails, secondaryPosition: undefined } }],
+    ["applicantDetails.secondaryPosition", { ...input, applicantDetails: { ...input.applicantDetails, secondaryPosition: "Other" } }],
+    ["applicantDetails.street", { ...input, applicantDetails: { ...applicantProfile(), gender: "Male", secondaryPosition: "No other position" } }],
+  ];
+  for (const [errorKey, payload] of invalid) {
+    const result = applicationSchema.safeParse(payload);
+    assert.equal(result.success, false, errorKey);
+    if (!result.success) assert.ok(fieldErrors(result.error)[errorKey], errorKey);
+  }
+  for (const applicationFormVersion of [1, "2", null]) {
+    const result = applicationSchema.safeParse({ ...input, applicationFormVersion });
+    assert.equal(result.success, false);
+    if (!result.success) assert.ok(fieldErrors(result.error).applicationFormVersion);
+  }
+  const { applicationFormVersion: _version, destinationCountry: _destination, termsAccepted: _terms, ...withoutMarker } = input;
+  void _version; void _destination; void _terms;
+  const legacyMissingBackground = applicationSchema.safeParse(withoutMarker);
+  assert.equal(legacyMissingBackground.success, false);
+  if (!legacyMissingBackground.success) {
+    const errors = fieldErrors(legacyMissingBackground.error);
+    assert.ok(errors.recentJobTitle);
+    assert.ok(errors.experienceYears);
+    assert.ok(errors.skills);
+  }
+});
+
+test("an empty version 2 form reports conditional questions alongside unchecked privacy and unanswered English", () => {
+  const input = modernApplicant("test");
+  const result = applicationSchema.safeParse({
+    ...input, fullName: "", email: "", phone: "", country: "", consent: false, termsAccepted: false,
+    applicantDetails: {
+      ...input.applicantDetails, firstName: "", lastName: "", gender: "", nationality: "",
+      currentAddress: "", street: "", city: "", province: "", postalCode: "",
+      dateOfBirth: "", placeOfBirth: "", secondaryPosition: "", englishProficiency: "",
+    },
+  });
+  assert.equal(result.success, false);
+  if (!result.success) {
+    const errors = fieldErrors(result.error);
+    for (const key of [
+      "consent", "termsAccepted", "country", "email", "phone",
+      "applicantDetails.firstName", "applicantDetails.lastName", "applicantDetails.gender",
+      "applicantDetails.nationality", "applicantDetails.street", "applicantDetails.city",
+      "applicantDetails.province", "applicantDetails.postalCode", "applicantDetails.dateOfBirth",
+      "applicantDetails.placeOfBirth", "applicantDetails.secondaryPosition", "applicantDetails.englishProficiency",
+    ]) assert.ok(errors[key], key);
+  }
+  for (const englishProficiency of ["", "Maybe", undefined, null, false, 1]) {
+    const legacy = applicationSchema.safeParse({ ...applicant("test"), applicantDetails: { ...applicantProfile(), englishProficiency } });
+    assert.equal(legacy.success, false);
+    if (!legacy.success) assert.ok(fieldErrors(legacy.error)["applicantDetails.englishProficiency"]);
+  }
+});
+
+test("version 2 narrows address and birthplace limits without changing legacy profile bounds", () => {
+  const input = modernApplicant("test");
+  const limits = { street: 140, city: 60, province: 60, placeOfBirth: 120 };
+  for (const [key, maximum] of Object.entries(limits)) {
+    const details = { ...input.applicantDetails, [key]: "x".repeat(maximum + 1) };
+    details.currentAddress = formatApplicantAddress(details);
+    const result = applicationSchema.safeParse({ ...input, applicantDetails: details });
+    assert.equal(result.success, false);
+    if (!result.success) assert.ok(fieldErrors(result.error)[`applicantDetails.${key}`]);
+    assert.equal(applicationSchema.safeParse({ ...applicant("test"), applicantDetails: details }).success, true);
+    const atLimit = { ...input.applicantDetails, [key]: "x".repeat(maximum) };
+    atLimit.currentAddress = formatApplicantAddress(atLimit);
+    assert.equal(applicationSchema.safeParse({ ...input, applicantDetails: atLimit }).success, true);
+  }
 });
 
 test("resume validation checks actual bytes, size, archives and filenames", async () => {

@@ -126,7 +126,7 @@ export async function createApplication(
     if (!job || job.status !== "published") throw new Error("JOB_NOT_OPEN");
     if (application.preferredEmployer && !getJobFairRole(job.data)?.employers.some((employer) => employer.name === application.preferredEmployer))
       throw new Error("INVALID_EMPLOYER");
-    if ((application.driverLicenseDetails || application.documents?.some((document) => document.category === "driver-license")) && !getJobFairRole(job.data)?.drivingLicenseIsPlus)
+    if (application.applicationFormVersion !== 2 && (application.driverLicenseDetails || application.documents?.some((document) => document.category === "driver-license")) && !getJobFairRole(job.data)?.drivingLicenseIsPlus)
       throw new Error("INVALID_DRIVER_LICENSE");
     const currentApplication = {
       ...application,

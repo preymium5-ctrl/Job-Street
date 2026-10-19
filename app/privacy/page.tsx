@@ -29,15 +29,14 @@ export default function Privacy() {
         </p>
         <h2>Information you choose to provide</h2>
         <p>
-          The application form collects your name, email address, telephone
-          number, nationality, residential address, date and place of birth,
-          English proficiency, country of residence, professional background, resume,
-          employer preference, NC2 certificate details, optional driver’s license
-          details and a license copy for applicable roles, optional diploma
-          or education certificates and other supporting documents, and optional
-          cover letter. You can also choose to provide your gender, Telegram
-          contact, parents’ names, other positions of interest, how you discovered
-          the website, a passport copy, residence ID, or certificate of employment.
+          The application form collects your name, gender, email address,
+          telephone number, nationality, residential address, date and place of
+          birth, English proficiency, country of residence, positions of interest,
+          and application destination. Your CV, valid passport copy, and updated
+          residence ID are required. You can also choose to provide your Telegram
+          contact, parents’ names, and optional
+          education, trade, clearance, employment, or driver’s license documents.
+          The form records your agreement to the terms and privacy notice.
           A license number is not needed. Please do not include bank
           information, medical records, or other unnecessary sensitive
           information.
@@ -62,10 +61,11 @@ export default function Privacy() {
           accounts authorized by the recruiting team can open them.
         </p>
         <p>
-          Supporting documents are optional. You can attach an NC2 certificate,
-          diploma or education certificate, NBI clearance, Form 18a, a driver’s
-          license copy for applicable roles, and another document relevant
-          to your application. The additional personal questions, passport copy,
+          The current application form requires a CV, valid passport copy, and
+          residence ID with readable front and back. NC2 certificates, diplomas,
+          NBI clearance with apostille, Form 18a, employment certificates, and
+          driver’s license copies are optional uploads. Each file must be 3 MB or
+          smaller, with all uploads together within 4 MB. The additional personal questions, passport copy,
           residence ID, and certificate of employment are retained in the website’s
           private application records and are not included in the current Google
           tracker export. Requests for correction

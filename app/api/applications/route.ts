@@ -24,7 +24,7 @@ import {
 import type { Application } from "@/lib/types";
 import { getJobFairRole } from "@/data/job-fair";
 import { drainSheetsQueue } from "@/lib/sheets-queue";
-import { MAX_APPLICATION_UPLOAD_BYTES, supportingDocumentTypes } from "@/lib/document-uploads";
+import { MAX_APPLICATION_UPLOAD_BYTES, MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, referenceApplicationUploads, supportingDocumentTypes } from "@/lib/document-uploads";
 
 export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
@@ -60,37 +60,55 @@ export async function POST(request: NextRequest) {
       return failure("Check the highlighted application details.", 422, {
         fieldErrors: fieldErrors(result.error),
       });
+    const referenceForm = result.data.applicationFormVersion === 2;
+    const maximumUploadBytes = referenceForm ? MAX_REFERENCE_UPLOAD_BYTES : MAX_APPLICATION_UPLOAD_BYTES;
+    const combinedLimitMessage = `Keep all uploads together within ${referenceForm ? 4 : 15} MB.`;
+    const referenceCategories = new Set<string>(referenceApplicationUploads.map(({ id }) => id));
+    const documentTypes = supportingDocumentTypes.filter(({ id }) => !referenceForm || referenceCategories.has(id));
+    if (referenceForm) {
+      const missingUploads: Record<string, string> = {};
+      for (const upload of referenceApplicationUploads) {
+        const field = upload.id === "resume" ? "resume" : `document:${upload.id}`;
+        if (upload.required && !(form.get(field) instanceof File)) missingUploads[field] = `${upload.label}.`;
+      }
+      if (Object.keys(missingUploads).length)
+        return failure("Attach the required CV, valid passport and residence ID.", 422, { fieldErrors: missingUploads });
+      if (form.has("document:other"))
+        return failure("Choose a document category listed in this form.", 422, { fieldErrors: { documents: "Other supporting documents are not collected by this form." } });
+    }
     const file = form.get("resume");
     if (!(file instanceof File))
       return failure("Attach your resume.", 422, {
         fieldErrors: { resume: "Attach a PDF, DOC, or DOCX resume." },
       });
+    if (referenceForm && file.size > MAX_REFERENCE_FILE_BYTES)
+      return failure("Your CV must be 3 MB or smaller.", 422, { fieldErrors: { resume: "Your CV must be 3 MB or smaller." } });
     const resume = await validateResume(file);
     const documents: { category: (typeof supportingDocumentTypes)[number]["id"]; document: Awaited<ReturnType<typeof validateSupportingDocument>> }[] = [];
     let uploadBytes = file.size;
-    const allowedFileFields = new Set(["resume", ...supportingDocumentTypes.map(({ id }) => `document:${id}`)]);
+    const allowedFileFields = new Set(["resume", ...documentTypes.map(({ id }) => `document:${id}`)]);
     for (const [field, item] of form.entries()) {
       if (item instanceof File && !allowedFileFields.has(field))
         return failure("Choose a supported document category.", 422, { fieldErrors: { documents: "Choose a supported document category." } });
     }
     if (form.getAll("resume").length !== 1) return failure("Attach one CV only.", 422);
-    for (const { id } of supportingDocumentTypes) {
+    for (const { id } of documentTypes) {
       const files = form.getAll(`document:${id}`);
       if (files.length > 1 || files.some((item) => !(item instanceof File)))
-        return failure("Attach one file per document category.", 422, { fieldErrors: { documents: "Attach one file per document category." } });
+        return failure("Attach one file per document category.", 422, { fieldErrors: { [referenceForm ? `document:${id}` : "documents"]: "Attach one file per document category." } });
       const attachment = files[0];
       if (attachment instanceof File) {
         uploadBytes += attachment.size;
-        if (uploadBytes > MAX_APPLICATION_UPLOAD_BYTES) return failure("Keep all uploads together within 15 MB.", 422, { fieldErrors: { documents: "Keep all uploads together within 15 MB." } });
+        if (uploadBytes > maximumUploadBytes) return failure(combinedLimitMessage, 422, { fieldErrors: { documents: combinedLimitMessage } });
         try { documents.push({ category: id, document: await validateSupportingDocument(attachment) }); }
         catch (error) {
-          if (error instanceof UploadError) return failure(error.message, 422, { fieldErrors: { documents: error.message } });
+          if (error instanceof UploadError) return failure(error.message, 422, { fieldErrors: { [referenceForm ? `document:${id}` : "documents"]: error.message } });
           throw error;
         }
       }
     }
-    if (resume.bytes.length + documents.reduce((sum, item) => sum + item.document.bytes.length, 0) > MAX_APPLICATION_UPLOAD_BYTES)
-      return failure("Keep all uploads together within 15 MB.", 422, { fieldErrors: { documents: "Keep all uploads together within 15 MB." } });
+    if (resume.bytes.length + documents.reduce((sum, item) => sum + item.document.bytes.length, 0) > maximumUploadBytes)
+      return failure(combinedLimitMessage, 422, { fieldErrors: { documents: combinedLimitMessage } });
     const requestDigest = createHash("sha256")
       .update(JSON.stringify(result.data))
       .update(resume.bytes);
@@ -125,7 +143,7 @@ export async function POST(request: NextRequest) {
     if (!job || job.status !== "published")
       return failure("This position is no longer accepting applications.", 409);
     const fairRole = getJobFairRole(job);
-    if ((result.data.driverLicenseDetails || documents.some(({ category }) => category === "driver-license")) && !fairRole?.drivingLicenseIsPlus)
+    if (!referenceForm && (result.data.driverLicenseDetails || documents.some(({ category }) => category === "driver-license")) && !fairRole?.drivingLicenseIsPlus)
       return failure("Driver’s license details are not collected for this position.", 422, {
         fieldErrors: { driverLicenseDetails: "Remove the license details and attachment for this position." },
       });

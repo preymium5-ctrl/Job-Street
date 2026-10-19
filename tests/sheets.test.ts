@@ -138,6 +138,19 @@ test("expanded applicant details and identity uploads stay out of strict legacy 
   }
 });
 
+test("reference-only fields stay private while legacy receiver strings identify questions not collected", () => {
+  const application: Application = { ...applicant(), applicationFormVersion: 2, destinationCountry: "Croatia", termsAccepted: true, recentJobTitle: "", skills: "", experienceYears: 0 };
+  const payload = buildSheetsPayload(application, resume, job);
+  for (const field of ["applicationFormVersion", "destinationCountry", "termsAccepted"]) assert.equal(Object.hasOwn(payload.application, field), false);
+  assert.equal(payload.application.recentJobTitle, "Not collected by this form");
+  assert.equal(payload.application.skills, "Not collected by this form");
+  assert.equal(payload.application.experienceYears, 0);
+  assert.equal(application.recentJobTitle, ""); assert.equal(application.skills, "");
+  const withAnswers = buildSheetsPayload({ ...application, recentJobTitle: "Earlier applicant answer", skills: "Earlier applicant skills" }, resume, job);
+  assert.equal(withAnswers.application.recentJobTitle, "Earlier applicant answer");
+  assert.equal(withAnswers.application.skills, "Earlier applicant skills");
+});
+
 test("schema 4 health enables source delivery through safe body-free Google redirects", async () => {
   await withWebhook(async () => {
     const application = { ...applicant(), discoverySource: "Google search" as const };

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { applicantGenders, applicationStatuses, discoverySources, documentStatuses } from "./types";
 import { minimumExperienceYears } from "../data/employment";
 import { formatApplicantAddress } from "./applicant-address";
+import { additionalPositionOptions, currentWorkCountries, nationalityOptions } from "../data/application-options";
 
 const shortText = (maximum = 160) =>
   z.string().trim().min(2, "Enter at least 2 characters.").max(maximum);
@@ -19,7 +20,10 @@ const applicantDetailsSchema = z.object({
     "Date of birth cannot be in the future.",
   ),
   placeOfBirth: shortText(160),
-  englishProficiency: z.enum(["Yes", "No"], { error: "Select Yes or No." }),
+  englishProficiency: z.custom<"Yes" | "No">(
+    (value) => value === "Yes" || value === "No",
+    { error: "Select Yes or No.", abort: false },
+  ),
   gender: z.enum([...applicantGenders, ""], { error: "Select a listed gender option." }).optional(),
   telegram: z.string().trim().max(80).optional(),
   fatherName: z.string().trim().max(120).optional(),
@@ -37,6 +41,9 @@ const applicantDetailsSchema = z.object({
 });
 export const applicationSchema = z
   .object({
+    applicationFormVersion: z.literal(2).optional(),
+    destinationCountry: z.literal("Croatia", { error: "Select Croatia as your application destination." }).optional(),
+    termsAccepted: z.boolean().optional(),
     jobId: z.string().trim().min(1).max(100),
     fullName: shortText(120),
     email: z
@@ -58,9 +65,9 @@ export const applicationSchema = z
     country: shortText(80),
     discoverySource: z.enum([...discoverySources, ""], { error: "Choose an option from the list." }).optional(),
     applicantDetails: applicantDetailsSchema.optional(),
-    recentJobTitle: shortText(160),
-    experienceYears: z.number().min(minimumExperienceYears, "At least 3 years of relevant work experience is required.").max(60),
-    skills: shortText(2000),
+    recentJobTitle: z.string().trim().max(160).default(""),
+    experienceYears: z.number().min(0).max(60).default(0),
+    skills: z.string().trim().max(2000).default(""),
     education: z.string().trim().max(2000).default(""),
     summary: z.string().trim().max(4000).default(""),
     coverLetter: z.string().trim().max(6000).default(""),
@@ -73,12 +80,48 @@ export const applicationSchema = z
       nbi: z.enum(documentStatuses),
       form18a: z.enum(documentStatuses),
     }).strict().optional(),
-    consent: z.literal(true, {
-      error: "Acknowledge the privacy notice to submit.",
-    }),
+    consent: z.boolean({ error: "Acknowledge the privacy notice to submit." }).refine(
+      (value) => value === true,
+      "Acknowledge the privacy notice to submit.",
+    ),
   })
   .strict()
   .superRefine((value, context) => {
+    if (value.applicationFormVersion === 2) {
+      if (value.destinationCountry !== "Croatia")
+        context.addIssue({ code: "custom", path: ["destinationCountry"], message: "Select the country where you would like to apply." });
+      if (value.termsAccepted !== true)
+        context.addIssue({ code: "custom", path: ["termsAccepted"], message: "Agree to the terms and conditions to submit." });
+      if (!currentWorkCountries.some((country) => country === value.country))
+        context.addIssue({ code: "custom", path: ["country"], message: "Select a country from the list." });
+      const details = value.applicantDetails;
+      if (!details) {
+        context.addIssue({ code: "custom", path: ["applicantDetails", "firstName"], message: "Complete your personal details." });
+      } else {
+        if (details.gender !== "Male" && details.gender !== "Female")
+          context.addIssue({ code: "custom", path: ["applicantDetails", "gender"], message: "Select Male or Female." });
+        if (!nationalityOptions.some((nationality) => nationality === details.nationality))
+          context.addIssue({ code: "custom", path: ["applicantDetails", "nationality"], message: "Select a nationality from the list." });
+        if (!additionalPositionOptions.some((position) => position === details.secondaryPosition))
+          context.addIssue({ code: "custom", path: ["applicantDetails", "secondaryPosition"], message: "Select another position, Other, or No other position." });
+        const addressLimits = { street: 140, city: 60, province: 60, postalCode: 20 } as const;
+        for (const key of ["street", "city", "province", "postalCode"] as const) {
+          if (!details[key])
+            context.addIssue({ code: "custom", path: ["applicantDetails", key], message: "Complete this part of your current address." });
+          else if (details[key]!.length > addressLimits[key])
+            context.addIssue({ code: "custom", path: ["applicantDetails", key], message: `Keep this address field within ${addressLimits[key]} characters.` });
+        }
+        if (details.placeOfBirth.length > 120)
+          context.addIssue({ code: "custom", path: ["applicantDetails", "placeOfBirth"], message: "Keep your place of birth within 120 characters." });
+      }
+    } else {
+      if (value.recentJobTitle.length < 2)
+        context.addIssue({ code: "custom", path: ["recentJobTitle"], message: "Enter at least 2 characters." });
+      if (value.experienceYears < minimumExperienceYears)
+        context.addIssue({ code: "custom", path: ["experienceYears"], message: "At least 3 years of relevant work experience is required." });
+      if (value.skills.length < 2)
+        context.addIssue({ code: "custom", path: ["skills"], message: "Enter at least 2 characters." });
+    }
     if (value.applicantDetails) {
       const combinedName = `${value.applicantDetails.firstName} ${value.applicantDetails.lastName}`;
       if (combinedName.length > 120)

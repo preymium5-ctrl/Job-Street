@@ -78,6 +78,9 @@ export interface ApplicantDetails {
   otherPosition?: string;
 }
 export interface ApplicationInput {
+  applicationFormVersion?: 2;
+  destinationCountry?: "Croatia";
+  termsAccepted?: boolean;
   jobId: string;
   fullName: string;
   email: string;
@@ -85,12 +88,12 @@ export interface ApplicationInput {
   country: string;
   discoverySource?: DiscoverySource | "";
   applicantDetails?: ApplicantDetails;
-  recentJobTitle: string;
-  experienceYears: number;
-  skills: string;
-  education: string;
-  summary: string;
-  coverLetter: string;
+  recentJobTitle?: string;
+  experienceYears?: number;
+  skills?: string;
+  education?: string;
+  summary?: string;
+  coverLetter?: string;
   consent: boolean;
   nc2Certificate?: string;
   driverLicenseDetails?: string;
@@ -106,6 +109,12 @@ export interface ApplicationDocument {
   size: number;
 }
 export interface Application extends ApplicationInput {
+  recentJobTitle: string;
+  experienceYears: number;
+  skills: string;
+  education: string;
+  summary: string;
+  coverLetter: string;
   id: string;
   reference: string;
   jobTitle: string;

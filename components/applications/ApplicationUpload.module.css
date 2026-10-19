@@ -1,0 +1,36 @@
+.card { min-width: 0; padding: 21px; border: 1px solid var(--line); border-radius: 13px; background: var(--paper); }
+.label { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0; color: var(--brand-navy); font-size: 15px; font-weight: 700; line-height: 1.6; }
+.label > span { flex: 0 0 auto; color: var(--muted); font-size: 12px; font-weight: 400; }
+.description { margin: 8px 0 16px; color: var(--muted); font-size: 14px; line-height: 1.75; }
+.dropzone { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 11px; min-height: 190px; padding: 24px 18px; border: 1.5px dashed #80b6ac; border-radius: 11px; background: #fff; text-align: center; transition: border-color .18s, background .18s; }
+.dropzone > svg { color: var(--brand-teal); }
+.dropzone:hover, .dragging { border-color: var(--brand-teal); background: var(--teal-soft); }
+.choose { display: inline-flex; align-items: center; justify-content: center; padding: 9px 15px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--brand-navy); font-size: 14px; font-weight: 600; line-height: 1.5; }
+.help { max-width: 29ch; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.dropzone input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; scroll-margin-top: 130px; }
+.dropzone:focus-within { border-color: var(--brand-teal); outline: 3px solid #007f7633; outline-offset: 3px; }
+.invalid { border-color: #bd263b; }
+.invalid:focus-within { outline-color: #bd263b26; border-color: #bd263b; }
+.limits { margin: 13px 0 0; color: var(--muted); font-size: 14px; line-height: 1.75; }
+.empty { margin: 9px 0 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.file { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 10px 12px; margin-top: 13px; border: 1px solid var(--line); border-radius: 9px; background: var(--teal-soft); }
+.file > svg { flex: 0 0 auto; color: var(--brand-teal-hover); }
+.file > div { flex: 1; min-width: 0; }
+.file strong { display: block; color: var(--brand-navy); font-size: 14px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.file span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+.file button { display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 44px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--brand-navy); cursor: pointer; }
+.file button:hover { background: #ffffffa6; }
+.error { margin: 10px 0 0; color: #a81828; font-size: 14px; line-height: 1.7; }
+.disabled { opacity: .65; }
+.disabled .dropzone input, .disabled button { cursor: wait; }
+.disabled .dropzone:hover { border-color: #80b6ac; background: #fff; }
+@media (max-width: 650px) {
+  .card { padding: 17px; border-radius: 11px; }
+  .dropzone { min-height: 182px; padding: 22px 14px; }
+  .label { gap: 8px; font-size: 14px; }
+  .file { padding: 9px; gap: 8px; }
+  .file button { width: 36px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dropzone { transition: none; }
+}

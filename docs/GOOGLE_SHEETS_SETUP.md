@@ -1,23 +1,34 @@
 # Google Sheets receiver and discovery source
 
-## Expanded application profile and optional identity documents
+## Expanded application profile and versioned uploads
 
 The reference-style application form stores its additional personal and English
-proficiency answers in `applicantDetails`. Optional passport, residence ID
-(front and back combined in one file), and certificate of employment uploads use
-the `passport`, `residence-id`, and `employment-certificate` categories. The CV
-remains required; these and all other supporting documents are optional. The
-existing 3 MB per supporting file and 15 MB combined application limit still apply.
+proficiency answers in `applicantDetails`. Version 2 (`applicationFormVersion: 2`)
+requires a CV, valid passport, and updated residence ID (front and back combined in
+one file). Diploma, NC2, NBI/apostille, Form 18a, employment certificate, and driver’s
+license uploads are optional. The generic `other` upload is not collected by this
+version. Each file, including the CV, must be no larger than 3 MB; all uploads
+together must stay within 4 MB. Existing unversioned submissions retain their
+5 MB CV, 3 MB per supporting file, and 15 MB combined limits, with only the CV
+required. Passport, residence ID, and employment certificate files use the
+`passport`, `residence-id`, and `employment-certificate` categories.
 These answers and files are retained in the website's application database and
 private storage, available through authenticated staff review and download.
 
 Receiver schemas 3 and 4 accept only their established application fields and six
 document categories. The export builder explicitly selects the supported fields
-and excludes `applicantDetails` and future unknown fields. It also excludes the
+and excludes `applicantDetails`, `applicationFormVersion`, `destinationCountry`,
+`termsAccepted`, and future unknown fields. It also excludes the
 three new upload categories from Google Sheets and Google Drive delivery. Existing
 CV and supported-document exports continue unchanged; an application with only
-the new optional documents exports as version 1 (CV only), without unsupported
+the identity documents exports as version 1 (CV only), without unsupported
 document entries. Discovery answers retain the capability check described below.
+
+Version 2 does not ask for a recent job title, skills text, or experience years.
+The website stores empty strings and zero for those legacy fields. Its outbound
+copy supplies the explicit system text **Not collected by this form** for blank
+recent-title and skills fields because the existing receiver requires nonempty
+strings. This does not fabricate applicant answers in the website record.
 
 Exporting the additional questions or new document types requires a separately
 reviewed receiver schema and owner deployment. No live receiver, tracker columns,

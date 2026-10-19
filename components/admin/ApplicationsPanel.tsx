@@ -44,6 +44,7 @@ export default function ApplicationsPanel({
   const selected = applications.find(
     (application) => application.id === selectedId,
   );
+  const modernForm = selected?.applicationFormVersion === 2;
   const profile = selected?.applicantDetails;
   const addressProfile: [string, string][] = profile ? (
     profile.street?.trim() && profile.city?.trim() && profile.province?.trim() && profile.postalCode?.trim()
@@ -255,14 +256,18 @@ export default function ApplicationsPanel({
                   ["Full name", selected.fullName],
                   ["Email", selected.email],
                   ["WhatsApp / contact number", selected.phone],
-                  ["Current country", selected.country],
+                  [modernForm ? "Country currently working in" : "Current country", selected.country],
                   ...personalProfile.filter(([, value]) => Boolean(value)),
-                  ["Discovered us through", selected.discoverySource || "Not provided"],
+                  ...(!modernForm ? [["Discovered us through", selected.discoverySource || "Not provided"] as [string, string]] : []),
                 ]}
               />
               <Details
-                title="Professional background"
-                items={[
+                title={modernForm ? "Application preferences" : "Professional background"}
+                items={modernForm ? [
+                  ["Country applying to", selected.destinationCountry || "Not provided"],
+                  ["Primary job position", selected.jobTitle],
+                  ...professionalProfile.filter(([, value]) => Boolean(value)),
+                ] : [
                   ["Most recent role", selected.recentJobTitle],
                   ["Relevant experience", `${selected.experienceYears} years`],
                   ["Skills", selected.skills],
@@ -275,7 +280,7 @@ export default function ApplicationsPanel({
                   ["Cover letter", selected.coverLetter || "Not provided"],
                 ]}
               />
-              <Details
+              {!modernForm && <Details
                 title="Certificate and document readiness"
                 items={[
                   ["Preferred employer", selected.preferredEmployer || "Not provided / open to allocations"],
@@ -286,7 +291,7 @@ export default function ApplicationsPanel({
                   ["NBI clearance with apostille", documentStatus(selected.documentReadiness?.nbi)],
                   ["Form 18a", documentStatus(selected.documentReadiness?.form18a)],
                 ]}
-              />
+              />}
             </div>
             <aside className={styles.applicationAside}>
               <h3>Move their journey forward.</h3>
@@ -354,6 +359,10 @@ export default function ApplicationsPanel({
                 Privacy acknowledgement:{" "}
                 {selected.consent ? "Received" : "Not recorded"}
               </p>
+              {modernForm && <p className={styles.help}>
+                Terms and conditions acknowledgement:{" "}
+                {selected.termsAccepted ? "Received" : "Not recorded"}
+              </p>}
             </aside>
           </div>
         </section>
