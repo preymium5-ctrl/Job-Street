@@ -15,7 +15,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import type { ApplicationInput, Job } from "@/lib/types";
+import { discoverySources, type ApplicationInput, type DiscoverySource, type Job } from "@/lib/types";
 import { JobSalary } from "@/components/jobs/JobSalary";
 import { minimumExperienceYears } from "@/data/employment";
 import { NoPlacementFee } from "@/components/jobs/EmploymentBenefits";
@@ -32,7 +32,7 @@ const steps = [
   "Review & submit",
 ];
 const fields: (keyof ApplicationInput)[][] = [
-  ["fullName", "email", "phone", "country"],
+  ["fullName", "email", "phone", "country", "discoverySource"],
   ["recentJobTitle", "experienceYears", "skills", "education", "summary"],
   ["coverLetter", "nc2Certificate", "driverLicenseDetails", "preferredEmployer"],
   ["consent"],
@@ -56,6 +56,12 @@ function validate(
       errors.phone = "Enter a valid contact number with country code.";
     if (values.country.trim().length < 2)
       errors.country = "Enter your country of residence.";
+    if (
+      values.discoverySource !== undefined &&
+      values.discoverySource !== "" &&
+      !discoverySources.some((source) => source === values.discoverySource)
+    )
+      errors.discoverySource = "Select a listed option or leave this field blank.";
   }
   if (step === 1) {
     if (values.recentJobTitle.trim().length < 2)
@@ -94,6 +100,7 @@ export default function ApplicationForm({ job }: { job: Job }) {
     email: "",
     phone: "",
     country: "",
+    discoverySource: "",
     recentJobTitle: "",
     experienceYears: Number.NaN,
     skills: "",
@@ -577,6 +584,30 @@ export default function ApplicationForm({ job }: { job: Job }) {
                           autoComplete: "country-name",
                           wide: true,
                         })}
+                        <div className={`${styles.field} ${styles.full}`}>
+                          <label htmlFor="discoverySource">
+                            Where did you discover us? <span>Optional</span>
+                          </label>
+                          <select
+                            id="discoverySource"
+                            name="discoverySource"
+                            value={values.discoverySource || ""}
+                            disabled={busy}
+                            aria-invalid={Boolean(errors.discoverySource)}
+                            aria-describedby={errors.discoverySource ? "discoverySource-error" : undefined}
+                            onChange={(event) => update("discoverySource", event.target.value as DiscoverySource | "")}
+                          >
+                            <option value="">Select an option</option>
+                            {discoverySources.map((source) => (
+                              <option key={source} value={source}>{source}</option>
+                            ))}
+                          </select>
+                          {errors.discoverySource && (
+                            <p id="discoverySource-error" className={styles.fieldError}>
+                              {errors.discoverySource}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     )}
                     {step === 1 && (
@@ -812,6 +843,7 @@ export default function ApplicationForm({ job }: { job: Job }) {
                             ["Email", values.email],
                             ["Phone", values.phone],
                             ["Country of residence", values.country],
+                            ["Where did you discover us?", values.discoverySource || "Not provided"],
                           ]}
                         />
                         <ReviewSection

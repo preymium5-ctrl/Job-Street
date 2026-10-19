@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { applicationStatuses, documentStatuses } from "./types";
+import { applicationStatuses, discoverySources, documentStatuses } from "./types";
 import { minimumExperienceYears } from "../data/employment";
 
 const shortText = (maximum = 160) =>
@@ -25,6 +25,7 @@ export const applicationSchema = z
         "Enter at least 7 digits.",
       ),
     country: shortText(80),
+    discoverySource: z.enum([...discoverySources, ""], { error: "Choose an option from the list." }).optional(),
     recentJobTitle: shortText(160),
     experienceYears: z.number().min(minimumExperienceYears, "At least 3 years of relevant work experience is required.").max(60),
     skills: shortText(2000),

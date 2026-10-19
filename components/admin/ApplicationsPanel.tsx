@@ -233,6 +233,7 @@ export default function ApplicationsPanel({
                   ["Email", selected.email],
                   ["Phone", selected.phone],
                   ["Country of residence", selected.country],
+                  ["Discovered us through", selected.discoverySource || "Not provided"],
                 ]}
               />
               <Details

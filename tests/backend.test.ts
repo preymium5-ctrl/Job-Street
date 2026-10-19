@@ -16,6 +16,7 @@ import {
 } from "../lib/repository";
 import { administrators, audits } from "../lib/schema";
 import { applicationSchema } from "../lib/validation";
+import { discoverySources } from "../lib/types";
 import {
   decodeSession,
   hashPassword,
@@ -184,6 +185,22 @@ test("server validation rejects invalid contact details and missing consent", ()
     assert.equal(applicationSchema.safeParse({ ...applicant("test"), experienceYears }).success, false);
   assert.equal(applicationSchema.safeParse({ ...applicant("test"), experienceYears: 3 }).success, true);
 });
+test("discovery source accepts listed options, stays optional, and rejects unlisted values", () => {
+  const input = applicant("test");
+  assert.equal(applicationSchema.safeParse(input).success, true);
+  assert.equal(applicationSchema.safeParse({ ...input, discoverySource: "" }).success, true);
+  for (const discoverySource of discoverySources) {
+    const result = applicationSchema.safeParse({ ...input, discoverySource });
+    assert.equal(result.success, true);
+    if (result.success) assert.equal(result.data.discoverySource, discoverySource);
+  }
+  for (const discoverySource of ["Unlisted channel", "facebook", 123, null]) {
+    const result = applicationSchema.safeParse({ ...input, discoverySource });
+    assert.equal(result.success, false);
+    if (!result.success) assert.ok(result.error.issues.some((issue) => issue.path[0] === "discoverySource"));
+  }
+});
+
 test("resume validation checks actual bytes, size, archives and filenames", async () => {
   assert.throws(
     () =>
@@ -309,7 +326,7 @@ test("job edits survive database restart and record an audit", async () => {
 });
 test("applications persist once; invalid uploads, bots and closed jobs never return success", async () => {
   const [job] = await getJobs();
-  const payload = applicant(job.id);
+  const payload = { ...applicant(job.id), discoverySource: "Instagram" as const };
   const key = randomUUID();
   const first = await submit(applicationRequest(payload, key));
   assert.equal(first.status, 201, JSON.stringify(await first.clone().json()));
@@ -319,6 +336,12 @@ test("applications persist once; invalid uploads, bots and closed jobs never ret
   assert.equal(retry.status, 200);
   assert.deepEqual(await retry.json(), accepted);
   assert.equal((await getApplications()).length, 1);
+  assert.equal((await getApplications())[0].discoverySource, "Instagram");
+  const changedSource = await submit(applicationRequest({ ...payload, discoverySource: "Reddit" }, key));
+  assert.equal(changedSource.status, 409);
+  const invalidSource = await submit(applicationRequest({ ...payload, discoverySource: "Unlisted channel" }));
+  assert.equal(invalidSource.status, 422);
+  assert.ok((await invalidSource.json()).fieldErrors.discoverySource);
   const changed = await submit(
     applicationRequest({ ...payload, fullName: "Another Applicant" }, key),
   );
@@ -348,6 +371,7 @@ test("applications persist once; invalid uploads, bots and closed jobs never ret
   await saveJob(job, "test-staff");
   await closeDatabase();
   assert.equal((await getApplications())[0].reference, accepted.reference);
+  assert.equal((await getApplications())[0].discoverySource, "Instagram");
   const existing = (await getApplications())[0];
   await assert.rejects(
     createApplication(

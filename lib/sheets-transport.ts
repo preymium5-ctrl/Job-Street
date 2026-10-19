@@ -78,7 +78,7 @@ export function signedSheetsBody(payload: SheetsPayload, secret: string, timesta
   });
 }
 
-async function readAcknowledgement(response: Response, payload: SheetsPayload) {
+async function readSheetsJson(response: Response): Promise<unknown> {
   if (!response.ok) throw new SheetsDeliveryError("WEBHOOK_REJECTED");
   const reader = response.body?.getReader();
   if (!reader) throw new SheetsDeliveryError("INVALID_ACKNOWLEDGEMENT");
@@ -94,12 +94,47 @@ async function readAcknowledgement(response: Response, payload: SheetsPayload) {
     }
     chunks.push(item.value);
   }
-  let answer: Partial<SheetsAcknowledgement>;
-  try { answer = JSON.parse(Buffer.concat(chunks).toString("utf8")); }
+  try { return JSON.parse(Buffer.concat(chunks).toString("utf8")); }
   catch { throw new SheetsDeliveryError("INVALID_ACKNOWLEDGEMENT"); }
+}
+
+async function readAcknowledgement(response: Response, payload: SheetsPayload) {
+  const answer = await readSheetsJson(response) as Partial<SheetsAcknowledgement>;
   if (!answer || answer.ok !== true || answer.applicationId !== payload.application.id || answer.reference !== payload.application.reference || !Number.isSafeInteger(answer.row) || (answer.row || 0) < 2 || typeof answer.duplicate !== "boolean")
     throw new SheetsDeliveryError("INVALID_ACKNOWLEDGEMENT");
   return answer as SheetsAcknowledgement;
+}
+
+async function fetchSheetsResponse(url: string, init: RequestInit) {
+  let response = await fetch(url, { ...init, cache: "no-store", redirect: "manual" });
+  // ContentService redirects both health GETs and signed POST acknowledgements.
+  // Only a body-free GET may follow the single-use Google response URL.
+  if ([302, 303].includes(response.status)) {
+    const location = response.headers.get("location");
+    let redirect: URL;
+    try { redirect = new URL(location || ""); }
+    catch { throw new SheetsDeliveryError("WEBHOOK_REJECTED"); }
+    if (redirect.protocol !== "https:" || redirect.hostname !== "script.googleusercontent.com" || redirect.port || redirect.username || redirect.password || redirect.pathname !== "/macros/echo")
+      throw new SheetsDeliveryError("WEBHOOK_REJECTED");
+    await response.body?.cancel();
+    response = await fetch(redirect, { method: "GET", signal: init.signal, redirect: "error", cache: "no-store" });
+  }
+  return response;
+}
+
+async function receiverSupportsDiscoverySource(url: string, signal: AbortSignal) {
+  try {
+    const response = await fetchSheetsResponse(url, {
+      method: "GET", signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
+    });
+    const health = await readSheetsJson(response) as Record<string, unknown> | null;
+    return health?.ok === true && health.service === "chapter-applications" && health.version === 1 &&
+      Number.isSafeInteger(health.schemaVersion) && (health.schemaVersion as number) >= 4 &&
+      Number.isSafeInteger(health.columns) && (health.columns as number) >= 30;
+  } catch {
+    // Old or unavailable health responses must not block existing deliveries.
+    return false;
+  }
 }
 
 export const sendApplicationToSheets: SheetsTransport = async (payload, options) => {
@@ -107,26 +142,18 @@ export const sendApplicationToSheets: SheetsTransport = async (payload, options)
   if (!config.valid) throw new SheetsDeliveryError(config.code!);
   const signal = AbortSignal.timeout(Math.min(120_000, Math.max(1000, options?.timeoutMs ?? 120_000)));
   try {
-    let response = await fetch(process.env.GOOGLE_SHEETS_WEBHOOK_URL!, {
+    const url = process.env.GOOGLE_SHEETS_WEBHOOK_URL!;
+    const { discoverySource, ...legacyApplication } = payload.application;
+    // Keep the answer in the stored application and full payload. Only the signed
+    // outbound copy is filtered until the deployed receiver advertises column AD.
+    const outbound = discoverySource && await receiverSupportsDiscoverySource(url, signal)
+      ? payload : { ...payload, application: legacyApplication };
+    const response = await fetchSheetsResponse(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: signedSheetsBody(payload, process.env.GOOGLE_SHEETS_WEBHOOK_SECRET!),
+      body: signedSheetsBody(outbound, process.env.GOOGLE_SHEETS_WEBHOOK_SECRET!),
       signal,
-      cache: "no-store",
-      redirect: "manual",
     });
-    // Apps Script's ContentService redirects the response to a single-use Google URL.
-    // Only the signed POST goes to the configured endpoint; never forward its body elsewhere.
-    if ([302, 303].includes(response.status)) {
-      const location = response.headers.get("location");
-      let redirect: URL;
-      try { redirect = new URL(location || ""); }
-      catch { throw new SheetsDeliveryError("WEBHOOK_REJECTED"); }
-      if (redirect.protocol !== "https:" || redirect.hostname !== "script.googleusercontent.com" || redirect.port || redirect.username || redirect.password || redirect.pathname !== "/macros/echo")
-        throw new SheetsDeliveryError("WEBHOOK_REJECTED");
-      await response.body?.cancel();
-      response = await fetch(redirect, { method: "GET", signal, redirect: "error", cache: "no-store" });
-    }
     return await readAcknowledgement(response, payload);
   } catch (error) {
     if (error instanceof SheetsDeliveryError) throw error;

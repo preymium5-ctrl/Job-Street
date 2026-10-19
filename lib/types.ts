@@ -43,12 +43,27 @@ export interface DocumentReadiness {
   nbi: DocumentStatus;
   form18a: DocumentStatus;
 }
+export const discoverySources = [
+  "Facebook",
+  "TikTok",
+  "Instagram",
+  "Reddit",
+  "Threads",
+  "X (Twitter)",
+  "YouTube",
+  "LinkedIn",
+  "Google search",
+  "Friend or family",
+  "Other",
+] as const;
+export type DiscoverySource = (typeof discoverySources)[number];
 export interface ApplicationInput {
   jobId: string;
   fullName: string;
   email: string;
   phone: string;
   country: string;
+  discoverySource?: DiscoverySource | "";
   recentJobTitle: string;
   experienceYears: number;
   skills: string;

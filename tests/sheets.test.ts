@@ -11,7 +11,7 @@ import { sheetDeliveries } from "../lib/schema";
 import { drainSheetsQueue, sheetsQueueStatus } from "../lib/sheets-queue";
 import { buildSheetsPayload, sendApplicationToSheets, sheetsConfiguration, SheetsDeliveryError, type SheetsPayload } from "../lib/sheets-transport";
 import { applicationSchema } from "../lib/validation";
-import type { Application, Job } from "../lib/types";
+import { discoverySources, type Application, type Job } from "../lib/types";
 import { getJobFairRole } from "../data/job-fair";
 import { NextRequest } from "next/server";
 import { POST as submit } from "../app/api/applications/route";
@@ -55,6 +55,22 @@ async function delivery(id: string) {
   return (await (await getDatabase()).select().from(sheetDeliveries).where(eq(sheetDeliveries.applicationId, id)))[0];
 }
 
+async function withWebhook(run: () => Promise<void>) {
+  const originalFetch = globalThis.fetch;
+  const url = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
+  const secret = process.env.GOOGLE_SHEETS_WEBHOOK_SECRET;
+  process.env.GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/test-discovery/exec";
+  process.env.GOOGLE_SHEETS_WEBHOOK_SECRET = "test-discovery-signature-secret-".repeat(3);
+  try { await run(); }
+  finally {
+    globalThis.fetch = originalFetch;
+    if (url === undefined) delete process.env.GOOGLE_SHEETS_WEBHOOK_URL;
+    else process.env.GOOGLE_SHEETS_WEBHOOK_URL = url;
+    if (secret === undefined) delete process.env.GOOGLE_SHEETS_WEBHOOK_SECRET;
+    else process.env.GOOGLE_SHEETS_WEBHOOK_SECRET = secret;
+  }
+}
+
 test("document readiness validates certificate details and retains legacy form compatibility", () => {
   const full = applicant();
   const { id: _id, reference: _reference, jobTitle: _title, status: _status, submittedAt: _date, resumeName: _name, resumeMime: _mime, resumeKey: _key, isExample: _example, ...input } = full;
@@ -71,6 +87,100 @@ test("legacy applications export complete document readiness and empty certifica
   assert.deepEqual(payload.application.documentReadiness, { nc2: "not-yet", diploma: "not-yet", nbi: "not-yet", form18a: "not-yet" });
   assert.equal(payload.application.nc2Certificate, "");
   assert.equal(payload.application.preferredEmployer, "");
+  assert.equal(payload.application.discoverySource, undefined);
+});
+
+test("Sheets payload preserves each discovery answer independently of receiver compatibility", () => {
+  for (const discoverySource of ["" as const, ...discoverySources]) {
+    const payload = buildSheetsPayload({ ...applicant(), discoverySource }, resume, job);
+    assert.equal(payload.application.discoverySource, discoverySource);
+  }
+});
+
+test("schema 4 health enables source delivery through safe body-free Google redirects", async () => {
+  await withWebhook(async () => {
+    const application = { ...applicant(), discoverySource: "Google search" as const };
+    const payload = buildSheetsPayload(application, resume, job);
+    let calls = 0;
+    globalThis.fetch = async (url, init) => {
+      calls++;
+      if (calls <= 2) {
+        assert.equal(init?.method, "GET");
+        assert.equal(init?.body, undefined);
+        assert.equal(init?.headers, undefined);
+        if (calls === 1) {
+          assert.equal(String(url), process.env.GOOGLE_SHEETS_WEBHOOK_URL);
+          return new Response(null, { status: 302, headers: { location: "https://script.googleusercontent.com/macros/echo?user_content_key=health" } });
+        }
+        assert.equal(new URL(String(url)).hostname, "script.googleusercontent.com");
+        return Response.json({ ok: true, service: "chapter-applications", version: 1, schemaVersion: 4, columns: 30 });
+      }
+      assert.equal(String(url), process.env.GOOGLE_SHEETS_WEBHOOK_URL);
+      assert.equal(init?.method, "POST");
+      const envelope = JSON.parse(String(init?.body));
+      assert.equal(envelope.signature, createHmac("sha256", process.env.GOOGLE_SHEETS_WEBHOOK_SECRET!).update(`${envelope.timestamp}.${envelope.payload}`).digest("hex"));
+      assert.equal(JSON.parse(envelope.payload).application.discoverySource, "Google search");
+      return Response.json({ ok: true, applicationId: application.id, reference: application.reference, row: 2, duplicate: false });
+    };
+    assert.equal((await sendApplicationToSheets(payload)).row, 2);
+    assert.equal(calls, 3);
+    assert.equal(payload.application.discoverySource, "Google search");
+  });
+});
+
+test("old, unavailable or untrusted receiver health omits only the outbound source and continues delivery", async () => {
+  const healthResponses = [
+    () => Response.json({ ok: true, service: "chapter-applications", version: 1, schemaVersion: 3, columns: 29 }),
+    () => Response.json({ ok: true, service: "chapter-applications", version: 1, schemaVersion: 4, columns: 29 }),
+    () => Response.json({ ok: true, service: "unrelated", version: 1, schemaVersion: 4, columns: 30 }),
+    () => new Response(null, { status: 302, headers: { location: "https://hostile.example/steal" } }),
+    () => new Response("x".repeat(16 * 1024 + 1)),
+    () => { throw new DOMException("Health timed out", "TimeoutError"); },
+  ];
+  for (const healthResponse of healthResponses) {
+    await withWebhook(async () => {
+      const application = { ...applicant(), discoverySource: "Facebook" as const };
+      const payload = buildSheetsPayload(application, resume, job);
+      let calls = 0;
+      globalThis.fetch = async (url, init) => {
+        calls++;
+        assert.equal(String(url), process.env.GOOGLE_SHEETS_WEBHOOK_URL);
+        if (init?.method === "GET") {
+          assert.equal(init.body, undefined);
+          return healthResponse();
+        }
+        assert.equal(init?.method, "POST");
+        const sent = JSON.parse(JSON.parse(String(init?.body)).payload);
+        assert.equal(Object.hasOwn(sent.application, "discoverySource"), false);
+        const { discoverySource: _source, ...previousFields } = payload.application;
+        void _source;
+        assert.deepEqual(sent.application, previousFields);
+        return Response.json({ ok: true, applicationId: application.id, reference: application.reference, row: 2, duplicate: false });
+      };
+      assert.equal((await sendApplicationToSheets(payload)).row, 2);
+      assert.equal(calls, 2);
+      assert.equal(application.discoverySource, "Facebook");
+      assert.equal(payload.application.discoverySource, "Facebook");
+    });
+  }
+});
+
+test("blank and legacy sources require no capability request and no extra strict application key", async () => {
+  for (const discoverySource of [undefined, "" as const]) {
+    await withWebhook(async () => {
+      const application = { ...applicant(), discoverySource };
+      const payload = buildSheetsPayload(application, resume, job);
+      let calls = 0;
+      globalThis.fetch = async (_url, init) => {
+        calls++;
+        assert.equal(init?.method, "POST");
+        assert.equal(Object.hasOwn(JSON.parse(JSON.parse(String(init?.body)).payload).application, "discoverySource"), false);
+        return Response.json({ ok: true, applicationId: application.id, reference: application.reference, row: 2, duplicate: false });
+      };
+      assert.equal((await sendApplicationToSheets(payload)).row, 2);
+      assert.equal(calls, 1);
+    });
+  }
 });
 
 test("new applications atomically queue exactly once and remain queued without configuration", async () => {
