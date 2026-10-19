@@ -184,6 +184,8 @@ body { background: var(--street-paper); font-weight: 400; }
 .street-footer-nav a:hover { color: var(--street-blue); text-decoration: underline; }
 .street-socials { padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 11px; margin: 7px 0 0; }
 .street-socials li { display: grid; place-items: center; width: 29px; height: 29px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); }
+.street-socials a { display: grid; place-items: center; width: 100%; height: 100%; border-radius: inherit; }
+.street-socials a:hover, .street-socials a:focus-visible { background: var(--surface-soft); box-shadow: 0 0 0 1px var(--brand-teal); }
 .street-socials img { object-fit: contain; }
 .street-footer-bottom { border-top: 1px solid var(--line); padding-block: 23px; display: flex; align-items: center; justify-content: space-between; gap: 25px; font-size: 10px; color: var(--muted); }
 .street-footer-bottom > div { display: flex; gap: 25px; }

@@ -4,19 +4,29 @@
 .socialHeading > span { font-size: 11px; color: var(--muted); }
 .socialWindow { overflow: hidden; mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent); }
 .track { display: flex; width: max-content; animation: community-drift 40s linear infinite; }
+.socialWindow:hover .track, .socialWindow:focus-within .track { animation-play-state: paused; }
 .group { display: flex; align-items: center; flex: 0 0 auto; width: max-content; min-width: 100vw; justify-content: space-around; }
 .socialGroup { margin: 0; padding: 0; list-style: none; }
 .socialItem { display: flex; align-items: center; gap: 16px; padding-inline: 24px; color: var(--ink); font-size: clamp(24px, 2.3vw, 34px); font-weight: 600; line-height: 1.2; white-space: nowrap; }
+.socialLink { display: inline-flex; align-items: center; gap: 16px; border-radius: 8px; color: inherit; text-decoration: none; }
+.socialLink:hover { color: var(--brand-teal); }
 .socialIcon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 54px; height: 54px; border: 1px solid var(--line); border-radius: 50%; color: var(--brand-teal); background: var(--paper); }
 .socialIcon img { object-fit: contain; }
 .screenReaderOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .separator { margin-left: 24px; color: var(--brand-teal); font-size: 24px; font-weight: 400; }
+.socialWindow:has(.socialLink:focus-visible) { overflow: visible; mask-image: none; }
+.socialWindow:has(.socialLink:focus-visible) .track { animation: none; transform: none; width: 100%; }
+.socialWindow:has(.socialLink:focus-visible) .group { width: 100%; min-width: 0; flex-wrap: wrap; justify-content: center; gap: 24px; padding: 8px var(--space); }
+.socialWindow:has(.socialLink:focus-visible) .group[aria-hidden="true"] { display: none; }
+.socialWindow:has(.socialLink:focus-visible) .socialItem { padding: 0; }
+.socialWindow:has(.socialLink:focus-visible) .separator { display: none; }
 @keyframes community-drift { to { transform: translateX(-50%); } }
 @media (max-width: 700px) {
  .section { padding-block: 25px 28px; }
  .socialHeading { gap: 18px; margin-bottom: 22px; align-items: flex-start; }
  .socialHeading > span { max-width: 150px; font-size: 10px; text-align: right; }
  .socialItem { gap: 12px; padding-inline: 16px; }
+ .socialLink { gap: 12px; }
  .socialIcon { width: 46px; height: 46px; }
  .socialIcon img, .socialIcon svg { width: 25px; height: 25px; }
  .separator { margin-left: 18px; }
