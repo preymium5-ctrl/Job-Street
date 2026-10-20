@@ -24,7 +24,7 @@ import {
 import type { Application } from "@/lib/types";
 import { getJobFairRole } from "@/data/job-fair";
 import { drainSheetsQueue } from "@/lib/sheets-queue";
-import { MAX_APPLICATION_UPLOAD_BYTES, MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, referenceApplicationUploads, supportingDocumentTypes } from "@/lib/document-uploads";
+import { getReferenceApplicationUploads, MAX_APPLICATION_UPLOAD_BYTES, MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, supportingDocumentTypes } from "@/lib/document-uploads";
 
 export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
@@ -61,18 +61,18 @@ export async function POST(request: NextRequest) {
         fieldErrors: fieldErrors(result.error),
       });
     const referenceForm = result.data.applicationFormVersion === 2;
+    // Document requirements use the stored position title, never a client-supplied role.
+    const job = await getJobById(result.data.jobId);
+    const referenceUploads = getReferenceApplicationUploads({
+      country: result.data.country,
+      destinationCountry: result.data.destinationCountry,
+      jobTitle: job?.title,
+    });
     const maximumUploadBytes = referenceForm ? MAX_REFERENCE_UPLOAD_BYTES : MAX_APPLICATION_UPLOAD_BYTES;
     const combinedLimitMessage = `Keep all uploads together within ${referenceForm ? 4 : 15} MB.`;
-    const referenceCategories = new Set<string>(referenceApplicationUploads.map(({ id }) => id));
+    const referenceCategories = new Set<string>(referenceUploads.map(({ id }) => id));
     const documentTypes = supportingDocumentTypes.filter(({ id }) => !referenceForm || referenceCategories.has(id));
     if (referenceForm) {
-      const missingUploads: Record<string, string> = {};
-      for (const upload of referenceApplicationUploads) {
-        const field = upload.id === "resume" ? "resume" : `document:${upload.id}`;
-        if (upload.required && !(form.get(field) instanceof File)) missingUploads[field] = `${upload.label}.`;
-      }
-      if (Object.keys(missingUploads).length)
-        return failure("Attach the required CV, valid passport and residence ID.", 422, { fieldErrors: missingUploads });
       if (form.has("document:other"))
         return failure("Choose a document category listed in this form.", 422, { fieldErrors: { documents: "Other supporting documents are not collected by this form." } });
     }
@@ -126,6 +126,16 @@ export async function POST(request: NextRequest) {
         jobTitle: existing.data.jobTitle,
       });
     }
+    // An exact retry keeps its original receipt even if staff have since changed the role.
+    if (referenceForm) {
+      const missingUploads: Record<string, string> = {};
+      for (const upload of referenceUploads) {
+        const field = upload.id === "resume" ? "resume" : `document:${upload.id}`;
+        if (upload.required && !(form.get(field) instanceof File)) missingUploads[field] = `${upload.label}.`;
+      }
+      if (Object.keys(missingUploads).length)
+        return failure("Attach the required application documents.", 422, { fieldErrors: missingUploads });
+    }
     if (
       !(await rateLimit(
         request,
@@ -139,7 +149,6 @@ export async function POST(request: NextRequest) {
         "You have submitted several applications recently. Please try again in an hour.",
         429,
       );
-    const job = await getJobById(result.data.jobId);
     if (!job || job.status !== "published")
       return failure("This position is no longer accepting applications.", 409);
     const fairRole = getJobFairRole(job);

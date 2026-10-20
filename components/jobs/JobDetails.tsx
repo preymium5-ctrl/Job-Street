@@ -13,7 +13,7 @@ const sections = [
   ["overview", "Job description"],
   ["responsibilities", "Key responsibilities"],
   ["qualifications", "Qualifications & requirements"],
-  ["employers", "Employers & assessment"],
+  ["assessment", "Assessment & guidance"],
   ["compensation", "Salary & positions"],
   ["benefits", "Benefits & support"],
   ["application-process", "Recruitment process"],
@@ -34,7 +34,7 @@ export function JobDetails({ job, relatedJobs }: { job: Job; relatedJobs: Job[] 
   const benefits = [...new Set([...recruitmentBenefits, ...job.benefits])].filter((item) => item.trim().replace(/[.!]$/, "").toLowerCase() !== noPlacementFee.toLowerCase());
   const faqs = [
     { question: "What should I include in my application?", answer: "Describe experience and skills relevant to this position and attach your current CV. Use the responsibilities and requirements on this page as a guide." },
-    { question: "What documents should I prepare?", answer: "Prepare your current CV as a PDF, DOC, or DOCX file, up to 5 MB. Include relevant work experience and training. Do not upload passports, national IDs, medical records, or other sensitive identity documents at this initial stage." },
+    { question: "What documents should I prepare?", answer: "Prepare your updated CV and valid passport. A residence ID with readable front and back is required for applicants working outside the Philippines, and a driver's license is required for driver applicants. Other supporting documents may be required; Form 18a is for Croatia applicants. Each file must be 3 MB or smaller, with all uploads together within 4 MB." },
     { question: "How do I know my application was received?", answer: "After a successful submission, you will see a confirmation with your position and unique application reference. Save the reference for your records. A confirmation appears only after your application has been saved." },
     { question: "Can I apply for another position?", answer: "Yes. Explore the job directory and submit a separate application for another relevant position. Each application is associated with its selected role." },
     { question: "What should I check before accepting a role?", answer: "Confirm the employer, work location, deductions, working hours, and written terms before accepting any offer." },
@@ -91,10 +91,9 @@ export function JobDetails({ job, relatedJobs }: { job: Job; relatedJobs: Job[] 
               <RoleSection id="responsibilities" number="02" title="Key responsibilities"><ul className={styles.checkList}>{job.responsibilities.map((item) => <li key={item}><Check size={15} aria-hidden="true" /><span>{item}</span></li>)}</ul></RoleSection>
               <RoleSection id="qualifications" number="03" title="Qualifications & requirements"><ul className={styles.checkList}>{job.requirements.map((item) => <li key={item}><Check size={15} aria-hidden="true" /><span>{item}</span></li>)}{role?.drivingLicenseIsPlus && <li><Check size={15} aria-hidden="true" /><span>A driver’s license is a plus (optional).</span></li>}</ul><p className={styles.smallNote}>Relevant experience: {job.experience}.</p></RoleSection>
             </div>
-            <RoleSection id="employers" number="04" title="Employers & assessment">
+            <RoleSection id="assessment" number="04" title="Assessment & guidance">
               {role ? <>
-                <p className={styles.sectionLead}>Explore the employer options and prepare for the assessment for this role.</p>
-                <div className={styles.employerGrid}>{role.employers.map((employer) => <div key={employer.name}><h3>{employer.name}</h3><p><strong>{employer.workers.toLocaleString("en-US")}</strong><span>{employer.workers === 1 ? "worker" : "workers"}</span></p></div>)}</div>
+                <p className={styles.sectionLead}>Review the qualification guidance and prepare for the assessment for this role.</p>
                 <dl className={styles.credentials}><div><dt>NC2 guidance</dt><dd>{role.nc2}</dd></div><div><dt>Age requirement</dt><dd>{maximumAgeRequirement}</dd></div>{role.drivingLicenseIsPlus && <div><dt>Additional advantage</dt><dd>A driver’s license is a plus. Optional for this application.</dd></div>}</dl>
                 {role.focus && <p className={styles.smallNote}>{role.focus.replace(" in the plan", "")}</p>}
                 <h3 className={styles.subheading}>Skills assessment</h3><ul className={styles.checkList}>{role.testing.map((item) => <li key={item}><Check size={15} aria-hidden="true" /><span>{item}</span></li>)}</ul>

@@ -313,7 +313,7 @@ export const previousRecruitmentJobs: Job[] = proposalV1Jobs.map((job) => {
   };
 });
 
-export const proposedJobs: Job[] = previousRecruitmentJobs.map((job) => ({
+const currentRecruitmentJobs: Job[] = previousRecruitmentJobs.map((job) => ({
   ...job,
   image: `/images/street-v2/${job.slug}.webp`,
   imageAlt: `AI-generated illustration of a Filipino worker performing ${job.title.toLowerCase()} work for Jobs Street Croatia`,
@@ -326,6 +326,53 @@ export const proposedJobs: Job[] = previousRecruitmentJobs.map((job) => ({
     .replace(" in the plan", ""))],
   benefits: [...recruitmentBenefits],
 }));
+
+const combinedFinishingJob = currentRecruitmentJobs.find((job) => job.slug === "grinder-and-cleaner")!;
+export const previousCombinedFinishingJob = combinedFinishingJob;
+const grinderSummary = "Grind and deburr metal components to prepare consistent surfaces for the next production stage.";
+const cleanerSummary = "Keep workplaces, facilities, and shared areas clean, hygienic, and ready for daily use.";
+
+// Retain the Grinder's original ID and URL so existing applications and links remain valid.
+// Cleaner has its own listing; no vacancy count has been supplied for the new role.
+export const proposedJobs: Job[] = [
+  ...currentRecruitmentJobs.map((job) => job.id === combinedFinishingJob.id ? {
+    ...job,
+    title: "Grinder",
+    summary: grinderSummary,
+    description: job.description.replace(job.summary, grinderSummary),
+    imageAlt: "AI-generated illustration of a Filipino worker performing grinding work for Jobs Street Croatia",
+    responsibilities: [
+      "Check the assigned metal component and identify edges or surfaces requiring finishing.",
+      "Use approved grinding and deburring tools to prepare surfaces to the required finish.",
+      "Inspect finished components and maintain a clear work area using the required dust and safety controls.",
+    ],
+  } : job),
+  {
+    ...combinedFinishingJob,
+    id: "proposed-cleaner-18",
+    slug: "cleaner",
+    title: "Cleaner",
+    category: "Cleaning & Maintenance",
+    openings: undefined,
+    summary: cleanerSummary,
+    description: `${cleanerSummary} We are hiring skilled Filipino workers for this position in Croatia. Review the responsibilities, qualifications, salary range and benefits below, then apply with your CV and relevant supporting documents.`,
+    responsibilities: [
+      "Clean floors, work surfaces, washrooms, and shared areas according to the assigned schedule.",
+      "Use cleaning products and equipment safely and dispose of waste in the designated areas.",
+      "Replenish supplies and report maintenance needs, hazards, or damaged equipment to the supervisor.",
+    ],
+    requirements: [
+      maximumAgeRequirement,
+      minimumExperienceRequirement,
+      "Relevant experience in workplace or facility cleaning and maintaining hygiene standards.",
+      "Ability to follow cleaning schedules, product instructions, and safe handling procedures.",
+      "Attention to detail and the ability to work responsibly as part of a team.",
+    ],
+    image: "/images/street-v2/cleaner.webp",
+    imageAlt: "AI-generated illustration of a Filipino cleaner at work for Jobs Street Croatia",
+    postedAt: new Date(Date.parse(combinedFinishingJob.postedAt) - 1).toISOString(),
+  },
+];
 
 // Kept for the existing read-only route smoke script and other catalog consumers.
 export const sampleJobs = proposedJobs;

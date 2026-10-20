@@ -1,4 +1,5 @@
 // Options captured from the owner-provided application form on 20 October 2026.
+export const destinationCountries = ["Croatia", "Slovenia", "Serbia", "Romania", "North Macedonia", "Montenegro"] as const;
 export const nationalityOptions = [
   "Filipino",
   "Afghanistan",

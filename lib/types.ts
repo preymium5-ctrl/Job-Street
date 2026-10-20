@@ -1,4 +1,5 @@
 import type { SupportingDocumentCategory } from "./document-uploads";
+import type { destinationCountries } from "../data/application-options";
 export type JobStatus = "published" | "draft" | "closed";
 export interface Job {
   id: string;
@@ -61,7 +62,7 @@ export const applicantGenders = ["Male", "Female", "Prefer not to say"] as const
 export interface ApplicantDetails {
   firstName: string;
   lastName: string;
-  nationality: string;
+  nationality?: string;
   currentAddress: string;
   street?: string;
   city?: string;
@@ -79,7 +80,7 @@ export interface ApplicantDetails {
 }
 export interface ApplicationInput {
   applicationFormVersion?: 2;
-  destinationCountry?: "Croatia";
+  destinationCountry?: (typeof destinationCountries)[number];
   termsAccepted?: boolean;
   jobId: string;
   fullName: string;

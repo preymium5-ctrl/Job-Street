@@ -2,15 +2,15 @@
 export const applicationFaqs = [
   [
     "How do I apply for a job?",
-    "Find a role that fits your experience, read its requirements, and select Apply now. Complete the four steps, attach your CV, and submit. Each application is linked to the position you choose.",
+    "Find a role that fits your experience, read its requirements, and select Apply now. Complete the application form, attach the required documents, and submit. Each application is linked to the position you choose.",
   ],
   [
     "What documents are required?",
-    "Upload your current CV as a PDF, DOC, or DOCX file up to 5 MB. You can also attach a diploma or education certificate, NC2 certificate, NBI clearance, Form 18a, and another relevant document. Supporting documents are optional and accept PDF, DOC, DOCX, JPG, or PNG files up to 3 MB each; all uploads together must stay within 15 MB. You can apply while documents are still in progress.",
+    "Attach your updated CV and valid passport. A residence ID with readable front and back is required for applicants working outside the Philippines, and a driver's license is required for driver applicants. Other documents may be required, including a diploma, NC2 certificate, NBI clearance, and Form 18a for Croatia applicants. Each file must be 3 MB or smaller, with all uploads together within 4 MB.",
   ],
   [
     "Can I apply for multiple positions?",
-    "Yes. Submit a separate application for each position that matches your skills. Tailor your professional summary to the role and keep the reference number for each application.",
+    "Yes. Submit a separate application for each position that matches your skills and experience. Keep the reference number for each application.",
   ],
   [
     "How will I know my application was received?",

@@ -55,7 +55,7 @@ export default function ApplicationsPanel({
     ["First name", profile.firstName],
     ["Last name", profile.lastName],
     ["Gender", profile.gender || ""],
-    ["Nationality", profile.nationality],
+    ["Nationality", profile.nationality || "Not collected"],
     ...addressProfile,
     ["Date of birth", profile.dateOfBirth],
     ["Place of birth", profile.placeOfBirth],

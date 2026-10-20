@@ -25,7 +25,7 @@ const escapeRegex = (value: string) =>
 async function check(
   route: string,
   expectedStatus: number | number[] = 200,
-  validate?: (html: string) => string[],
+  validate?: (html: string, response: Response) => string[],
 ) {
   const response = await fetch(new URL(route, base), {
     signal: AbortSignal.timeout(20000),
@@ -41,7 +41,7 @@ async function check(
         `Expected ${acceptedStatuses.join(" or ")}, received ${response.status}`,
       ];
   if (acceptedStatuses.includes(response.status) && validate)
-    errors.push(...validate(html));
+    errors.push(...validate(html, response));
   const passed = errors.length === 0;
   results.push({ route, status: response.status, passed, errors });
   console.log(
@@ -53,20 +53,24 @@ async function main() {
   for (const route of [
     "/",
     "/jobs",
-    "/job-fair",
     "/about",
     "/contact",
     "/privacy",
     "/terms",
   ])
-    await check(route, 200, route === "/job-fair" ? (html) => {
+    await check(route, 200, (html) => {
       const errors: string[] = [];
       for (const employer of jobFair.employers)
-        if (!html.includes(employer.name)) errors.push(`Missing employer: ${employer.name}`);
-      if (!html.includes(jobFair.testingDateLabel) || !html.includes("248")) errors.push("Missing testing date or position total");
-      if (!html.includes("18a") || !html.includes("apostille")) errors.push("Missing candidate document guide");
+        if (html.includes(employer.name)) errors.push(`Company name is publicly visible: ${employer.name}`);
       return errors;
-    } : undefined);
+    });
+  // Redirects emitted after streaming starts use an HTTP 200 response and a refresh meta tag.
+  await check("/job-fair", [308, 200], (html, response) => {
+    const redirectsToJobs = response.status === 308
+      ? response.headers.get("location") === "/jobs"
+      : /<meta[^>]+http-equiv="refresh"[^>]+content="0;url=\/jobs"/.test(html);
+    return redirectsToJobs ? [] : ["Missing redirect to the current job directory"];
+  });
   for (const job of proposedJobs) {
     await check(`/jobs/${job.slug}`, 200, (html) => {
       const errors: string[] = [];
@@ -74,16 +78,14 @@ async function main() {
         errors.push("Missing correct role heading");
       if (!html.includes(`href="/jobs/${job.slug}/apply"`))
         errors.push("Missing role-specific application link");
-      if (!/proposed/i.test(html) || !/NET/.test(html) || !html.includes(job.salary!))
-        errors.push("Missing proposed NET salary");
-      if (!/not confirmed employer offers/i.test(html))
-        errors.push("Missing unconfirmed employer offer disclosure");
+      if (!html.includes(job.salary!) || !html.includes("EUR / month"))
+        errors.push("Missing role salary range");
       if (html.includes("Not a confirmed employer offer."))
         errors.push("Removed per-salary sentence has returned");
       const fairRole = getJobFairRole(job);
       if (fairRole) {
-        for (const employer of fairRole.employers)
-          if (!html.includes(employer.name)) errors.push(`Missing role allocation: ${employer.name}`);
+        for (const employer of jobFair.employers)
+          if (html.includes(employer.name)) errors.push(`Company name is publicly visible: ${employer.name}`);
         if (!html.includes(fairRole.nc2)) errors.push("Missing role-specific NC2 guidance");
       }
       if (html.includes('"@type":"JobPosting"'))
@@ -100,10 +102,8 @@ async function main() {
     await check(`/jobs/${job.slug}/apply`, 200, (html) => {
       const errors: string[] = [];
       if (!html.includes(job.title)) errors.push("Missing selected role title");
-      if (!html.includes("Your details"))
-        errors.push("Missing initial application step");
-      if (!/proposed/i.test(html) || !/not confirmed/i.test(html))
-        errors.push("Missing proposal disclosure before application");
+      if (!html.includes("Work Experience"))
+        errors.push("Missing application work-experience section");
       return errors;
     });
   }

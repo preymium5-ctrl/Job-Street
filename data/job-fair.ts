@@ -49,7 +49,7 @@ export const jobFair = {
     },
     {
       name: "Končar GIM", workers: 35,
-      testing: "Written exam for all positions except welders. Welder test details to follow.",
+      testing: "Written exam for all positions except welders. Trade test for welders.",
       roles: [
         { slug: "mg-winding-insulator", title: "M/G Winding Insulator", workers: 5 },
         { slug: "mg-winding-production-worker", title: "M/G Winding Production Worker", workers: 5 },
@@ -71,7 +71,7 @@ export const jobFair = {
     },
     {
       name: "Novi Ferromont d.o.o.", workers: 30,
-      testing: "Testing details to follow.",
+      testing: "Trade test.",
       roles: [
         { slug: "fabricator", title: "Fabricator", workers: 15 },
         { slug: "mig-mag-tig-welder", title: "MIG MAG / TIG Welder", workers: 5 },
@@ -81,7 +81,7 @@ export const jobFair = {
     },
     {
       name: "Ferokotao d.o.o.", workers: 78,
-      testing: "Testing details to follow.",
+      testing: "Trade test.",
       roles: [
         { slug: "fabricator", title: "Fabricator", workers: 43 },
         { slug: "mig-mag-tig-rel-welder", title: "MIG MAG / TIG / REL Welder", workers: 15 },
@@ -98,14 +98,14 @@ export const fairDocuments = [
   "Valid NC2 certificate",
   "High school diploma",
   "NBI clearance with apostille",
-  "Form 18a",
+  "Form 18a (for Croatia applicants)",
 ] as const;
 
 export const fairOptionalDocument = "A driving licence is a plus.";
 export const fairDocumentTiming =
   "Documents do not have to be ready on the testing day — candidates must obtain them so the work permit application can be filed.";
 export const nc2ElectricalNote =
-  "The plan accepts NC2 Electrical categories related to electricians, including industrial electrician, building wiring installation and maintenance, power distribution, lineman, electrical installer and electrical assembler. Vertiv's work profile specifically calls for industrial electricians.";
+  "The plan accepts NC2 Electrical categories related to electricians, including industrial electrician, building wiring installation and maintenance, power distribution, lineman, electrical installer and electrical assembler. The work profile specifically calls for industrial electricians.";
 
 /** Published certificate groups; roles without a confirmed category stay unlisted. */
 export const fairNc2Requirements = [
@@ -123,7 +123,7 @@ export const jobFairFaqs: [string, string][] = [
   ["What is Job Fair Philippines 2026?", "It is a recruitment and skills-assessment plan for Filipino applicants exploring work abroad in Croatia. The plan lists 248 workers across 17 role types and six employer groups."],
   ["When are the online interviews and skills testing?", `Online interviews are scheduled for ${jobFair.interviewDateLabel}. Five full days of skills testing are planned for ${jobFair.testingDateLabel}, Monday to Friday. Confirm your appointment with the recruitment team.`],
   ["Which jobs abroad can I explore?", "The listed roles cover welding, fabrication, pipe fitting, electrical installation and assembly, CNC operation, industrial painting, motor and generator work, robotic welding, and grinding. Open a role to review its salary, experience and certificate guidance."],
-  ["Where in the Philippines will the job fair testing take place?", "Testing is planned in the Philippines. The testing-centre address and individual attendance arrangements are to be confirmed by BEI Manpower."],
+  ["Where in the Philippines will the job fair testing take place?", "Testing is planned in the Philippines. Confirm the testing-centre address and individual attendance arrangements with the recruitment team."],
   ["How do I apply for the Croatia job fair from the Philippines?", "Choose a role, select Apply now, fill in your contact details and experience, and upload your CV. You can also attach supporting documents and provide NC2 details. A driver's license is a plus; the license details and copy are optional. Save the reference shown after submitting your application."],
 ];
 
@@ -138,7 +138,7 @@ const knownRoles: { slug: string; nc2: string; testing?: string[]; focus?: strin
       "Visual inspection (VT); radiographic testing (RT) is not required in the plan.",
     ],
   },
-  { slug: "pipe-fitter", nc2: "Valid NC2 certificate; category to be confirmed", testing: ["Written exam for Đuro Đaković Montaža pipe fitters."] },
+  { slug: "pipe-fitter", nc2: "Valid NC2 certificate; category to be confirmed", testing: ["Written exam for pipe fitters."] },
   { slug: "mg-winding-insulator", nc2: "NC2 Fabricator or Electrical" },
   { slug: "mg-winding-production-worker", nc2: "NC2 Fabricator or Electrical" },
   { slug: "mg-winding-processing-worker", nc2: "NC2 Fabricator or Electrical" },
@@ -147,11 +147,11 @@ const knownRoles: { slug: string; nc2: string; testing?: string[]; focus?: strin
   { slug: "mig-mag-tig-rel-welder", nc2: "NC2 Welding" },
   {
     slug: "electrical-installer", nc2: "NC2 Electrical",
-    focus: "Vertiv is looking for industrial electricians. Lineman or data-centre experience alone does not match the work profile in the plan.",
+    focus: "This role calls for industrial electricians. Lineman or data-centre experience alone does not match the work profile in the plan.",
   },
   {
     slug: "electrical-assembler", nc2: "NC2 Electrical",
-    focus: "Vertiv is looking for industrial electricians. Lineman or data-centre experience alone does not match the work profile in the plan.",
+    focus: "This role calls for industrial electricians. Lineman or data-centre experience alone does not match the work profile in the plan.",
   },
   { slug: "welder", nc2: "NC2 Welding" },
   { slug: "mig-mag-tig-welder", nc2: "NC2 Welding" },
@@ -159,6 +159,7 @@ const knownRoles: { slug: string; nc2: string; testing?: string[]; focus?: strin
   { slug: "industrial-spray-painter", nc2: "NC2 Fabricator" },
   { slug: "robotic-welding-machine-operator", nc2: "Valid NC2 certificate; category to be confirmed" },
   { slug: "grinder-and-cleaner", nc2: "NC2 Fabricator" },
+  { slug: "cleaner", nc2: "Any role-specific certificate category to be confirmed", testing: ["Trade test."] },
 ];
 
 /** Match source-controlled records by both ID and slug, never unrelated staff jobs. */
@@ -171,7 +172,7 @@ export function getJobFairRole(job: Pick<Job, "id" | "slug">): JobFairRole | und
     const allocation = employer.roles.find((item) => item.slug === job.slug);
     if (!allocation) return [];
     const testing = employer.name === "Končar GIM"
-      ? job.slug === "mig-mag-tig-rel-welder" ? "Welder test details to follow." : "Written exam."
+      ? job.slug === "mig-mag-tig-rel-welder" ? "Trade test." : "Written exam."
       : job.slug === "pipe-fitter" ? "Written exam."
       : employer.name === "Vertiv" ? job.slug === "welder" ? "Interview with the client; welder test if needed." : "Interview with the client."
       : employer.testing;
@@ -182,7 +183,7 @@ export function getJobFairRole(job: Pick<Job, "id" | "slug">): JobFairRole | und
     nc2: role.nc2,
     // Page 5 explicitly places this optional advantage under "All positions".
     drivingLicenseIsPlus: true,
-    testing: role.testing ?? [...new Set(employers.map((employer) => `${employer.name}: ${employer.testing}`))],
+    testing: role.testing ?? [...new Set(employers.map((employer) => employer.testing))],
     ...(role.focus ? { focus: role.focus } : {}),
   };
 }

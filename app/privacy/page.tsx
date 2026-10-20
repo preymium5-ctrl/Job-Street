@@ -30,12 +30,13 @@ export default function Privacy() {
         <h2>Information you choose to provide</h2>
         <p>
           The application form collects your name, gender, email address,
-          telephone number, nationality, residential address, date and place of
-          birth, English proficiency, country of residence, positions of interest,
-          and application destination. Your CV, valid passport copy, and updated
-          residence ID are required. You can also choose to provide your Telegram
+          telephone number, residential address, date and place of
+          birth, English proficiency, country where you currently work, positions of interest,
+          and application destination. Your CV and valid passport copy are required.
+          Filipinos working outside the Philippines must also upload an updated residence ID.
+          Driver applicants must upload their driver’s license. You can also choose to provide your Telegram
           contact, parents’ names, and optional
-          education, trade, clearance, employment, or driver’s license documents.
+          education, trade, clearance, employment, or other applicable documents.
           The form records your agreement to the terms and privacy notice.
           A license number is not needed. Please do not include bank
           information, medical records, or other unnecessary sensitive
@@ -61,10 +62,12 @@ export default function Privacy() {
           accounts authorized by the recruiting team can open them.
         </p>
         <p>
-          The current application form requires a CV, valid passport copy, and
-          residence ID with readable front and back. NC2 certificates, diplomas,
-          NBI clearance with apostille, Form 18a, employment certificates, and
-          driver’s license copies are optional uploads. Each file must be 3 MB or
+          The current application form requires a CV and valid passport copy.
+          Residence ID with readable front and back is required for Filipinos working
+          outside the Philippines, and driver’s license copies are required for driver applicants.
+          NC2 certificates, diplomas, NBI clearance with apostille, Form 18a for Croatia applicants,
+          and employment certificates may be required; you may upload them now if available.
+          Each file must be 3 MB or
           smaller, with all uploads together within 4 MB. The additional personal questions, passport copy,
           residence ID, and certificate of employment are retained in the website’s
           private application records and are not included in the current Google

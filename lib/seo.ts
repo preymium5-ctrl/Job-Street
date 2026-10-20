@@ -1,6 +1,7 @@
 import type { Metadata, MetadataRoute } from "next";
 import type { Job } from "./types";
 import { site } from "../data/site";
+import { isAdditionalApplicationJob } from "../data/application-jobs";
 
 type SeoEnvironment = Record<string, string | undefined>;
 
@@ -60,7 +61,7 @@ export function pageMetadata({ title, description, path, image = "/images/street
 }
 
 export function discoverableJob(job: Job) {
-  return job.status === "published" && !job.isExample;
+  return job.status === "published" && !job.isExample && !isAdditionalApplicationJob(job);
 }
 
 export function jobPageMetadata(job: Job): Metadata {

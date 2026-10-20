@@ -18,7 +18,7 @@ import { administrators, audits } from "../lib/schema";
 import { applicationSchema, fieldErrors } from "../lib/validation";
 import { applicantGenders, discoverySources, type ApplicantDetails } from "../lib/types";
 import { formatApplicantAddress } from "../lib/applicant-address";
-import { additionalPositionOptions, currentWorkCountries, nationalityOptions } from "../data/application-options";
+import { additionalPositionOptions, currentWorkCountries, destinationCountries, nationalityOptions } from "../data/application-options";
 import {
   decodeSession,
   hashPassword,
@@ -118,11 +118,13 @@ function structuredApplicantProfile(): ApplicantDetails {
   return { ...applicantProfile(), ...address, currentAddress: formatApplicantAddress(address) };
 }
 function modernApplicant(jobId: string) {
+  const profile = structuredApplicantProfile();
+  delete profile.nationality;
   return {
     applicationFormVersion: 2 as const, destinationCountry: "Croatia" as const, termsAccepted: true,
     jobId, fullName: "Test Applicant", email: "modern-applicant@example.test", phone: "+63 917 123 4567",
     country: "Philippines", consent: true,
-    applicantDetails: { ...structuredApplicantProfile(), gender: "Female" as const, secondaryPosition: "No other position" },
+    applicantDetails: { ...profile, gender: "Female" as const, secondaryPosition: "No other position" },
   };
 }
 function applicationRequest(
@@ -347,6 +349,7 @@ test("version 2 matches the captured form choices and defaults uncollected backg
   assert.equal(parsed.consent, true);
   assert.equal(parsed.applicantDetails?.englishProficiency, "No");
   assert.equal(parsed.applicantDetails?.secondaryPosition, "No other position");
+  assert.equal(Object.hasOwn(parsed.applicantDetails!, "nationality"), false);
   assert.deepEqual([parsed.recentJobTitle, parsed.skills, parsed.education, parsed.summary, parsed.coverLetter, parsed.experienceYears], ["", "", "", "", "", 0]);
   assert.equal(Object.hasOwn(input, "recentJobTitle"), false);
   assert.equal(Object.hasOwn(input, "skills"), false);
@@ -355,6 +358,9 @@ test("version 2 matches the captured form choices and defaults uncollected backg
     assert.equal(applicationSchema.safeParse({ ...input, applicantDetails: { ...input.applicantDetails, nationality } }).success, true, nationality);
   for (const country of currentWorkCountries)
     assert.equal(applicationSchema.safeParse({ ...input, country }).success, true, country);
+  assert.deepEqual(destinationCountries, ["Croatia", "Slovenia", "Serbia", "Romania", "North Macedonia", "Montenegro"]);
+  for (const destinationCountry of destinationCountries)
+    assert.equal(applicationSchema.safeParse({ ...input, destinationCountry }).success, true, destinationCountry);
   for (const secondaryPosition of additionalPositionOptions)
     assert.equal(applicationSchema.safeParse({ ...input, applicantDetails: { ...input.applicantDetails, secondaryPosition, otherPosition: "" } }).success, true, secondaryPosition);
   assert.equal(applicationSchema.safeParse({ ...input, applicantDetails: { ...input.applicantDetails, gender: "Male", englishProficiency: "Yes" } }).success, true);
@@ -406,7 +412,7 @@ test("an empty version 2 form reports conditional questions alongside unchecked 
   const result = applicationSchema.safeParse({
     ...input, fullName: "", email: "", phone: "", country: "", consent: false, termsAccepted: false,
     applicantDetails: {
-      ...input.applicantDetails, firstName: "", lastName: "", gender: "", nationality: "",
+      ...input.applicantDetails, firstName: "", lastName: "", gender: "",
       currentAddress: "", street: "", city: "", province: "", postalCode: "",
       dateOfBirth: "", placeOfBirth: "", secondaryPosition: "", englishProficiency: "",
     },
@@ -417,7 +423,7 @@ test("an empty version 2 form reports conditional questions alongside unchecked 
     for (const key of [
       "consent", "termsAccepted", "country", "email", "phone",
       "applicantDetails.firstName", "applicantDetails.lastName", "applicantDetails.gender",
-      "applicantDetails.nationality", "applicantDetails.street", "applicantDetails.city",
+      "applicantDetails.street", "applicantDetails.city",
       "applicantDetails.province", "applicantDetails.postalCode", "applicantDetails.dateOfBirth",
       "applicantDetails.placeOfBirth", "applicantDetails.secondaryPosition", "applicantDetails.englishProficiency",
     ]) assert.ok(errors[key], key);
@@ -438,7 +444,7 @@ test("version 2 narrows address and birthplace limits without changing legacy pr
     const result = applicationSchema.safeParse({ ...input, applicantDetails: details });
     assert.equal(result.success, false);
     if (!result.success) assert.ok(fieldErrors(result.error)[`applicantDetails.${key}`]);
-    assert.equal(applicationSchema.safeParse({ ...applicant("test"), applicantDetails: details }).success, true);
+    assert.equal(applicationSchema.safeParse({ ...applicant("test"), applicantDetails: { ...details, nationality: "Filipino" } }).success, true);
     const atLimit = { ...input.applicantDetails, [key]: "x".repeat(maximum) };
     atLimit.currentAddress = formatApplicantAddress(atLimit);
     assert.equal(applicationSchema.safeParse({ ...input, applicantDetails: atLimit }).success, true);
@@ -731,7 +737,7 @@ test("staff-only applicants, private downloads, status audits and session revoca
   assert.equal(photoResponse.status, 201);
   const uploaded = await photoResponse.json();
   assert.match(uploaded.url, /^\/api\/images\/[a-f0-9-]+\.jpg$/);
-  const [sample] = await getJobs();
+  const sample = (await getJobs()).find((job) => job.slug === "fabricator")!;
   const jobResponse = await createJob(
     new NextRequest(`${origin}/api/admin/jobs`, {
       method: "POST",

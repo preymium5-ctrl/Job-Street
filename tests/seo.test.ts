@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { proposedJobs } from "../data/jobs";
+import { additionalApplicationJobs, isAdditionalApplicationJob } from "../data/application-jobs";
 import { site } from "../data/site";
-import { getPublicJobBySlug, getPublicJobs, usesPublishedCatalog } from "../lib/public-jobs";
+import { getApplicationJobs, getPublicJobBySlug, getPublicJobs, usesPublishedCatalog } from "../lib/public-jobs";
 import config from "../next.config";
 import { breadcrumbData, buildSitemap, canIndexSite, jobDirectoryData, jobPageMetadata, robotsRules, searchRobots, serializeJsonLd, siteUrl, webPageData } from "../lib/seo";
 
@@ -22,16 +23,16 @@ test("production indexing is enabled while local, preview and explicit pauses st
   assert.equal(privatePage.index, false);
 });
 
-test("sitemap includes all 17 hiring roles and excludes retired event pages, examples, closed jobs and applications", () => {
+test("sitemap includes official hiring roles and excludes form-only jobs, retired event pages, examples, closed jobs and applications", () => {
   const base = proposedJobs[0];
-  const jobs = [...proposedJobs,
+  const jobs = [...proposedJobs, ...additionalApplicationJobs,
     { ...base, slug: "example-role", isExample: true },
     { ...base, slug: "closed-role", status: "closed" as const },
     { ...base, slug: "draft-role", status: "draft" as const },
   ];
   const sitemap = buildSitemap(jobs, { VERCEL_ENV: "production" });
-  assert.equal(sitemap.length, 21);
-  assert.equal(new Set(sitemap.map(({ url }) => url)).size, 21);
+  assert.equal(sitemap.length, proposedJobs.length + 4);
+  assert.equal(new Set(sitemap.map(({ url }) => url)).size, proposedJobs.length + 4);
   assert.ok(sitemap.every(({ url }) => !url.includes("/job-fair")));
   for (const job of proposedJobs) assert.ok(sitemap.some(({ url }) => url === siteUrl(`/jobs/${job.slug}`)));
   assert.ok(sitemap.every(({ url }) => url.startsWith(site.url) && !/apply|example-role|closed-role|draft-role|localhost/.test(url)));
@@ -56,8 +57,8 @@ test("role metadata uses unique canonical URLs and Philippines hiring descriptio
 });
 
 test("structured data describes published content and escapes untrusted script text", () => {
-  const data = jobDirectoryData([...proposedJobs, { ...proposedJobs[0], slug: "example", isExample: true }]);
-  assert.equal(data.mainEntity.itemListElement.length, 17);
+  const data = jobDirectoryData([...proposedJobs, ...additionalApplicationJobs, { ...proposedJobs[0], slug: "example", isExample: true }]);
+  assert.equal(data.mainEntity.itemListElement.length, proposedJobs.length);
   assert.equal(data["@type"], "CollectionPage");
   const serialized = serializeJsonLd({ name: "</script><script>alert(1)</script>" });
   assert.equal(serialized.includes("<"), false);
@@ -67,9 +68,9 @@ test("structured data describes published content and escapes untrusted script t
   assert.equal(/JobPosting|baseSalary|EventScheduled/.test(serializeJsonLd(data)), false);
 });
 
-test("alternate domains redirect to the existing www primary host without a loop", async () => {
+test("configured alternate domains redirect to the primary host without a loop", async () => {
   const redirects = await config.redirects!();
-  assert.equal(redirects.length, 3);
+  assert.equal(redirects.length, site.alternateHosts.length);
   for (const redirect of redirects) {
     assert.equal(redirect.destination, `${site.url}/:path*`);
     assert.equal(redirect.permanent, true);
@@ -89,7 +90,13 @@ test("database-free production renders the published fair catalog without touchi
     process.env = { ...original, NODE_ENV: "production" };
     delete process.env.DATABASE_URL;
     delete process.env.CHAPTER_LOCAL_MODE;
-    assert.equal((await getPublicJobs()).length, 17);
+    const publicJobs = await getPublicJobs();
+    const applicationJobs = await getApplicationJobs();
+    assert.equal(publicJobs.length, proposedJobs.length);
+    assert.equal(publicJobs.some(isAdditionalApplicationJob), false);
+    assert.equal(applicationJobs.length, proposedJobs.length + additionalApplicationJobs.length);
+    assert.equal(applicationJobs.filter(isAdditionalApplicationJob).length, additionalApplicationJobs.length);
+    assert.equal(await getPublicJobBySlug(additionalApplicationJobs[0].slug), undefined);
     assert.equal((await getPublicJobBySlug("electrical-installer"))?.title, "Electrical Installer");
     assert.equal(await getPublicJobBySlug("missing-job"), undefined);
   } finally {

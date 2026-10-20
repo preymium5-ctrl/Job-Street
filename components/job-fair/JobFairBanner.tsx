@@ -10,7 +10,7 @@ export function JobFairBanner({ className = "" }: { className?: string }) {
         <span className={styles.icon}><CalendarDays size={22} aria-hidden="true" /></span>
         <div>
           <p className={styles.title}>{jobFair.title}</p>
-          <p className={styles.organizers}>{jobFair.organizers.join(" × ")}</p>
+          <p className={styles.organizers}>Recruitment and skills assessment</p>
         </div>
       </div>
       <div className={styles.date}>

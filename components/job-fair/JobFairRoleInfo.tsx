@@ -12,12 +12,7 @@ export function JobFairRoleInfo({ job, compact = false }: { job: Job; compact?: 
     <section className={`${styles.panel} ${compact ? styles.compact : ""}`} aria-label="Recruitment details for this role">
       <span className="eyebrow">Hiring in the Philippines</span>
       <h3>Role requirements</h3>
-      <p className={styles.label}>Employer options for this role</p>
-      <ul className={styles.employers}>
-        {role.employers.map((employer) => (
-          <li key={employer.name}><span>{employer.name}</span><strong>{employer.workers} {employer.workers === 1 ? "worker" : "workers"}</strong></li>
-        ))}
-      </ul>
+      {typeof job.openings === "number" && <p className={styles.credential}><strong>Available positions</strong>{job.openings.toLocaleString("en-US")}</p>}
       <p className={styles.credential}><strong>NC2 guidance</strong>{role.nc2}</p>
       <p className={styles.credential}><strong>Age requirement</strong>{maximumAgeRequirement}</p>
       {role.drivingLicenseIsPlus && <p className={styles.credential}><strong>Additional advantage</strong>A driver’s license is a plus. Optional for this application.</p>}

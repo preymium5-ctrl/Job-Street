@@ -3,20 +3,15 @@ import Link from "next/link";
 import { ArrowUpRight, BriefcaseBusiness, MapPin, ShieldCheck } from "lucide-react";
 import type { Job } from "@/lib/types";
 import { JobSalary } from "./JobSalary";
-import { getJobFairRole } from "@/data/job-fair";
 import { noPlacementFee } from "@/data/employment";
 import styles from "./JobCard.module.css";
 
-export function JobCard({ job, index = 0, featured = false, employer }: {
+export function JobCard({ job, index = 0, featured = false }: {
   job: Job;
   index?: number;
   featured?: boolean;
-  employer?: string;
 }) {
-  const role = getJobFairRole(job);
-  const allocation = employer ? role?.employers.find((item) => item.name === employer) : undefined;
-  const workers = allocation?.workers ?? job.openings;
-  const employerName = allocation?.name ?? (role?.employers.length === 1 ? role.employers[0].name : role ? `${role.employers.length} employer options` : null);
+  const workers = job.openings;
 
   return (
     <article className={`job-card ${styles.card}`} data-reveal aria-labelledby={`job-card-${job.slug}`}>
@@ -38,7 +33,6 @@ export function JobCard({ job, index = 0, featured = false, employer }: {
         </div>
         <div className={styles.salary}><JobSalary job={job} /></div>
         <p className={styles.experience}><BriefcaseBusiness size={14} aria-hidden="true" />{job.experience}</p>
-        {employerName && <p className={styles.employer}>{employerName}<span> / {role ? "Filipino applicants" : job.employmentType}</span></p>}
         <p className={styles.summary}>{job.summary}</p>
         <div className={styles.actions}>
           <Link href={`/jobs/${job.slug}`} className={styles.details}>View role <ArrowUpRight size={17} aria-hidden="true" /></Link>

@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { proposedJobs, proposalV1Jobs, previousRecruitmentJobs } from "../data/jobs";
+import { proposedJobs, proposalV1Jobs, previousRecruitmentJobs, previousCombinedFinishingJob } from "../data/jobs";
+import { additionalApplicationJobs } from "../data/application-jobs";
 import { getJobFairRole, jobFair } from "../data/job-fair";
 import { maximumAgeRequirement, minimumExperienceRequirement } from "../data/employment";
 import type { Database } from "./db";
@@ -14,6 +15,8 @@ export const hiringContentVersion = "croatia-philippines-hiring-2026-10-16-v1";
 export const minimumExperienceVersion = "minimum-experience-three-years-2026-10-16-v1";
 export const hiringWorkerCountsVersion = "employer-worker-counts-2026-10-16-v1";
 export const maximumAgeRequirementVersion = "maximum-age-requirement-2026-10-16-v1";
+export const finishingJobsVersion = "separate-grinder-cleaner-2026-10-20-v1";
+export const additionalApplicationJobsVersion = "additional-application-jobs-2026-10-20-v1";
 export const legacyExampleJobIds = [
   "example-warehouse-01",
   "example-bus-02",
@@ -87,6 +90,61 @@ export async function migrateProposedJobCatalog(db: Database) {
   await migrateMinimumExperience(db);
   await migrateHiringWorkerCounts(db);
   await migrateMaximumAgeRequirement(db);
+  await migrateFinishingJobs(db);
+  await migrateAdditionalApplicationJobs(db);
+}
+
+/** Split the finishing listing while keeping the original ID, staff edits and applicant history. */
+export async function migrateFinishingJobs(db: Database) {
+  await db.transaction(async (tx) => {
+    if (process.env.DATABASE_URL) await tx.execute(sql`SELECT pg_advisory_xact_lock(621349133)`);
+    const [applied] = await tx.select().from(settings).where(eq(settings.key, finishingJobsVersion));
+    if (applied) return;
+    const grinder = proposedJobs.find((job) => job.id === previousCombinedFinishingJob.id)!;
+    const cleaner = proposedJobs.find((job) => job.slug === "cleaner")!;
+    const updatedIds: string[] = [];
+    const [row] = await tx.select().from(jobs).where(eq(jobs.id, grinder.id)).for("update");
+    if (row && row.slug === grinder.slug) {
+      const data = { ...row.data };
+      for (const field of ["title", "summary", "description", "imageAlt", "responsibilities"] as const)
+        if (JSON.stringify(data[field]) === JSON.stringify(previousCombinedFinishingJob[field]))
+          Object.assign(data, { [field]: grinder[field] });
+      if (JSON.stringify(data) !== JSON.stringify(row.data)) {
+        await tx.update(jobs).set({ data }).where(eq(jobs.id, row.id));
+        updatedIds.push(row.id);
+      }
+    }
+    const [existingCleaner] = await tx.select().from(jobs).where(eq(jobs.id, cleaner.id));
+    if (!existingCleaner)
+      await tx.insert(jobs).values({ id: cleaner.id, slug: cleaner.slug, status: cleaner.status, data: cleaner });
+    await tx.insert(settings).values({ key: finishingJobsVersion, value: new Date().toISOString() });
+    await tx.insert(audits).values({
+      id: randomUUID(), actorId: "system:catalog-migration", action: "catalog.finishing-jobs-separated",
+      targetId: finishingJobsVersion, details: { updatedIds, addedIds: existingCleaner ? [] : [cleaner.id] },
+    });
+  });
+}
+
+/** Persist form-only roles for server-side application validation without replacing staff records. */
+export async function migrateAdditionalApplicationJobs(db: Database) {
+  await db.transaction(async (tx) => {
+    if (process.env.DATABASE_URL) await tx.execute(sql`SELECT pg_advisory_xact_lock(621349133)`);
+    const [applied] = await tx.select().from(settings).where(eq(settings.key, additionalApplicationJobsVersion));
+    if (applied) return;
+    const addedIds: string[] = [];
+    for (const job of additionalApplicationJobs) {
+      const [existing] = await tx.select().from(jobs).where(eq(jobs.id, job.id));
+      if (existing) continue;
+      // A conflicting staff slug rolls back instead of silently replacing their listing.
+      await tx.insert(jobs).values({ id: job.id, slug: job.slug, status: job.status, data: job });
+      addedIds.push(job.id);
+    }
+    await tx.insert(settings).values({ key: additionalApplicationJobsVersion, value: new Date().toISOString() });
+    await tx.insert(audits).values({
+      id: randomUUID(), actorId: "system:catalog-migration", action: "catalog.application-jobs-added",
+      targetId: additionalApplicationJobsVersion, details: { addedIds },
+    });
+  });
 }
 
 /** Replace only known catalog photos; preserve staff uploads and every non-image field. */
@@ -165,7 +223,7 @@ export async function migrateMinimumExperience(db: Database) {
       if (!row || row.slug !== replacement.slug) continue;
       const baseline = proposalV1Jobs.find((job) => job.id === row.id)!;
       const data = { ...row.data, requirements: [...new Set([minimumExperienceRequirement, ...row.data.requirements])] };
-      if (data.experience === baseline.experience) data.experience = replacement.experience;
+      if (baseline && data.experience === baseline.experience) data.experience = replacement.experience;
       if (JSON.stringify(data) === JSON.stringify(row.data)) continue;
       await tx.update(jobs).set({ data }).where(eq(jobs.id, row.id));
       updatedIds.push(row.id);

@@ -13,7 +13,7 @@ import { hashPassword } from "../lib/auth";
 import { readObject, validateResume, validateSupportingDocument } from "../lib/storage";
 import { drainSheetsQueue } from "../lib/sheets-queue";
 import type { ApplicationDocument } from "../lib/types";
-import { MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, referenceApplicationUploads } from "../lib/document-uploads";
+import { getReferenceApplicationUploads, MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, referenceApplicationUploads } from "../lib/document-uploads";
 import { POST as submit } from "../app/api/applications/route";
 import { POST as signIn } from "../app/api/admin/session/route";
 import { GET as download } from "../app/api/admin/applications/[id]/documents/[documentId]/route";
@@ -24,7 +24,7 @@ const pdf = Buffer.from("%PDF-1.4\nSynthetic supporting document\n%%EOF\n");
 let directory = "";
 before(async () => {
   directory = await mkdtemp(path.join(tmpdir(), "chapter-documents-test-"));
-  Object.assign(process.env, { NODE_ENV: "test", DATA_DIR: directory, CHAPTER_LOCAL_MODE: "true", APP_ORIGIN: origin, SESSION_SECRET: "documents-test-secret-".repeat(4) });
+  Object.assign(process.env, { NODE_ENV: "test", DATA_DIR: directory, CHAPTER_LOCAL_MODE: "true", TRUST_PROXY: "false", APP_ORIGIN: origin, SESSION_SECRET: "documents-test-secret-".repeat(4) });
   for (const key of ["DATABASE_URL", "S3_BUCKET", "S3_REGION", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "GOOGLE_SHEETS_WEBHOOK_URL", "GOOGLE_SHEETS_WEBHOOK_SECRET"]) delete process.env[key];
 });
 after(async () => {
@@ -47,7 +47,7 @@ test("supporting uploads validate real bytes and sanitize scans", async () => {
 });
 
 test("applications privately retain optional identity and work documents while legacy Google exports keep supported files", async () => {
-  const job = (await getJobs())[0];
+  const job = (await getJobs()).find((candidate) => candidate.slug === "fabricator")!;
   const input = { jobId: job.id, fullName: "Document Test Applicant", email: "documents@example.test", phone: "+639171234567", country: "Philippines", recentJobTitle: "Fabricator", experienceYears: 3, skills: "Fabrication", education: "School diploma", summary: "", coverLetter: "", driverLicenseDetails: "Non-professional license, Philippines", consent: true };
   const key = randomUUID();
   function request(changed?: "driver-license" | "passport", duplicate = false) {
@@ -135,12 +135,12 @@ test("driver license collection is restricted to the PDF roles, including attach
   assert.equal((await getApplications()).length, count);
 });
 
-test("reference form requires three private uploads, enforces its smaller limits and preserves exact retries", async () => {
+test("reference form requires residence ID abroad, enforces its smaller limits and preserves exact retries", async () => {
   const job = (await getJobs())[0];
   const input = {
     applicationFormVersion: 2, destinationCountry: "Croatia", termsAccepted: true,
-    jobId: job.id, fullName: "Modern Applicant", email: "modern-documents@example.test", phone: "+639171234567", country: "Philippines", consent: true,
-    applicantDetails: { firstName: "Modern", lastName: "Applicant", gender: "Male", nationality: "Filipino",
+    jobId: job.id, fullName: "Modern Applicant", email: "modern-documents@example.test", phone: "+639171234567", country: "Romania", consent: true,
+    applicantDetails: { firstName: "Modern", lastName: "Applicant", gender: "Male",
       street: "123 Test Street", city: "Test City", province: "Test Province", postalCode: "1234",
       currentAddress: "123 Test Street, Test City, Test Province, 1234", dateOfBirth: "1992-02-29", placeOfBirth: "Test city", secondaryPosition: "No other position", englishProficiency: "No" },
   };
@@ -158,7 +158,8 @@ test("reference form requires three private uploads, enforces its smaller limits
     const bytes = Buffer.alloc(size, " "); bytes.write("%PDF-1.4\n"); bytes.write("\n%%EOF\n", size - 8); return bytes;
   }
   assert.equal(MAX_REFERENCE_UPLOAD_BYTES, 4 * 1024 * 1024);
-  assert.deepEqual(referenceApplicationUploads.filter(({ required }) => required).map(({ id }) => id), ["resume", "passport", "residence-id"]);
+  assert.deepEqual(referenceApplicationUploads.filter(({ required }) => required).map(({ id }) => id), ["resume", "passport"]);
+  assert.deepEqual(getReferenceApplicationUploads({ country: input.country, jobTitle: job.title }).filter(({ required }) => required).map(({ id }) => id), ["resume", "passport", "residence-id"]);
   const beforeCount = (await getApplications()).length;
   for (const field of ["resume", "document:passport", "document:residence-id"]) {
     const response = await submit(request({ [field]: undefined }));
@@ -189,6 +190,7 @@ test("reference form requires three private uploads, enforces its smaller limits
   assert.equal((await submit(request({ "document:passport": Buffer.from("%PDF-1.4\nchanged passport\n%%EOF\n") }))).status, 409);
   const application = (await getApplications()).find((record) => record.reference === receipt.reference)!;
   assert.equal(application.applicationFormVersion, 2);
+  assert.equal(Object.hasOwn(application.applicantDetails!, "nationality"), false);
   assert.equal(application.recentJobTitle, ""); assert.equal(application.skills, ""); assert.equal(application.experienceYears, 0);
   assert.deepEqual(application.documents?.map(({ category }) => category), ["passport", "residence-id"]);
   for (const document of application.documents || []) {
@@ -209,4 +211,63 @@ test("reference form requires three private uploads, enforces its smaller limits
   await saveJob({ ...job, id: customId, slug: `modern-custom-${customId}`, title: "Modern custom role" }, "test-staff", true);
   const optionalLicense = await submit(request({ "document:driver-license": pdf }, randomUUID(), false, customId));
   assert.equal(optionalLicense.status, 201);
+});
+
+test("reference document requirements follow the current country and stored driving role", async () => {
+  const storedJob = (await getJobs())[0];
+  const driverId = randomUUID();
+  const cleanerId = randomUUID();
+  const cleanerJob = { ...storedJob, id: cleanerId, slug: `cleaner-${cleanerId}`, title: "Cleaner" };
+  await saveJob({ ...storedJob, id: driverId, slug: `driver-${driverId}`, title: "Delivery Driver" }, "test-staff", true);
+  await saveJob(cleanerJob, "test-staff", true);
+  const requiredIds = (country: string, jobTitle: string) => getReferenceApplicationUploads({ country, jobTitle }).filter(({ required }) => required).map(({ id }) => id);
+  assert.deepEqual(requiredIds("Philippines", "Cleaner"), ["resume", "passport"]);
+  assert.deepEqual(requiredIds("Philippines", "Delivery Driver"), ["resume", "passport", "driver-license"]);
+  assert.deepEqual(requiredIds("Serbia", "Heavy Truck Driver (Dumptruck)"), ["resume", "passport", "residence-id", "driver-license"]);
+  assert.match(getReferenceApplicationUploads().find(({ id }) => id === "residence-id")!.description, /Filipinos living outside the Philippines/);
+  assert.match(getReferenceApplicationUploads({ destinationCountry: "Croatia" }).find(({ id }) => id === "form18a")!.label, /for Croatia applicants/);
+  assert.match(getReferenceApplicationUploads({ destinationCountry: "Serbia" }).find(({ id }) => id === "form18a")!.description, /not needed/);
+
+  const input = {
+    applicationFormVersion: 2, destinationCountry: "Slovenia", termsAccepted: true,
+    jobId: driverId, fullName: "Country Applicant", email: "country-driver@example.test", phone: "+639171234567", country: "Philippines", consent: true,
+    applicantDetails: { firstName: "Country", lastName: "Applicant", gender: "Female",
+      street: "123 Test Street", city: "Test City", province: "Test Province", postalCode: "1234",
+      currentAddress: "123 Test Street, Test City, Test Province, 1234", dateOfBirth: "1992-02-29", placeOfBirth: "Test city", secondaryPosition: "No other position", englishProficiency: "Yes" },
+  };
+  function request(jobId: string, country = "Philippines", license = false, requestKey = randomUUID()) {
+    const form = new FormData();
+    form.set("payload", JSON.stringify({ ...input, jobId, country }));
+    form.set("idempotencyKey", requestKey);
+    form.set("resume", new File([pdf], "cv.pdf"));
+    form.set("document:passport", new File([pdf], "passport.pdf"));
+    if (license) form.set("document:driver-license", new File([pdf], "license.pdf"));
+    return new NextRequest(`${origin}/api/applications`, { method: "POST", headers: { origin, "x-forwarded-for": "192.0.2.42" }, body: form });
+  }
+  process.env.TRUST_PROXY = "true";
+  try {
+    const count = (await getApplications()).length;
+    const noLicense = await submit(request(driverId));
+    assert.equal(noLicense.status, 422);
+    assert.ok((await noLicense.json()).fieldErrors["document:driver-license"]);
+    const noResidence = await submit(request(cleanerId, "Serbia"));
+    assert.equal(noResidence.status, 422);
+    assert.ok((await noResidence.json()).fieldErrors["document:residence-id"]);
+    assert.equal((await getApplications()).length, count);
+    assert.equal((await submit(request(driverId, "Philippines", true))).status, 201);
+    const cleanerKey = randomUUID();
+    const cleanerAccepted = await submit(request(cleanerId, "Philippines", false, cleanerKey));
+    assert.equal(cleanerAccepted.status, 201);
+    const cleanerReceipt = await cleanerAccepted.json();
+    await saveJob({ ...cleanerJob, title: "Van Driver" }, "test-staff");
+    const cleanerRetry = await submit(request(cleanerId, "Philippines", false, cleanerKey));
+    assert.equal(cleanerRetry.status, 200);
+    assert.deepEqual(await cleanerRetry.json(), cleanerReceipt);
+    const newDriverRequest = await submit(request(cleanerId));
+    assert.equal(newDriverRequest.status, 422);
+    assert.ok((await newDriverRequest.json()).fieldErrors["document:driver-license"]);
+    assert.equal((await getApplications()).length, count + 2);
+  } finally {
+    process.env.TRUST_PROXY = "false";
+  }
 });

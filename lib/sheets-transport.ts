@@ -55,6 +55,17 @@ export function sheetsConfiguration(env: Record<string, string | undefined> = pr
 
 export function buildSheetsPayload(application: Application, resume: Buffer, job?: Job, documents: SheetsDocument[] = []): SheetsPayload {
   const fair = job ? getJobFairRole(job) : undefined;
+  let summary = application.summary;
+  let coverLetter = application.coverLetter;
+  if (application.applicationFormVersion === 2 && application.destinationCountry) {
+    // The deployed receiver accepts these existing notes columns. Keep its
+    // strict schema and all applicant text intact when projecting destination.
+    const destinationNote = `Application destination: ${application.destinationCountry}`;
+    const withSummary = `${summary}${summary ? "\n\n" : ""}${destinationNote}`;
+    const withCoverLetter = `${coverLetter}${coverLetter ? "\n\n" : ""}${destinationNote}`;
+    if (withSummary.length <= 4000) summary = withSummary;
+    else if (withCoverLetter.length <= 6000) coverLetter = withCoverLetter;
+  }
   // Receiver schemas 3/4 reject unknown keys and document categories. Keep the
   // expanded applicant profile and identity documents in private website records.
   const receiverDocuments = documents.filter(({ category }) => receiverDocumentCategories.has(category));
@@ -75,8 +86,8 @@ export function buildSheetsPayload(application: Application, resume: Buffer, job
       experienceYears: application.experienceYears,
       skills: application.applicationFormVersion === 2 && !application.skills ? "Not collected by this form" : application.skills,
       education: application.education,
-      summary: application.summary,
-      coverLetter: application.coverLetter,
+      summary,
+      coverLetter,
       consent: application.consent,
       ...(application.driverLicenseDetails !== undefined ? { driverLicenseDetails: application.driverLicenseDetails } : {}),
       status: application.status,

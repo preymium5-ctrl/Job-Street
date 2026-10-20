@@ -4,8 +4,8 @@ import styles from "./ApplicationRequirements.module.css";
 export function ApplicationRequirements() {
   return (
     <section className={styles.requirements} aria-labelledby="application-requirements-heading">
-      <h2 className={styles.heading} id="application-requirements-heading">Document requirements</h2>
-      <p className={styles.positions}><strong>All positions:</strong></p>
+      <h2 className={styles.heading} id="application-requirements-heading">Documents may be required</h2>
+      <p className={styles.positions}><strong>Depending on your position and application destination:</strong></p>
       <ul className={styles.documentList}>
         {fairDocuments.map((document) => (
           <li key={document}>{document}</li>

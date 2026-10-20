@@ -1,13 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, CheckCircle2, ClipboardCheck, FileText, LockKeyhole } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, CheckCircle2, ClipboardCheck, FileText, LockKeyhole, MessageCircle, Send } from "lucide-react";
 import type { ApplicantDetails, ApplicationInput, Job } from "@/lib/types";
 import { formatApplicantAddress } from "@/lib/applicant-address";
 import { applicationSchema, fieldErrors } from "@/lib/validation";
-import { additionalPositionOptions, currentWorkCountries, nationalityOptions } from "@/data/application-options";
-import { MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, referenceApplicationUploads, type ReferenceUploadId, type SupportingDocumentCategory } from "@/lib/document-uploads";
+import { additionalPositionOptions, currentWorkCountries, destinationCountries } from "@/data/application-options";
+import { isAdditionalApplicationJob } from "@/data/application-jobs";
+import { MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, getReferenceApplicationUploads, type ReferenceUploadId, type SupportingDocumentCategory } from "@/lib/document-uploads";
 import { BrandLockup } from "@/components/ui/Brand";
 import { ApplicationRequirements } from "./ApplicationRequirements";
 import { ApplicationUpload } from "./ApplicationUpload";
@@ -18,8 +19,8 @@ type UploadFiles = Partial<Record<ReferenceUploadId, File>>;
 const addressFields = ["street", "city", "province", "postalCode"] as const;
 const positionHelp = "Please select only a position for which you already have relevant work experience.";
 
-function validateUpload(id: ReferenceUploadId, file?: File): string | undefined {
-  const definition = referenceApplicationUploads.find((upload) => upload.id === id)!;
+function validateUpload(id: ReferenceUploadId, file: File | undefined, uploads: ReturnType<typeof getReferenceApplicationUploads>): string | undefined {
+  const definition = uploads.find((upload) => upload.id === id)!;
   if (!file) return definition.required ? "Attach this required document." : undefined;
   if (!file.size) return "Choose a file that is not empty.";
   if (file.size > MAX_REFERENCE_FILE_BYTES) return "Choose a file no larger than 3 MB.";
@@ -38,13 +39,14 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
     applicationFormVersion: 2, destinationCountry: "Croatia", termsAccepted: false,
     jobId: initialJob.id, fullName: "", email: "", phone: "", country: "", consent: false,
     applicantDetails: {
-      firstName: "", lastName: "", gender: "", nationality: "", telegram: "", currentAddress: "",
+      firstName: "", lastName: "", gender: "", telegram: "", currentAddress: "",
       street: "", city: "", province: "", postalCode: "", dateOfBirth: "", placeOfBirth: "",
       fatherName: "", motherName: "", secondaryPosition: "", otherPosition: "",
       englishProficiency: "" as ApplicantDetails["englishProficiency"],
     },
   });
   const job = availableJobs.find((candidate) => candidate.id === values.jobId) || initialJob;
+  const uploads = getReferenceApplicationUploads({ country: values.country, destinationCountry: values.destinationCountry, jobTitle: job.title });
   const [files, setFiles] = useState<UploadFiles>({});
   const [errors, setErrors] = useState<FormErrors>({});
   const [error, setError] = useState("");
@@ -58,12 +60,15 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
   const submittingRef = useRef(false);
   const idempotencyRef = useRef<string | null>(null);
   const totalBytes = Object.values(files).reduce((sum, file) => sum + (file?.size || 0), 0);
-  const requiredReady = referenceApplicationUploads.filter((upload) => upload.required && !validateUpload(upload.id, files[upload.id])).length;
+  const requiredUploads = uploads.filter((upload) => upload.required);
+  const requiredReady = requiredUploads.filter((upload) => !validateUpload(upload.id, files[upload.id], uploads)).length;
 
   function update<K extends keyof ApplicationInput>(key: K, value: ApplicationInput[K]) {
     idempotencyRef.current = null;
     setValues((current) => ({ ...current, [key]: value }));
-    setErrors((current) => ({ ...current, [key]: undefined }));
+    setErrors((current) => ({ ...current, [key]: undefined,
+      ...(key === "country" ? { "document:residence-id": undefined } : {}),
+      ...(key === "jobId" ? { "document:driver-license": undefined } : {}) }));
   }
 
   function updateDetails<K extends keyof ApplicantDetails>(key: K, value: ApplicantDetails[K]) {
@@ -80,14 +85,14 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
   function chooseFile(id: ReferenceUploadId, file?: File) {
     idempotencyRef.current = null;
     setFiles((current) => ({ ...current, [id]: file }));
-    setErrors((current) => ({ ...current, [uploadErrorKey(id)]: file ? validateUpload(id, file) : undefined, documents: undefined }));
+    setErrors((current) => ({ ...current, [uploadErrorKey(id)]: file ? validateUpload(id, file, uploads) : undefined, documents: undefined }));
   }
 
   function validateAll(): FormErrors {
     const parsed = applicationSchema.safeParse(values);
     const next: FormErrors = parsed.success ? {} : fieldErrors(parsed.error);
-    for (const upload of referenceApplicationUploads) {
-      const message = validateUpload(upload.id, files[upload.id]);
+    for (const upload of uploads) {
+      const message = validateUpload(upload.id, files[upload.id], uploads);
       if (message) next[uploadErrorKey(upload.id)] = message;
     }
     if (totalBytes > MAX_REFERENCE_UPLOAD_BYTES) next.documents = "Keep all files together within 4 MB; aim for under 1 MB each.";
@@ -114,7 +119,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
     idempotencyRef.current ||= crypto.randomUUID();
     const body = new FormData();
     body.append("payload", JSON.stringify(values)); body.append("resume", resume);
-    for (const upload of referenceApplicationUploads) {
+    for (const upload of uploads) {
       if (upload.id !== "resume" && files[upload.id]) body.append(`document:${upload.id}`, files[upload.id]!);
     }
     body.append("website", website); body.append("idempotencyKey", idempotencyRef.current);
@@ -139,7 +144,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
   }
 
   function profileText(key: keyof ApplicantDetails, label: string, options: {
-    optional?: boolean; type?: string; placeholder?: string; autoComplete?: string; help?: string;
+    optional?: boolean; type?: string; placeholder?: string; autoComplete?: string; help?: string; icon?: ReactNode;
   } = {}) {
     const errorKey = `applicantDetails.${key}` as const;
     const limits: Partial<Record<keyof ApplicantDetails, number>> = {
@@ -147,7 +152,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
       postalCode: 20, placeOfBirth: 120, fatherName: 120, motherName: 120, otherPosition: 160,
     };
     return <div className={styles.field}>
-      <label htmlFor={errorKey}>{label}<span>{options.optional ? "Optional" : <span aria-label="required">*</span>}</span></label>
+      <label htmlFor={errorKey}>{options.icon}{label}<span>{options.optional ? "Optional" : <span aria-label="required">*</span>}</span></label>
       <input id={errorKey} name={errorKey} type={options.type || "text"} value={values.applicantDetails?.[key] || ""}
         placeholder={options.placeholder} autoComplete={options.autoComplete} maxLength={limits[key]} disabled={busy}
         max={options.type === "date" ? new Date().toISOString().slice(0, 10) : undefined}
@@ -159,9 +164,9 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
     </div>;
   }
 
-  function contactInput(key: "email" | "phone", label: string, placeholder: string, help?: string) {
+  function contactInput(key: "email" | "phone", label: string, placeholder: string, help?: string, icon?: ReactNode) {
     return <div className={styles.field}>
-      <label htmlFor={key}>{label}<span aria-label="required">*</span></label>
+      <label htmlFor={key}>{icon}{label}<span aria-label="required">*</span></label>
       <input id={key} name={key} type={key === "email" ? "email" : "tel"} value={values[key]} placeholder={placeholder}
         autoComplete={key === "email" ? "email" : "tel"} maxLength={key === "email" ? 254 : 30} disabled={busy}
         required aria-required="true" aria-invalid={Boolean(errors[key])}
@@ -172,9 +177,9 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
     </div>;
   }
 
-  function selectField(key: "country" | "jobId" | "destinationCountry" | "nationality" | "secondaryPosition", label: string,
-    options: readonly { value: string; label: string }[], help?: string, placeholder = true) {
-    const nested = key === "nationality" || key === "secondaryPosition";
+  function selectField(key: "country" | "jobId" | "destinationCountry" | "secondaryPosition", label: string,
+    options: readonly { value: string; label: string; group?: string }[], help?: string, placeholder = true) {
+    const nested = key === "secondaryPosition";
     const errorKey = nested ? `applicantDetails.${key}` as const : key;
     const value = nested ? values.applicantDetails?.[key] || "" : values[key];
     return <div className={styles.field}>
@@ -182,12 +187,16 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
       <select id={errorKey} name={errorKey} value={value} disabled={busy} required aria-required="true" aria-invalid={Boolean(errors[errorKey])}
         aria-describedby={[help ? `${errorKey}-help` : undefined, errors[errorKey] ? `${errorKey}-error` : undefined].filter(Boolean).join(" ") || undefined}
         onChange={(event) => {
-          if (key === "nationality" || key === "secondaryPosition") updateDetails(key, event.target.value);
-          else if (key === "destinationCountry") update(key, "Croatia");
+          if (key === "secondaryPosition") updateDetails(key, event.target.value);
+          else if (key === "destinationCountry") update(key, event.target.value as ApplicationInput["destinationCountry"]);
           else update(key, event.target.value);
         }}>
         {placeholder && <option value="">Select an option</option>}
-        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        {options.some((option) => option.group)
+          ? [...new Set(options.map((option) => option.group))].map((group) => <optgroup key={group} label={group || "Jobs"}>
+            {options.filter((option) => option.group === group).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </optgroup>)
+          : options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
       {help && <p id={`${errorKey}-help`} className={styles.formNote}>{help}</p>}
       {errors[errorKey] && <p id={`${errorKey}-error`} className={styles.fieldError}>{errors[errorKey]}</p>}
@@ -212,7 +221,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
   const nameOptions = (options: readonly string[]) => options.map((option) => ({ value: option, label: option }));
 
   return <div className={styles.page}><div className="container">
-    <Link href={`/jobs/${job.slug}`} className={styles.back}><ArrowLeft size={16} /> Back to the opportunity</Link>
+    <Link href={isAdditionalApplicationJob(job) ? "/jobs" : `/jobs/${job.slug}`} className={styles.back}><ArrowLeft size={16} /> Back to opportunities</Link>
     <div className={styles.shell} role="region" aria-label="Application">
       <header className={styles.masthead}>
         <div className={styles.mastheadBrand}><BrandLockup /></div>
@@ -249,10 +258,9 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
                       {profileText("lastName", "Your last name", { placeholder: "Enter your last name", autoComplete: "family-name" })}
                       {choices("gender", "Enter your gender", ["Male", "Female"])}
                       {contactInput("email", "Email", "you@example.com")}
-                      {selectField("nationality", "Please enter your nationality", nameOptions(nationalityOptions))}
-                      {contactInput("phone", "WhatsApp number", "+63 912 345 6789", "Enter your active WhatsApp number with the country code.")}
-                      {profileText("telegram", "Telegram number", { optional: true, type: "tel", placeholder: "Enter your Telegram number", help: "Enter your active Telegram number, if you use Telegram." })}
-                      <fieldset className={`${styles.addressGroup} ${styles.full}`}><legend>Your current address</legend><div className={styles.grid}>
+                      {contactInput("phone", "WhatsApp number", "+63 912 345 6789", "Enter your active WhatsApp number with the country code.", <MessageCircle className={styles.whatsappIcon} size={18} aria-hidden="true" />)}
+                      {profileText("telegram", "Telegram number", { optional: true, type: "tel", placeholder: "Enter your Telegram number", help: "Enter your active Telegram number, if you use Telegram.", icon: <Send className={styles.telegramIcon} size={18} aria-hidden="true" /> })}
+                      <fieldset className={`${styles.addressGroup} ${styles.full}`}><legend>Your current address / location</legend><div className={styles.grid}>
                         {profileText("street", "Street", { placeholder: "House / building number and street", autoComplete: "street-address" })}
                         {profileText("city", "City", { placeholder: "Enter your city", autoComplete: "address-level2" })}
                         {profileText("province", "Province", { placeholder: "Enter your province / state", autoComplete: "address-level1" })}
@@ -262,27 +270,30 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
                       {profileText("placeOfBirth", "Your place of birth", { placeholder: "City / province and country" })}
                       {profileText("fatherName", "Your father’s full name", { optional: true })}
                       {profileText("motherName", "Your mother’s full name", { optional: true })}
-                      <div className={styles.full}>{selectField("destinationCountry", "Please select a country where you would like to apply", [{ value: "Croatia", label: "Croatia" }], "Our listed vacancies are in Croatia.", false)}</div>
+                      <div className={styles.full}>{selectField("destinationCountry", "Please select a country where you would like to apply", nameOptions(destinationCountries), undefined, false)}</div>
                     </div>
                   </section>
                   <section id="work-experience" className={styles.sectionCard} aria-labelledby="work-heading">
                     <SectionHeading id="work-heading" title="Work Experience" />
                     <div className={styles.questionStack}>
-                      {selectField("country", "Where are you currently working?", nameOptions(currentWorkCountries), "Select the country where you currently work or are based.")}
-                      {selectField("jobId", "What job position are you primarily applying for?", availableJobs.map((candidate) => ({ value: candidate.id, label: candidate.title })), positionHelp, false)}
-                      {selectField("secondaryPosition", "Please select another job position in which you have experience", nameOptions(additionalPositionOptions), positionHelp)}
+                      {selectField("country", "Country where you are currently working", nameOptions(currentWorkCountries), "Select the country where you currently work or are based.")}
+                      {selectField("jobId", "What job position are you primarily applying for?", [
+                        ...availableJobs.filter((candidate) => !isAdditionalApplicationJob(candidate)),
+                        ...availableJobs.filter(isAdditionalApplicationJob),
+                      ].map((candidate) => ({ value: candidate.id, label: candidate.title, group: isAdditionalApplicationJob(candidate) ? "Other jobs we’re offering" : "Our listed jobs" })), positionHelp, false)}
+                      {selectField("secondaryPosition", "Please select an additional role in which you have relevant experience", nameOptions(additionalPositionOptions), "Choose a role other than the one you are applying for. Select ‘No other position’ if none applies.")}
                       {profileText("otherPosition", "If the job you’re applying for is not listed above, please enter it here", { optional: true })}
                     </div>
                   </section>
-                  <section id="application-documents" className={styles.sectionCard} aria-label="Document requirements and uploads">
+                  <section id="application-documents" className={styles.sectionCard} aria-label="Documents that may be required and uploads">
                     <ApplicationRequirements />
                     <div className={styles.uploadHeading}><h2 className={styles.sectionTitle} id="documents-heading">Document Uploads</h2>
-                      <p className={styles.sectionIntro}>For this application, attach your CV, valid passport, and residence ID. Attach the work permit documents below if you have them available.</p>
+                      <p className={styles.sectionIntro}>Attach your updated CV and valid passport. A residence ID is required for applicants working outside the Philippines, and a driver’s license is required for driver applicants. You may upload other supporting documents if available.</p>
                     </div>
-                    <div className={styles.uploadStatus} role="status" aria-live="polite"><ClipboardCheck size={22} aria-hidden="true" /><div><strong>{requiredReady} of 3 required documents ready</strong>
+                    <div className={styles.uploadStatus} role="status" aria-live="polite"><ClipboardCheck size={22} aria-hidden="true" /><div><strong>{requiredReady} of {requiredUploads.length} required documents ready</strong>
                       <p>{(totalBytes / 1024 / 1024).toFixed(1)} MB of 4 MB used. Keep all files together within 4 MB; aim for under 1 MB each.</p></div>
                     </div>
-                    <div className={styles.uploadsGrid}>{referenceApplicationUploads.map((upload) => <ApplicationUpload key={upload.id}
+                    <div className={styles.uploadsGrid}>{uploads.map((upload) => <ApplicationUpload key={upload.id}
                       id={upload.id === "resume" ? "resume" : `attachment-${upload.id}`} label={upload.label} description={upload.description}
                       required={upload.required} accept={upload.accept} file={files[upload.id] || null} disabled={busy}
                       error={errors[uploadErrorKey(upload.id)]} onChange={(file) => chooseFile(upload.id, file)} onRemove={() => chooseFile(upload.id)} />)}</div>

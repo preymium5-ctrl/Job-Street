@@ -151,6 +151,53 @@ test("reference-only fields stay private while legacy receiver strings identify 
   assert.equal(withAnswers.application.skills, "Earlier applicant skills");
 });
 
+test("reference application destination is reported in existing Sheets notes without changing stored answers", () => {
+  const application: Application = { ...applicant(), applicationFormVersion: 2, destinationCountry: "Romania", termsAccepted: true };
+  const payload = buildSheetsPayload(application, resume, job);
+  assert.equal(payload.application.summary, "Application destination: Romania");
+  assert.equal(payload.application.country, application.country);
+  assert.equal(Object.hasOwn(payload.application, "destinationCountry"), false);
+  assert.equal(application.summary, "");
+  assert.equal(application.coverLetter, "");
+  assert.deepEqual(buildSheetsPayload(application, resume, job), payload);
+
+  const answered = { ...application, summary: "Applicant summary", coverLetter: "Applicant cover letter" };
+  const withAnswers = buildSheetsPayload(answered, resume, job);
+  assert.equal(withAnswers.application.summary, "Applicant summary\n\nApplication destination: Romania");
+  assert.equal(withAnswers.application.coverLetter, answered.coverLetter);
+  assert.equal(answered.summary, "Applicant summary");
+
+  const legacy = { ...answered, applicationFormVersion: undefined };
+  const legacyPayload = buildSheetsPayload(legacy, resume, job);
+  assert.equal(legacyPayload.application.summary, legacy.summary);
+  assert.equal(legacyPayload.application.coverLetter, legacy.coverLetter);
+});
+
+test("Sheets destination notes respect receiver limits and preserve saturated applicant text", () => {
+  const note = "Application destination: Montenegro";
+  const application: Application = { ...applicant(), applicationFormVersion: 2, destinationCountry: "Montenegro", termsAccepted: true,
+    summary: "s".repeat(4000 - note.length - 2), coverLetter: "Applicant cover letter" };
+  const exactSummary = buildSheetsPayload(application, resume, job);
+  assert.equal(exactSummary.application.summary, `${application.summary}\n\n${note}`);
+  assert.equal(exactSummary.application.summary.length, 4000);
+
+  const overflowSummary = { ...application, summary: application.summary + "s" };
+  const fallback = buildSheetsPayload(overflowSummary, resume, job);
+  assert.equal(fallback.application.summary, overflowSummary.summary);
+  assert.equal(fallback.application.coverLetter, `Applicant cover letter\n\n${note}`);
+
+  const exactCover = { ...overflowSummary, coverLetter: "c".repeat(6000 - note.length - 2) };
+  const exactFallback = buildSheetsPayload(exactCover, resume, job);
+  assert.equal(exactFallback.application.coverLetter, `${exactCover.coverLetter}\n\n${note}`);
+  assert.equal(exactFallback.application.coverLetter.length, 6000);
+
+  const saturated = { ...overflowSummary, coverLetter: exactCover.coverLetter + "c" };
+  const preserved = buildSheetsPayload(saturated, resume, job);
+  assert.equal(preserved.application.summary, saturated.summary);
+  assert.equal(preserved.application.coverLetter, saturated.coverLetter);
+  assert.equal(saturated.destinationCountry, "Montenegro");
+});
+
 test("schema 4 health enables source delivery through safe body-free Google redirects", async () => {
   await withWebhook(async () => {
     const application = { ...applicant(), discoverySource: "Google search" as const };

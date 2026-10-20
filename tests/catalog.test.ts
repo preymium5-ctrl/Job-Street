@@ -4,7 +4,9 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { eq } from "drizzle-orm";
-import { proposedJobs, proposalV1Jobs, previousRecruitmentJobs } from "../data/jobs";
+import { proposedJobs, proposalV1Jobs, previousRecruitmentJobs, previousCombinedFinishingJob } from "../data/jobs";
+import { additionalApplicationJobs, isAdditionalApplicationJob } from "../data/application-jobs";
+import { publicJobContent } from "../lib/public-jobs";
 import { maximumAgeRequirement, maximumApplicantAge, minimumExperienceRequirement, recruitmentBenefits } from "../data/employment";
 import { fairDocuments, fairDocumentTiming, fairNc2Requirements, getJobFairRole, jobFair, nc2ElectricalNote } from "../data/job-fair";
 import { hiringAllocations, hiringWorkerTotal } from "../data/hiring-allocations";
@@ -26,6 +28,10 @@ import {
   hiringWorkerCountsVersion,
   migrateMaximumAgeRequirement,
   maximumAgeRequirementVersion,
+  migrateFinishingJobs,
+  finishingJobsVersion,
+  migrateAdditionalApplicationJobs,
+  additionalApplicationJobsVersion,
 } from "../lib/catalog-migration";
 import { closeDatabase, getDatabase } from "../lib/db";
 import { applications, audits, jobs, settings } from "../lib/schema";
@@ -80,8 +86,8 @@ test("the archived 17 operator proposals retain original worker counts and salar
     ],
   );
   assert.equal(proposalV1Jobs.reduce((sum, job) => sum + (job.openings ?? 0), 0), 248);
-  assert.equal(new Set(proposedJobs.map((job) => job.image)).size, 17);
-  assert.equal(new Set(proposedJobs.map((job) => job.slug)).size, 17);
+  assert.equal(new Set(proposedJobs.map((job) => job.image)).size, 18);
+  assert.equal(new Set(proposedJobs.map((job) => job.slug)).size, 18);
   for (const job of proposedJobs) {
     assert.equal(jobSchema.safeParse(job).success, true, job.title);
     assert.equal(job.salaryStatus, "proposed-net");
@@ -95,9 +101,9 @@ test("the archived 17 operator proposals retain original worker counts and salar
 });
 
 test("current employer counts vary strictly between 100 and 1200 and reconcile with every job total", () => {
-  assert.equal(Object.keys(hiringAllocations).length, proposedJobs.length);
+  assert.equal(Object.keys(hiringAllocations).length, proposalV1Jobs.length);
   const counts: number[] = [];
-  for (const job of proposedJobs) {
+  for (const job of proposedJobs.filter((job) => hiringAllocations[job.slug])) {
     const role = getJobFairRole(job)!;
     assert.deepEqual(role.employers.map((employer) => employer.name).sort(), Object.keys(hiringAllocations[job.slug]).sort());
     for (const employer of role.employers) {
@@ -112,8 +118,35 @@ test("current employer counts vary strictly between 100 and 1200 and reconcile w
   assert.ok(new Set(counts).size > 10);
   assert.deepEqual(getJobFairRole(proposedJobs[0])!.employers.map((employer) => employer.workers), [175, 225, 300, 450]);
   assert.equal(proposedJobs[0].openings, 1150);
-  assert.equal(proposedJobs.reduce((total, job) => total + job.openings!, 0), 11100);
+  assert.equal(proposedJobs.reduce((total, job) => total + (job.openings ?? 0), 0), 11100);
   assert.equal(hiringWorkerTotal("unrelated-staff-job"), undefined);
+});
+
+test("Grinder and Cleaner are distinct jobs with matching salary and role-specific duties", () => {
+  const grinder = proposedJobs.find((job) => job.title === "Grinder")!;
+  const cleaner = proposedJobs.find((job) => job.title === "Cleaner")!;
+  assert.ok(grinder && cleaner);
+  assert.equal(grinder.id, previousCombinedFinishingJob.id);
+  assert.equal(grinder.slug, previousCombinedFinishingJob.slug);
+  assert.equal(cleaner.salary, grinder.salary);
+  assert.notEqual(cleaner.id, grinder.id);
+  assert.notEqual(cleaner.image, grinder.image);
+  assert.equal(cleaner.openings, undefined);
+  assert.match(grinder.summary, /deburr metal/);
+  assert.match(cleaner.summary, /hygienic/);
+  assert.doesNotMatch(cleaner.requirements.join(" "), /NC2 Fabricator|grinding/);
+});
+
+test("public recruitment guidance removes company names and pending-test wording from saved content", () => {
+  for (const job of proposedJobs) {
+    const role = getJobFairRole(job)!;
+    const publicText = JSON.stringify({ job: publicJobContent(job), testing: role.testing, focus: role.focus });
+    assert.doesNotMatch(role.testing.join(" "), /to follow/i);
+    for (const employer of jobFair.employers)
+      assert.equal(publicText.includes(employer.name), false, `${job.title}: ${employer.name}`);
+  }
+  const oldContent = { ...proposedJobs[0], requirements: ["Vertiv is looking for industrial electricians."] };
+  assert.deepEqual(publicJobContent(oldContent).requirements, ["The recruitment team is looking for industrial electricians."]);
 });
 
 test("the dated fair allocations reconcile six employers and exactly 248 workers across the 17 roles", () => {
@@ -133,7 +166,7 @@ test("the dated fair allocations reconcile six employers and exactly 248 workers
     const role = getJobFairRole(job)!;
     assert.ok(role, job.slug);
     assert.equal(role.drivingLicenseIsPlus, true, `Page 5 says all positions: ${job.slug}`);
-    assert.equal(role.employers.reduce((total, employer) => total + employer.workers, 0), job.openings, job.title);
+    assert.equal(role.employers.reduce((total, employer) => total + employer.workers, 0), job.openings ?? 0, job.title);
     assert.ok(role.testing.length > 0);
     assert.match(job.description, /hiring skilled Filipino workers/);
     assert.ok(!job.description.toLowerCase().includes("not a confirmed employer offer"));
@@ -144,7 +177,7 @@ test("the dated fair allocations reconcile six employers and exactly 248 workers
 
 test("certificate and trade-test guidance follows the source without inventing missing categories", () => {
   const role = (slug: string) => getJobFairRole(proposedJobs.find((job) => job.slug === slug)!)!;
-  assert.deepEqual(fairDocuments, ["Valid NC2 certificate", "High school diploma", "NBI clearance with apostille", "Form 18a"]);
+  assert.deepEqual(fairDocuments, ["Valid NC2 certificate", "High school diploma", "NBI clearance with apostille", "Form 18a (for Croatia applicants)"]);
   for (const slug of ["fabricator", "cnc-operator", "industrial-spray-painter", "grinder-and-cleaner"])
     assert.equal(role(slug).nc2, "NC2 Fabricator");
   for (const slug of ["tig-rel-welder", "mig-mag-tig-rel-welder", "welder", "mig-mag-tig-welder"])
@@ -165,7 +198,7 @@ test("certificate and trade-test guidance follows the source without inventing m
   assert.match(tig, /1–2 REL passes/);
   assert.match(tig, /Visual inspection \(VT\)/);
   assert.match(tig, /radiographic testing \(RT\) is not required/);
-  assert.deepEqual(role("pipe-fitter").testing, ["Written exam for Đuro Đaković Montaža pipe fitters."]);
+  assert.deepEqual(role("pipe-fitter").testing, ["Written exam for pipe fitters."]);
 });
 
 test("the application NC2 table matches confirmed role guidance and leaves unspecified categories out", () => {
@@ -225,7 +258,7 @@ test("catalog migration preserves applications and custom jobs, resolves old slu
   await migrateProposedJobCatalog(db);
 
   const migrated = await db.select().from(jobs);
-  assert.equal(migrated.filter((row) => row.status === "published").length, 18);
+  assert.equal(migrated.filter((row) => row.status === "published").length, proposedJobs.length + additionalApplicationJobs.length + 1);
   for (const id of legacyExampleJobIds) {
     const archived = migrated.find((row) => row.id === id)!;
     assert.equal(archived.status, "closed");
@@ -506,4 +539,57 @@ test("age requirement migration preserves job details and historical application
   await migrateMaximumAgeRequirement(db);
   assert.deepEqual((await db.select().from(jobs).where(eq(jobs.id, original.id)))[0].data, updated.data);
   assert.equal((await db.select().from(audits).where(eq(audits.targetId, maximumAgeRequirementVersion))).length, 1);
+});
+
+test("separating Grinder and Cleaner preserves original links, staff terms and application history", async () => {
+  const db = await getDatabase();
+  const grinder = proposedJobs.find((job) => job.title === "Grinder")!;
+  const cleaner = proposedJobs.find((job) => job.title === "Cleaner")!;
+  await db.delete(settings).where(eq(settings.key, finishingJobsVersion));
+  await db.delete(audits).where(eq(audits.targetId, finishingJobsVersion));
+  await db.delete(jobs).where(eq(jobs.id, cleaner.id));
+  const original = { ...previousCombinedFinishingJob, salary: "€900–€1,000", status: "closed" as const, image: "/images/staff-grinder.webp" };
+  await db.update(jobs).set({ slug: original.slug, status: original.status, data: original }).where(eq(jobs.id, original.id));
+  const beforeApplications = await db.select().from(applications);
+  await migrateFinishingJobs(db);
+  const [updated] = await db.select().from(jobs).where(eq(jobs.id, original.id));
+  assert.equal(updated.slug, original.slug);
+  assert.equal(updated.status, "closed");
+  assert.equal(updated.data.title, "Grinder");
+  assert.equal(updated.data.salary, original.salary);
+  assert.equal(updated.data.image, original.image);
+  assert.equal(updated.data.summary, grinder.summary);
+  assert.deepEqual((await db.select().from(jobs).where(eq(jobs.id, cleaner.id)))[0].data, JSON.parse(JSON.stringify(cleaner)));
+  assert.deepEqual(await db.select().from(applications), beforeApplications);
+  const laterEdit = { ...updated.data, title: "Staff-reviewed grinder", description: "Staff description" };
+  await db.update(jobs).set({ data: laterEdit }).where(eq(jobs.id, laterEdit.id));
+  await migrateFinishingJobs(db);
+  assert.deepEqual((await db.select().from(jobs).where(eq(jobs.id, laterEdit.id)))[0].data, laterEdit);
+  assert.equal((await db.select().from(audits).where(eq(audits.targetId, finishingJobsVersion))).length, 1);
+});
+
+test("additional application jobs are seeded separately without salaries or overwriting staff edits", async () => {
+  const db = await getDatabase();
+  assert.ok(additionalApplicationJobs.length > 90);
+  assert.equal(new Set(additionalApplicationJobs.map((job) => job.id)).size, additionalApplicationJobs.length);
+  for (const job of additionalApplicationJobs) {
+    assert.equal(jobSchema.safeParse(job).success, true, job.title);
+    assert.equal(isAdditionalApplicationJob(job), true);
+    assert.equal(job.salary, undefined);
+    assert.equal(proposedJobs.some((official) => official.title === job.title), false);
+  }
+  assert.equal(isAdditionalApplicationJob({ id: "additional-application-unrelated-staff-job" }), false);
+  const missing = additionalApplicationJobs[0];
+  const edited = { ...additionalApplicationJobs[1], title: "Staff-reviewed additional role", status: "closed" as const };
+  await db.delete(settings).where(eq(settings.key, additionalApplicationJobsVersion));
+  await db.delete(audits).where(eq(audits.targetId, additionalApplicationJobsVersion));
+  await db.delete(jobs).where(eq(jobs.id, missing.id));
+  await db.update(jobs).set({ status: edited.status, data: edited }).where(eq(jobs.id, edited.id));
+  const beforeApplications = await db.select().from(applications);
+  await migrateAdditionalApplicationJobs(db);
+  assert.deepEqual((await db.select().from(jobs).where(eq(jobs.id, missing.id)))[0].data, missing);
+  assert.deepEqual((await db.select().from(jobs).where(eq(jobs.id, edited.id)))[0].data, edited);
+  assert.deepEqual(await db.select().from(applications), beforeApplications);
+  await migrateAdditionalApplicationJobs(db);
+  assert.equal((await db.select().from(audits).where(eq(audits.targetId, additionalApplicationJobsVersion))).length, 1);
 });
