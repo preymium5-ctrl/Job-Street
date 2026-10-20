@@ -32,8 +32,8 @@
 .field > label { display: flex; align-items: baseline; gap: 7px; margin-bottom: 9px; color: #263b49; font-size: 14px; font-weight: 400; line-height: 1.5; }
 .field > label > span { flex-shrink: 0; color: #67737e; font-size: 11px; }
 .field > label > svg { flex-shrink: 0; align-self: center; }
-.whatsappIcon { color: #128c46; }
-.telegramIcon { color: #1683ba; }
+.whatsappIcon { color: #25d366; }
+.telegramIcon { color: #26a5e4; }
 .field > label > span:not([aria-label="required"]):not(:has([aria-label="required"])) { margin-left: auto; }
 .field > label [aria-label="required"], .choiceLabel [aria-label="required"] { color: #b52e46; font-size: 14px; }
 .field > input, .field > select { display: block; width: 100%; min-width: 0; min-height: 50px; padding: 12px; border: 1px solid #d4d6d8; border-radius: 5px; background: #fff; color: #263b49; font: inherit; font-size: 16px; line-height: 1.5; transition: border-color .18s, box-shadow .18s; }

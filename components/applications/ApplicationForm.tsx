@@ -2,7 +2,7 @@
 
 import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, CheckCircle2, ClipboardCheck, FileText, LockKeyhole, MessageCircle, Send } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, CheckCircle2, ClipboardCheck, FileText, LockKeyhole } from "lucide-react";
 import type { ApplicantDetails, ApplicationInput, Job } from "@/lib/types";
 import { formatApplicantAddress } from "@/lib/applicant-address";
 import { applicationSchema, fieldErrors } from "@/lib/validation";
@@ -10,6 +10,7 @@ import { additionalPositionOptions, currentWorkCountries, destinationCountries }
 import { isAdditionalApplicationJob } from "@/data/application-jobs";
 import { MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, getReferenceApplicationUploads, type ReferenceUploadId, type SupportingDocumentCategory } from "@/lib/document-uploads";
 import { BrandLockup } from "@/components/ui/Brand";
+import { TelegramIcon, WhatsAppIcon } from "@/components/ui/ContactIcons";
 import { ApplicationRequirements } from "./ApplicationRequirements";
 import { ApplicationUpload } from "./ApplicationUpload";
 import styles from "./ApplicationForm.module.css";
@@ -258,8 +259,8 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
                       {profileText("lastName", "Your last name", { placeholder: "Enter your last name", autoComplete: "family-name" })}
                       {choices("gender", "Enter your gender", ["Male", "Female"])}
                       {contactInput("email", "Email", "you@example.com")}
-                      {contactInput("phone", "WhatsApp number", "+63 912 345 6789", "Enter your active WhatsApp number with the country code.", <MessageCircle className={styles.whatsappIcon} size={18} aria-hidden="true" />)}
-                      {profileText("telegram", "Telegram number", { optional: true, type: "tel", placeholder: "Enter your Telegram number", help: "Enter your active Telegram number, if you use Telegram.", icon: <Send className={styles.telegramIcon} size={18} aria-hidden="true" /> })}
+                      {contactInput("phone", "WhatsApp number", "+63 912 345 6789", "Enter your active WhatsApp number with the country code.", <WhatsAppIcon className={styles.whatsappIcon} />)}
+                      {profileText("telegram", "Telegram number", { optional: true, type: "tel", placeholder: "Enter your Telegram number", help: "Enter your active Telegram number, if you use Telegram.", icon: <TelegramIcon className={styles.telegramIcon} /> })}
                       <fieldset className={`${styles.addressGroup} ${styles.full}`}><legend>Your current address / location</legend><div className={styles.grid}>
                         {profileText("street", "Street", { placeholder: "House / building number and street", autoComplete: "street-address" })}
                         {profileText("city", "City", { placeholder: "Enter your city", autoComplete: "address-level2" })}
