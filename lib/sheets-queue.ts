@@ -126,6 +126,7 @@ export async function getApplicationSheetsState(applicationId: string) {
 type WorkerState = { timer?: ReturnType<typeof setInterval>; running?: Promise<unknown> };
 const globalWorker = globalThis as typeof globalThis & { chapterSheetsWorker?: WorkerState };
 export function startSheetsWorker() {
+  if (process.env.APPLICATION_STORAGE === "google-sheets") return;
   const state = (globalWorker.chapterSheetsWorker ??= {});
   if (state.timer) return;
   const run = () => {

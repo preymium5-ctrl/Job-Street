@@ -15,7 +15,7 @@ If dependencies need reinstalling, run `npm ci`. To create a production build, r
 
 ## Included
 
-- All 17 current roles, employer allocations, salary ranges and dated PHP estimates.
+- All 18 current listed roles, salary ranges and dated PHP estimates, plus additional application choices.
 - The original qualifications, role-specific driver’s licence guidance, and document requirements.
 - Prominent no-placement-fee messaging, free transportation and accommodation, and the supplied overtime/holiday benefits.
 - Job search and filters, detailed role pages, a separate application form with CV/supporting-file uploads, and a private staff workspace.
@@ -36,9 +36,13 @@ Verified on 17 October 2026 with an isolated application through the real submis
 
 Import this repository using the **Next.js** framework preset, with the root directory set to the repository root and the default `npm run build` command. Set `NEXT_PUBLIC_SITE_URL` and `APP_ORIGIN` to the final HTTPS website URL. The local `.env.local` file is intentionally excluded from Git.
 
-Public job pages can render from the bundled catalog without a database. Live applications and the staff workspace also require a production `DATABASE_URL`, a private S3-compatible upload bucket (`S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and provider-specific endpoint settings when needed), and a random `SESSION_SECRET` of at least 32 characters. Google Sheets remains the application reporting destination; it does not replace the durable application queue and upload storage in this implementation. Add the existing private Google connection variables to Vercel server environment settings separately.
+For this site's production deployment, set `APPLICATION_STORAGE=google-sheets`. The existing signed Google Apps Script receiver is the durable application store: it writes the complete form answers to the recruiting team's **Applications** tab and saves every uploaded document privately in Google Drive. The website returns a successful application reference only after Google acknowledges the saved row. Exact retries recover the original reference and files; changed contents with a reused submission ID are rejected. The receiver also enforces submission limits. This mode requires the current version 3 receiver protocol (schema 6), the existing private `GOOGLE_SHEETS_WEBHOOK_URL` and `GOOGLE_SHEETS_WEBHOOK_SECRET`, and `GOOGLE_SHEETS_SPREADSHEET_ID`. Keep these values in Vercel's Production environment settings. Never commit them or expose the secret through a `NEXT_PUBLIC_` variable.
 
-Keep `CHAPTER_LOCAL_MODE=false` in production; never point `DATA_DIR` at a Vercel temporary filesystem for permanent applicant storage. Set `INDEX_SITE=true` only for the final public production site. Keep previews excluded from indexing. Configure persistent application storage before accepting live submissions.
+Google Sheets mode uses the current application form, with a 4 MB combined upload limit. Application answers including Telegram, address, birth details, destination, work country, other roles, English proficiency and consent are mapped to their existing tracker columns. CV, passport, residence ID, employment certificate, education, trade, clearance, Form 18a and driver's license uploads are sent as private Drive files with corresponding links. Staff use their authorized Google accounts to review these records; the database-backed website staff workspace is a separate configuration.
+
+The default database mode remains available. It requires a production `DATABASE_URL`, a private S3-compatible upload bucket (`S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and provider-specific endpoint settings when needed), a random `SESSION_SECRET` of at least 32 characters, and a provisioned administrator. In that mode, submissions are saved to the database with a durable Sheets delivery queue and support the website's staff workspace.
+
+Keep `CHAPTER_LOCAL_MODE=false` in production; never point `DATA_DIR` at a Vercel temporary filesystem for permanent applicant storage. Set `APP_ORIGIN` and `NEXT_PUBLIC_SITE_URL` to the published HTTPS origin. Set `INDEX_SITE=true` only for the final public production site. Keep previews excluded from indexing.
 
 ## Source and assets
 

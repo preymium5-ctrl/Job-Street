@@ -5,12 +5,35 @@ import { getJobFairRole } from "../data/job-fair";
 import type { Job } from "./types";
 
 export const TARGET_SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID?.trim() || "";
-export type SheetsErrorCode = "NOT_CONFIGURED" | "CONFIGURATION_INVALID" | "WEBHOOK_UNAVAILABLE" | "WEBHOOK_REJECTED" | "INVALID_ACKNOWLEDGEMENT" | "RESUME_UNAVAILABLE";
+export type SheetsErrorCode = "NOT_CONFIGURED" | "CONFIGURATION_INVALID" | "WEBHOOK_UNAVAILABLE" | "WEBHOOK_REJECTED" | "INVALID_ACKNOWLEDGEMENT" | "RESUME_UNAVAILABLE" | "INVALID_APPLICATION_PROFILE" | "UNSUPPORTED_RECEIVER" | "SUBMISSION_RATE_LIMIT" | "DUPLICATE_CONFLICT";
 export class SheetsDeliveryError extends Error {
   constructor(public readonly code: SheetsErrorCode) { super(code); }
 }
 export interface SheetsDocument { id: string; category: SupportingDocumentCategory; name: string; mime: string; base64: string; }
 const receiverDocumentCategories = new Set<SupportingDocumentCategory>(["diploma", "nc2", "nbi", "form18a", "other", "driver-license"]);
+
+export interface ReceiverProfile {
+  firstName: string;
+  lastName: string;
+  gender: "Male" | "Female";
+  nationality?: string;
+  address: string;
+  street?: string;
+  city?: string;
+  province?: string;
+  postalCode?: string;
+  dateOfBirth: string;
+  placeOfBirth: string;
+  destinationCountry: string;
+  currentWorkCountry: string;
+  secondaryJobTitle: string;
+  otherJobTitle?: string;
+  englishProficiency: "Yes" | "No";
+  telegram?: string;
+  fatherName?: string;
+  motherName?: string;
+  termsAccepted: boolean;
+}
 type ReceiverApplication = Pick<Application,
   "id" | "reference" | "jobId" | "jobTitle" | "fullName" | "email" | "phone" | "country" |
   "discoverySource" | "recentJobTitle" | "experienceYears" | "skills" | "education" | "summary" |
@@ -18,10 +41,13 @@ type ReceiverApplication = Pick<Application,
   "preferredEmployer" | "status" | "submittedAt"
 >;
 export interface SheetsPayload {
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   application: ReceiverApplication & {
     expectedNc2: string;
     employers: { name: string; workers: number }[];
+    profile?: ReceiverProfile;
+    applicationSource?: string;
+    applicationFormVersion?: string;
   };
   resume: { name: string; mime: string; base64: string };
   documents?: SheetsDocument[];
@@ -34,6 +60,30 @@ export interface SheetsAcknowledgement {
   duplicate: boolean;
 }
 export type SheetsTransport = (payload: SheetsPayload, options?: { timeoutMs?: number }) => Promise<SheetsAcknowledgement>;
+
+function receiverProfile(application: Application): ReceiverProfile | undefined {
+  if (application.applicationFormVersion !== 2) return undefined;
+  const details = application.applicantDetails;
+  if (!details || !application.destinationCountry || application.termsAccepted !== true ||
+    (details.gender !== "Male" && details.gender !== "Female") || !details.secondaryPosition)
+    throw new SheetsDeliveryError("INVALID_APPLICATION_PROFILE");
+  return {
+    firstName: details.firstName,
+    lastName: details.lastName,
+    gender: details.gender,
+    address: details.currentAddress,
+    dateOfBirth: details.dateOfBirth,
+    placeOfBirth: details.placeOfBirth,
+    destinationCountry: application.destinationCountry,
+    currentWorkCountry: application.country,
+    secondaryJobTitle: details.secondaryPosition,
+    englishProficiency: details.englishProficiency,
+    termsAccepted: application.termsAccepted,
+    ...Object.fromEntries((["nationality", "street", "city", "province", "postalCode", "telegram", "fatherName", "motherName"] as const)
+      .filter((key) => details[key] !== undefined).map((key) => [key, details[key]])),
+    ...(details.otherPosition !== undefined ? { otherJobTitle: details.otherPosition } : {}),
+  };
+}
 
 export function sheetsConfiguration(env: Record<string, string | undefined> = process.env): {
   configured: boolean;
@@ -55,23 +105,11 @@ export function sheetsConfiguration(env: Record<string, string | undefined> = pr
 
 export function buildSheetsPayload(application: Application, resume: Buffer, job?: Job, documents: SheetsDocument[] = []): SheetsPayload {
   const fair = job ? getJobFairRole(job) : undefined;
-  let summary = application.summary;
-  let coverLetter = application.coverLetter;
-  if (application.applicationFormVersion === 2 && application.destinationCountry) {
-    // The deployed receiver accepts these existing notes columns. Keep its
-    // strict schema and all applicant text intact when projecting destination.
-    const destinationNote = `Application destination: ${application.destinationCountry}`;
-    const withSummary = `${summary}${summary ? "\n\n" : ""}${destinationNote}`;
-    const withCoverLetter = `${coverLetter}${coverLetter ? "\n\n" : ""}${destinationNote}`;
-    if (withSummary.length <= 4000) summary = withSummary;
-    else if (withCoverLetter.length <= 6000) coverLetter = withCoverLetter;
-  }
-  // Receiver schemas 3/4 reject unknown keys and document categories. Keep the
-  // expanded applicant profile and identity documents in private website records.
-  const receiverDocuments = documents.filter(({ category }) => receiverDocumentCategories.has(category));
+  const profile = receiverProfile(application);
+  const expandedPayload = Boolean(profile || documents.some(({ category }) => !receiverDocumentCategories.has(category)));
   return {
-    version: receiverDocuments.length ? 2 : 1,
-    ...(receiverDocuments.length ? { documents: receiverDocuments } : {}),
+    version: expandedPayload ? 3 : documents.length ? 2 : 1,
+    ...(expandedPayload || documents.length ? { documents } : {}),
     application: {
       id: application.id,
       reference: application.reference,
@@ -81,13 +119,14 @@ export function buildSheetsPayload(application: Application, resume: Buffer, job
       email: application.email,
       phone: application.phone,
       country: application.country,
+      ...(profile ? { profile, applicationSource: "Jobstreet Croatia", applicationFormVersion: "jobstreet-croatia-v2" } : {}),
       ...(application.discoverySource !== undefined ? { discoverySource: application.discoverySource } : {}),
       recentJobTitle: application.applicationFormVersion === 2 && !application.recentJobTitle ? "Not collected by this form" : application.recentJobTitle,
       experienceYears: application.experienceYears,
       skills: application.applicationFormVersion === 2 && !application.skills ? "Not collected by this form" : application.skills,
       education: application.education,
-      summary,
-      coverLetter,
+      summary: application.summary,
+      coverLetter: application.coverLetter,
       consent: application.consent,
       ...(application.driverLicenseDetails !== undefined ? { driverLicenseDetails: application.driverLicenseDetails } : {}),
       status: application.status,
@@ -133,11 +172,14 @@ async function readSheetsJson(response: Response): Promise<unknown> {
   catch { throw new SheetsDeliveryError("INVALID_ACKNOWLEDGEMENT"); }
 }
 
-async function readAcknowledgement(response: Response, payload: SheetsPayload) {
-  const answer = await readSheetsJson(response) as Partial<SheetsAcknowledgement>;
-  if (!answer || answer.ok !== true || answer.applicationId !== payload.application.id || answer.reference !== payload.application.reference || !Number.isSafeInteger(answer.row) || (answer.row || 0) < 2 || typeof answer.duplicate !== "boolean")
+async function readAcknowledgement(response: Response, payload: SheetsPayload): Promise<SheetsAcknowledgement> {
+  const answer = await readSheetsJson(response) as Record<string, unknown> | null;
+  if (answer?.ok === false && (answer.code === "SUBMISSION_RATE_LIMIT" || answer.code === "DUPLICATE_CONFLICT"))
+    throw new SheetsDeliveryError(answer.code);
+  if (!answer || answer.ok !== true || answer.applicationId !== payload.application.id || answer.reference !== payload.application.reference || typeof answer.row !== "number" || !Number.isSafeInteger(answer.row) || answer.row < 2 || typeof answer.duplicate !== "boolean")
     throw new SheetsDeliveryError("INVALID_ACKNOWLEDGEMENT");
-  return answer as SheetsAcknowledgement;
+  return { ok: true, applicationId: payload.application.id, reference: payload.application.reference,
+    row: answer.row, duplicate: answer.duplicate };
 }
 
 async function fetchSheetsResponse(url: string, init: RequestInit) {
@@ -157,18 +199,23 @@ async function fetchSheetsResponse(url: string, init: RequestInit) {
   return response;
 }
 
-async function receiverSupportsDiscoverySource(url: string, signal: AbortSignal) {
+async function receiverCapabilities(url: string, signal: AbortSignal, requireExpandedProfile = false) {
   try {
     const response = await fetchSheetsResponse(url, {
-      method: "GET", signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
+      method: "GET", signal: AbortSignal.any([signal, AbortSignal.timeout(requireExpandedProfile ? 20_000 : 3000)]),
     });
     const health = await readSheetsJson(response) as Record<string, unknown> | null;
-    return health?.ok === true && health.service === "chapter-applications" && health.version === 1 &&
+    const discoverySource = health?.ok === true && health.service === "chapter-applications" && health.version === 1 &&
       Number.isSafeInteger(health.schemaVersion) && (health.schemaVersion as number) >= 4 &&
       Number.isSafeInteger(health.columns) && (health.columns as number) >= 30;
+    // Schema 6 supports the compact 35-column tracker and the original 54-column
+    // layout. Never downgrade a complete application to a partial delivery.
+    const expandedProfile = discoverySource && (health!.schemaVersion as number) >= 6 &&
+      (health!.columns === 35 || health!.columns === 54);
+    return { discoverySource, expandedProfile };
   } catch {
-    // Old or unavailable health responses must not block existing deliveries.
-    return false;
+    // Existing legacy deliveries can continue; full-profile delivery must wait.
+    return { discoverySource: false, expandedProfile: false };
   }
 }
 
@@ -179,9 +226,11 @@ export const sendApplicationToSheets: SheetsTransport = async (payload, options)
   try {
     const url = process.env.GOOGLE_SHEETS_WEBHOOK_URL!;
     const { discoverySource, ...legacyApplication } = payload.application;
+    const capabilities = payload.version === 3 || discoverySource ? await receiverCapabilities(url, signal, payload.version === 3) : undefined;
+    if (payload.version === 3 && !capabilities?.expandedProfile) throw new SheetsDeliveryError("UNSUPPORTED_RECEIVER");
     // Keep the answer in the stored application and full payload. Only the signed
     // outbound copy is filtered until the deployed receiver advertises column AD.
-    const outbound = discoverySource && await receiverSupportsDiscoverySource(url, signal)
+    const outbound = capabilities?.discoverySource && discoverySource
       ? payload : { ...payload, application: legacyApplication };
     const response = await fetchSheetsResponse(url, {
       method: "POST",

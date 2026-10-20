@@ -47,6 +47,18 @@ function applicant(): Application {
     preferredEmployer: "", status: "New", submittedAt: new Date().toISOString(), resumeName: "resume.pdf", resumeMime: "application/pdf", resumeKey: `resumes/${randomUUID()}.pdf`, isExample: false,
   };
 }
+function referenceApplicant(): Application {
+  return {
+    ...applicant(), applicationFormVersion: 2, destinationCountry: "Romania", termsAccepted: true,
+    fullName: "Integration Applicant", discoverySource: "TikTok", recentJobTitle: "", skills: "", experienceYears: 0,
+    applicantDetails: {
+      firstName: "Integration", lastName: "Applicant", gender: "Female", nationality: "Filipino",
+      currentAddress: "10 Example Street, Makati, Metro Manila, 1200", street: "10 Example Street", city: "Makati", province: "Metro Manila", postalCode: "1200",
+      dateOfBirth: "1990-01-01", placeOfBirth: "Manila", englishProficiency: "Yes", telegram: "+63 917 000 0000",
+      fatherName: "Example Father", motherName: "Example Mother", secondaryPosition: "Other", otherPosition: "Cabinet maker",
+    },
+  };
+}
 async function record() {
   const application = applicant();
   await createApplication(application, randomUUID(), "test-request-hash");
@@ -98,50 +110,40 @@ test("Sheets payload preserves each discovery answer independently of receiver c
   }
 });
 
-test("expanded applicant details and identity uploads stay out of strict legacy Sheets payloads", async () => {
+test("full reference profile and all nine uploads export without leaking internal or unknown fields", () => {
   const application = {
-    ...applicant(),
-    discoverySource: "TikTok" as const,
-    applicantDetails: { firstName: "Private", lastName: "Applicant", currentAddress: "Private address", dateOfBirth: "1990-01-01", nationality: "Filipino", placeOfBirth: "Private birthplace", englishProficiency: "Yes" as const },
+    ...referenceApplicant(),
     unexpectedFutureAnswer: "Keep future fields private too",
   };
-  const newCategories: SupportingDocumentCategory[] = ["passport", "residence-id", "employment-certificate"];
-  const documents = newCategories.map((category) => ({ id: randomUUID(), category, name: `${category}.pdf`, mime: "application/pdf", base64: resume.toString("base64") }));
+  const categories: SupportingDocumentCategory[] = ["diploma", "nc2", "nbi", "form18a", "other", "driver-license", "passport", "residence-id", "employment-certificate"];
+  const documents = categories.map((category) => ({ id: randomUUID(), category, name: `${category}.pdf`, mime: "application/pdf", base64: resume.toString("base64") }));
   const payload = buildSheetsPayload(application, resume, job, documents);
-  assert.equal(payload.version, 1);
-  assert.equal(Object.hasOwn(payload, "documents"), false);
+  assert.equal(payload.version, 3);
+  assert.deepEqual(payload.documents, documents);
   assert.equal(Object.hasOwn(payload.application, "applicantDetails"), false);
   assert.equal(Object.hasOwn(payload.application, "unexpectedFutureAnswer"), false);
+  assert.equal(Object.hasOwn(payload.application, "resumeKey"), false);
   assert.equal(payload.application.discoverySource, "TikTok");
-  assert.equal(application.applicantDetails.currentAddress, "Private address");
-  assert.equal(documents.length, 3);
-  assert.ok(!JSON.stringify(payload).includes("Private address"));
-
-  const diploma = { id: randomUUID(), category: "diploma" as const, name: "diploma.pdf", mime: "application/pdf", base64: resume.toString("base64") };
-  const mixed = buildSheetsPayload(application, resume, job, [...documents, diploma]);
-  assert.equal(mixed.version, 2);
-  assert.deepEqual(mixed.documents, [diploma]);
-  for (const schemaVersion of [3, 4]) {
-    await withWebhook(async () => {
-      globalThis.fetch = async (_url, init) => {
-        if (init?.method === "GET") return Response.json({ ok: true, service: "chapter-applications", version: 1, schemaVersion, columns: schemaVersion === 4 ? 30 : 29 });
-        const sent = JSON.parse(JSON.parse(String(init?.body)).payload);
-        assert.equal(sent.version, 1);
-        assert.equal(Object.hasOwn(sent, "documents"), false);
-        assert.equal(Object.hasOwn(sent.application, "applicantDetails"), false);
-        assert.equal(Object.hasOwn(sent.application, "unexpectedFutureAnswer"), false);
-        assert.equal(sent.application.discoverySource, schemaVersion === 4 ? "TikTok" : undefined);
-        return Response.json({ ok: true, applicationId: application.id, reference: application.reference, row: 2, duplicate: false });
-      };
-      assert.equal((await sendApplicationToSheets(payload)).row, 2);
-    });
-  }
+  assert.equal(payload.application.applicationSource, "Jobstreet Croatia");
+  assert.equal(payload.application.applicationFormVersion, "jobstreet-croatia-v2");
+  assert.deepEqual(payload.application.profile, {
+    firstName: "Integration", lastName: "Applicant", gender: "Female", nationality: "Filipino",
+    address: "10 Example Street, Makati, Metro Manila, 1200", street: "10 Example Street", city: "Makati", province: "Metro Manila", postalCode: "1200",
+    dateOfBirth: "1990-01-01", placeOfBirth: "Manila", destinationCountry: "Romania", currentWorkCountry: "Philippines",
+    secondaryJobTitle: "Other", otherJobTitle: "Cabinet maker", englishProficiency: "Yes", telegram: "+63 917 000 0000",
+    fatherName: "Example Father", motherName: "Example Mother", termsAccepted: true,
+  });
+  assert.ok(!JSON.stringify(payload).includes(application.resumeKey));
+  assert.ok(!JSON.stringify(payload).includes(application.unexpectedFutureAnswer));
+  assert.ok(!JSON.stringify(payload).includes("test-discovery-signature-secret"));
 });
 
-test("reference-only fields stay private while legacy receiver strings identify questions not collected", () => {
-  const application: Application = { ...applicant(), applicationFormVersion: 2, destinationCountry: "Croatia", termsAccepted: true, recentJobTitle: "", skills: "", experienceYears: 0 };
+test("reference form uses typed profile columns while legacy strings identify questions not collected", () => {
+  const application = referenceApplicant();
   const payload = buildSheetsPayload(application, resume, job);
-  for (const field of ["applicationFormVersion", "destinationCountry", "termsAccepted"]) assert.equal(Object.hasOwn(payload.application, field), false);
+  for (const field of ["destinationCountry", "termsAccepted"]) assert.equal(Object.hasOwn(payload.application, field), false);
+  assert.equal(payload.application.profile?.destinationCountry, application.destinationCountry);
+  assert.equal(payload.application.profile?.termsAccepted, true);
   assert.equal(payload.application.recentJobTitle, "Not collected by this form");
   assert.equal(payload.application.skills, "Not collected by this form");
   assert.equal(payload.application.experienceYears, 0);
@@ -151,19 +153,23 @@ test("reference-only fields stay private while legacy receiver strings identify 
   assert.equal(withAnswers.application.skills, "Earlier applicant skills");
 });
 
-test("reference application destination is reported in existing Sheets notes without changing stored answers", () => {
-  const application: Application = { ...applicant(), applicationFormVersion: 2, destinationCountry: "Romania", termsAccepted: true };
+test("reference profile keeps optional unanswered fields absent and does not change stored answers", () => {
+  const application = referenceApplicant();
+  delete application.applicantDetails!.nationality;
+  delete application.applicantDetails!.telegram;
   const payload = buildSheetsPayload(application, resume, job);
-  assert.equal(payload.application.summary, "Application destination: Romania");
+  assert.equal(payload.application.summary, "");
   assert.equal(payload.application.country, application.country);
-  assert.equal(Object.hasOwn(payload.application, "destinationCountry"), false);
+  assert.equal(payload.application.profile?.destinationCountry, "Romania");
+  assert.equal(Object.hasOwn(payload.application.profile!, "nationality"), false);
+  assert.equal(Object.hasOwn(payload.application.profile!, "telegram"), false);
   assert.equal(application.summary, "");
   assert.equal(application.coverLetter, "");
   assert.deepEqual(buildSheetsPayload(application, resume, job), payload);
 
   const answered = { ...application, summary: "Applicant summary", coverLetter: "Applicant cover letter" };
   const withAnswers = buildSheetsPayload(answered, resume, job);
-  assert.equal(withAnswers.application.summary, "Applicant summary\n\nApplication destination: Romania");
+  assert.equal(withAnswers.application.summary, "Applicant summary");
   assert.equal(withAnswers.application.coverLetter, answered.coverLetter);
   assert.equal(answered.summary, "Applicant summary");
 
@@ -171,31 +177,80 @@ test("reference application destination is reported in existing Sheets notes wit
   const legacyPayload = buildSheetsPayload(legacy, resume, job);
   assert.equal(legacyPayload.application.summary, legacy.summary);
   assert.equal(legacyPayload.application.coverLetter, legacy.coverLetter);
+  assert.equal(legacyPayload.application.profile, undefined);
 });
 
-test("Sheets destination notes respect receiver limits and preserve saturated applicant text", () => {
-  const note = "Application destination: Montenegro";
-  const application: Application = { ...applicant(), applicationFormVersion: 2, destinationCountry: "Montenegro", termsAccepted: true,
-    summary: "s".repeat(4000 - note.length - 2), coverLetter: "Applicant cover letter" };
-  const exactSummary = buildSheetsPayload(application, resume, job);
-  assert.equal(exactSummary.application.summary, `${application.summary}\n\n${note}`);
-  assert.equal(exactSummary.application.summary.length, 4000);
+test("full profile never truncates saturated applicant text or silently drops incomplete profiles", () => {
+  const application = { ...referenceApplicant(), summary: "s".repeat(4000), coverLetter: "c".repeat(6000) };
+  const payload = buildSheetsPayload(application, resume, job);
+  assert.equal(payload.application.summary, application.summary);
+  assert.equal(payload.application.coverLetter, application.coverLetter);
+  assert.equal(payload.application.profile?.telegram, application.applicantDetails!.telegram);
+  assert.throws(() => buildSheetsPayload({ ...application, applicantDetails: undefined }, resume, job),
+    (error: unknown) => error instanceof SheetsDeliveryError && error.code === "INVALID_APPLICATION_PROFILE");
+  assert.throws(() => buildSheetsPayload({ ...application, applicantDetails: { ...application.applicantDetails!, gender: "Prefer not to say" } }, resume, job),
+    (error: unknown) => error instanceof SheetsDeliveryError && error.code === "INVALID_APPLICATION_PROFILE");
+});
 
-  const overflowSummary = { ...application, summary: application.summary + "s" };
-  const fallback = buildSheetsPayload(overflowSummary, resume, job);
-  assert.equal(fallback.application.summary, overflowSummary.summary);
-  assert.equal(fallback.application.coverLetter, `Applicant cover letter\n\n${note}`);
+test("schema 6 sends every profile answer and upload after a verified health response", async () => {
+  for (const columns of [35, 54]) await withWebhook(async () => {
+    const application = referenceApplicant();
+    const documents = (["passport", "residence-id", "employment-certificate"] as const)
+      .map((category) => ({ id: randomUUID(), category, name: `${category}.pdf`, mime: "application/pdf", base64: resume.toString("base64") }));
+    const payload = buildSheetsPayload(application, resume, job, documents);
+    let calls = 0;
+    globalThis.fetch = async (_url, init) => {
+      calls++;
+      if (init?.method === "GET") {
+        assert.equal(init.body, undefined);
+        assert.equal(init.headers, undefined);
+        return Response.json({ ok: true, service: "chapter-applications", version: 1, schemaVersion: 6, columns });
+      }
+      assert.equal(calls, 2);
+      const envelope = JSON.parse(String(init?.body));
+      assert.equal(envelope.signature, createHmac("sha256", process.env.GOOGLE_SHEETS_WEBHOOK_SECRET!).update(`${envelope.timestamp}.${envelope.payload}`).digest("hex"));
+      const sent = JSON.parse(envelope.payload);
+      assert.deepEqual(sent, payload);
+      assert.equal(sent.application.profile!.telegram, application.applicantDetails!.telegram);
+      return Response.json({ ok: true, applicationId: application.id, reference: application.reference, row: 2, duplicate: false, privateToken: "do-not-retain" });
+    };
+    assert.deepEqual(await sendApplicationToSheets(payload), { ok: true, applicationId: application.id, reference: application.reference, row: 2, duplicate: false });
+    assert.equal(calls, 2);
+  });
+});
 
-  const exactCover = { ...overflowSummary, coverLetter: "c".repeat(6000 - note.length - 2) };
-  const exactFallback = buildSheetsPayload(exactCover, resume, job);
-  assert.equal(exactFallback.application.coverLetter, `${exactCover.coverLetter}\n\n${note}`);
-  assert.equal(exactFallback.application.coverLetter.length, 6000);
+test("full applications wait for compatible receiver instead of reporting partial delivery", async () => {
+  for (const health of [
+    { ok: true, service: "chapter-applications", version: 1, schemaVersion: 4, columns: 30 },
+    { ok: true, service: "chapter-applications", version: 1, schemaVersion: 6, columns: 30 },
+    { ok: true, service: "unrelated", version: 1, schemaVersion: 6, columns: 35 },
+    { ok: false },
+  ]) await withWebhook(async () => {
+    const payload = buildSheetsPayload(referenceApplicant(), resume, job);
+    let posts = 0;
+    globalThis.fetch = async (_url, init) => {
+      if (init?.method === "POST") posts++;
+      return Response.json(health);
+    };
+    await assert.rejects(sendApplicationToSheets(payload), (error: unknown) => error instanceof SheetsDeliveryError && error.code === "UNSUPPORTED_RECEIVER");
+    assert.equal(posts, 0);
+    assert.ok(payload.application.profile?.telegram);
+  });
+});
 
-  const saturated = { ...overflowSummary, coverLetter: exactCover.coverLetter + "c" };
-  const preserved = buildSheetsPayload(saturated, resume, job);
-  assert.equal(preserved.application.summary, saturated.summary);
-  assert.equal(preserved.application.coverLetter, saturated.coverLetter);
-  assert.equal(saturated.destinationCountry, "Montenegro");
+test("receiver rate limits and idempotency conflicts surface bounded codes without remote details", async () => {
+  for (const code of ["SUBMISSION_RATE_LIMIT", "DUPLICATE_CONFLICT"] as const) await withWebhook(async () => {
+    const payload = buildSheetsPayload(applicant(), resume, job);
+    globalThis.fetch = async () => Response.json({ ok: false, code, privateToken: "secret-not-for-logs", applicant: "private-answer" });
+    await assert.rejects(sendApplicationToSheets(payload), (error: unknown) => {
+      assert.ok(error instanceof SheetsDeliveryError);
+      assert.equal(error.code, code);
+      assert.equal(error.message, code);
+      assert.ok(!JSON.stringify(error).includes("secret-not-for-logs"));
+      assert.ok(!JSON.stringify(error).includes("private-answer"));
+      return true;
+    });
+  });
 });
 
 test("schema 4 health enables source delivery through safe body-free Google redirects", async () => {

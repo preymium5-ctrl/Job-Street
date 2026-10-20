@@ -25,18 +25,31 @@ import type { Application } from "@/lib/types";
 import { getJobFairRole } from "@/data/job-fair";
 import { drainSheetsQueue } from "@/lib/sheets-queue";
 import { getReferenceApplicationUploads, MAX_APPLICATION_UPLOAD_BYTES, MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, supportingDocumentTypes } from "@/lib/document-uploads";
+import { saveApplicationToGoogle, usesGoogleApplicationStorage } from "@/lib/google-application-storage";
+import { sheetsConfiguration, SheetsDeliveryError } from "@/lib/sheets-transport";
+import { proposedJobs } from "@/data/jobs";
+import { additionalApplicationJobs } from "@/data/application-jobs";
 
 export const runtime = "nodejs";
+export const maxDuration = 120;
 export async function POST(request: NextRequest) {
   const stagedKeys: string[] = [];
   try {
     if (!sameOrigin(request))
       return failure("Submit your application from this website.", 403);
-    if (!(await rateLimit(request, "application", 20, 3600)))
-      return failure("Too many attempts. Please try again in an hour.", 429);
-    requireStorageConfiguration();
-    await requireApplicationConfiguration();
-    const form = await limitedFormData(request, MAX_APPLICATION_UPLOAD_BYTES + 1024 * 1024);
+    const googleStorage = usesGoogleApplicationStorage();
+    if (googleStorage) {
+      if (!sheetsConfiguration().valid) throw new Error("Google application storage is not configured.");
+    } else {
+      if (!(await rateLimit(request, "application", 20, 3600)))
+        return failure("Too many attempts. Please try again in an hour.", 429);
+      requireStorageConfiguration();
+      await requireApplicationConfiguration();
+    }
+    // The current form's 4 MB uploads plus bounded multipart fields fit the hosting request limit.
+    const form = await limitedFormData(request, googleStorage
+      ? MAX_REFERENCE_UPLOAD_BYTES + 64 * 1024
+      : MAX_APPLICATION_UPLOAD_BYTES + 1024 * 1024);
     if (String(form.get("website") || "").trim())
       return failure("The application could not be accepted.", 400);
     const key = String(form.get("idempotencyKey") || "").toLowerCase();
@@ -61,8 +74,12 @@ export async function POST(request: NextRequest) {
         fieldErrors: fieldErrors(result.error),
       });
     const referenceForm = result.data.applicationFormVersion === 2;
-    // Document requirements use the stored position title, never a client-supplied role.
-    const job = await getJobById(result.data.jobId);
+    if (googleStorage && !referenceForm)
+      return failure("Complete the current website application form.", 422);
+    // Resolve the position on the server rather than trusting a client-supplied title.
+    const job = googleStorage
+      ? [...proposedJobs, ...additionalApplicationJobs].find(({ id }) => id === result.data.jobId)
+      : await getJobById(result.data.jobId);
     const referenceUploads = getReferenceApplicationUploads({
       country: result.data.country,
       destinationCountry: result.data.destinationCountry,
@@ -112,9 +129,10 @@ export async function POST(request: NextRequest) {
     const requestDigest = createHash("sha256")
       .update(JSON.stringify(result.data))
       .update(resume.bytes);
+    if (googleStorage) requestDigest.update(JSON.stringify({ name: resume.name, mime: resume.mime }));
     for (const { category, document } of documents) requestDigest.update(JSON.stringify({ category, name: document.name, mime: document.mime, size: document.bytes.length })).update(document.bytes);
     const requestHash = requestDigest.digest("hex");
-    const existing = await findApplicationByKey(key);
+    const existing = googleStorage ? undefined : await findApplicationByKey(key);
     if (existing) {
       if (existing.requestHash !== requestHash)
         return failure(
@@ -137,7 +155,7 @@ export async function POST(request: NextRequest) {
         return failure("Attach the required application documents.", 422, { fieldErrors: missingUploads });
     }
     if (
-      !(await rateLimit(
+      !googleStorage && !(await rateLimit(
         request,
         "application-email",
         3,
@@ -160,6 +178,10 @@ export async function POST(request: NextRequest) {
       return failure("Choose an employer listed for this position.", 422, {
         fieldErrors: { preferredEmployer: "Choose an employer listed for this position, or no preference." },
       });
+    if (googleStorage) {
+      const saved = await saveApplicationToGoogle(result.data, job, key, requestHash, resume, documents);
+      return json({ reference: saved.reference, jobTitle: saved.jobTitle }, saved.duplicate ? 200 : 201);
+    }
     const resumeKey = await storeResume(resume);
     stagedKeys.push(resumeKey);
     const storedDocuments: NonNullable<Application["documents"]> = [];
@@ -213,7 +235,9 @@ export async function POST(request: NextRequest) {
       });
     if (error instanceof Error && error.message === "BODY_TOO_LARGE")
       return failure(
-        "The upload is too large. Keep all files together within 15 MB.",
+        usesGoogleApplicationStorage()
+          ? "The upload is too large. Keep all files together within 4 MB."
+          : "The upload is too large. Keep all files together within 15 MB.",
         413,
       );
     if (error instanceof Error && error.message === "INVALID_MULTIPART")
@@ -224,6 +248,13 @@ export async function POST(request: NextRequest) {
       return failure("Choose an employer listed for this position.", 422, {
         fieldErrors: { preferredEmployer: "Choose an employer listed for this position, or no preference." },
       });
+    if (error instanceof SheetsDeliveryError) {
+      if (error.code === "SUBMISSION_RATE_LIMIT")
+        return failure("You have submitted several applications recently. Please try again in an hour.", 429);
+      if (error.code === "DUPLICATE_CONFLICT")
+        return failure("This submission ID was already used. Refresh the form before sending a different application.", 409);
+      return failure("We couldn’t confirm receipt of your application. Please try again; your reference will be recovered if it was received.", 503);
+    }
     return serverFailure(error);
   }
 }

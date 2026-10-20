@@ -47,16 +47,15 @@ export default function Privacy() {
           The information is associated with the position you select and made
           available to authorized recruitment staff for reviewing that
           application. The catalogue describes work opportunities in Croatia for Filipino
-          applicants. This local
-          installation stores applications for authorized staff review and does
+          applicants. The website stores applications for authorized staff review and does
           not automatically forward them to employers. Submission records your
           interest and does not guarantee an interview or employment.
         </p>
         <h2>Recruitment records in Google</h2>
         <p>
-          Application details, including optional driver’s license information, may be copied
+          Application details, including personal answers and driver’s license information, are sent
           to the recruiting team’s Google Sheets tracker. A private copy of your
-          CV and supporting documents may be stored in the team’s Google Drive, with links in that
+          CV and supporting documents is stored in the team’s Google Drive, with links in that
           tracker. The website sends this information through its authorized
           server connection. Uploaded files are not shared publicly; only Google
           accounts authorized by the recruiting team can open them.
@@ -68,10 +67,9 @@ export default function Privacy() {
           NC2 certificates, diplomas, NBI clearance with apostille, Form 18a for Croatia applicants,
           and employment certificates may be required; you may upload them now if available.
           Each file must be 3 MB or
-          smaller, with all uploads together within 4 MB. The additional personal questions, passport copy,
-          residence ID, and certificate of employment are retained in the website’s
-          private application records and are not included in the current Google
-          tracker export. Requests for correction
+          smaller, with all uploads together within 4 MB. The tracker includes your form answers
+          and private links to your passport copy, residence ID, and certificate of employment
+          when uploaded. Requests for correction
           or deletion should include your reference so staff can locate both
           website and Google records.
         </p>
@@ -79,11 +77,11 @@ export default function Privacy() {
         <p>
           In local development, applications are stored in a durable database on
           the host computer, and uploaded files are stored outside the public
-          website directory. In a configured production installation, a
-          PostgreSQL database and private object storage are used. Recruitment
-          staff must sign in to view applicant records and download resumes.
-          Administrative changes and resume downloads are recorded in the audit
-          log.
+          website directory. The production Google Sheets mode stores applications in the
+          recruitment team’s tracker and uploads in private Google Drive. Staff need an
+          authorized Google account to access those records. A separate database and private
+          object storage may be configured for the website’s staff workspace, with signed-in
+          access and audit records for administrative changes and downloads.
         </p>
         <h2>Cookies and security records</h2>
         <p>

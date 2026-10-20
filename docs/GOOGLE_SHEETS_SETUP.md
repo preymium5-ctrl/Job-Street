@@ -1,4 +1,49 @@
-# Google Sheets receiver and discovery source
+# Google Sheets application delivery
+
+## Current production connection (20 October 2026)
+
+The production site uses `APPLICATION_STORAGE=google-sheets`. Set these values in
+the Vercel project's **Production** environment, then deploy the website:
+
+- `APP_ORIGIN` and `NEXT_PUBLIC_SITE_URL`: the published HTTPS website origin.
+- `APPLICATION_STORAGE`: `google-sheets`.
+- `GOOGLE_SHEETS_SPREADSHEET_ID`: the existing Job Fair 2026 tracker ID.
+- `GOOGLE_SHEETS_WEBHOOK_URL` and `GOOGLE_SHEETS_WEBHOOK_SECRET`: the existing
+  private receiver connection. Store both as secrets; do not include them in Git.
+
+This explicit mode saves applications in Google Sheets and uploads in private
+Google Drive. It needs no temporary filesystem, PostgreSQL database or S3 bucket.
+The database-backed website staff workspace remains a separate configuration.
+
+The receiver already deployed for this tracker uses protocol version 3 and
+receiver schema 6. The current **Applications** tab has 35 columns; the receiver
+also supports its earlier 54-column layout. `integrations/google-sheets/Code.gs`
+matches that existing receiver source. This website change does not redeploy the
+receiver, restructure the tracker or change file sharing.
+
+The current form's personal details, Telegram, structured address, birth details,
+parents' names, destination, work country, additional role, English answer and
+acknowledgements are mapped to the existing columns. All collected uploads,
+including passport, residence ID and employment certificates, are delivered to
+private Drive with links in the tracker. The combined upload limit is 4 MB.
+
+The website returns success only after an acknowledgement matching its signed
+application ID, reference and row. Retrying an identical submission reuses its
+record and private files. Changed contents with a reused submission key return
+a conflict. Google storage uses the receiver's existing `Jobs in Croatia` quota
+namespace, with `jobstreet-croatia-v2` as the separate form identifier.
+
+Verification must include a clearly labeled test application through the live
+website endpoint, readback of the complete tracker row and an exact retry that
+returns the same receipt without another row. Local unit tests alone do not
+confirm a production connection. A 403 from `/api/applications` means the
+configured origin does not match the website. Receiver failures return an error
+instead of an unconfirmed successful submission.
+
+## Historical integration notes (receiver schemas 3 and 4)
+
+The following notes describe the earlier partial export. They do not describe
+the production schema 6 connection above.
 
 ## Expanded application profile and versioned uploads
 

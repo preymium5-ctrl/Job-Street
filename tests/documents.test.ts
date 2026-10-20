@@ -46,7 +46,7 @@ test("supporting uploads validate real bytes and sanitize scans", async () => {
   assert.equal((await sharp(image.bytes).metadata()).format, "jpeg");
 });
 
-test("applications privately retain optional identity and work documents while legacy Google exports keep supported files", async () => {
+test("applications privately retain identity and work documents and export every supported file to Google", async () => {
   const job = (await getJobs()).find((candidate) => candidate.slug === "fabricator")!;
   const input = { jobId: job.id, fullName: "Document Test Applicant", email: "documents@example.test", phone: "+639171234567", country: "Philippines", recentJobTitle: "Fabricator", experienceYears: 3, skills: "Fabrication", education: "School diploma", summary: "", coverLetter: "", driverLicenseDetails: "Non-professional license, Philippines", consent: true };
   const key = randomUUID();
@@ -106,10 +106,10 @@ test("applications privately retain optional identity and work documents while l
   assert.equal((await download(new NextRequest(url, { headers: { cookie } }), { params: Promise.resolve({ id: application.id, documentId: randomUUID() }) })).status, 404);
   assert.ok((await (await getDatabase()).select().from(audits)).some((row) => row.action === "document.downloaded" && row.details.documentId === diploma.id));
   const delivered = await drainSheetsQueue({ applicationId: application.id }, { transport: async (payload) => {
-    assert.equal(payload.version, 2); assert.equal(payload.documents?.length, 3);
+    assert.equal(payload.version, 3); assert.equal(payload.documents?.length, 6);
     assert.equal(payload.application.driverLicenseDetails, input.driverLicenseDetails);
     assert.ok(payload.documents?.some((document) => document.category === "driver-license"));
-    assert.ok(payload.documents?.every((document) => !["passport", "residence-id", "employment-certificate"].includes(document.category)));
+    for (const category of ["passport", "residence-id", "employment-certificate"]) assert.ok(payload.documents?.some((document) => document.category === category));
     assert.equal("documents" in payload.application, false);
     assert.ok(!JSON.stringify(payload).includes(diploma.key));
     assert.equal(payload.documents![0].base64, pdf.toString("base64"));
@@ -199,10 +199,18 @@ test("reference form requires residence ID abroad, enforces its smaller limits a
     assert.equal((await download(new NextRequest(url), { params: Promise.resolve({ id: application.id, documentId: document.id }) })).status, 401);
   }
   const delivered = await drainSheetsQueue({ applicationId: application.id }, { transport: async (payload) => {
-    assert.equal(payload.version, 1); assert.equal(payload.documents, undefined);
-    for (const field of ["applicationFormVersion", "destinationCountry", "termsAccepted", "applicantDetails"]) assert.equal(Object.hasOwn(payload.application, field), false);
+    assert.equal(payload.version, 3);
+    assert.deepEqual(payload.documents?.map(({ category }) => category), ["passport", "residence-id"]);
+    for (const field of ["destinationCountry", "termsAccepted", "applicantDetails"]) assert.equal(Object.hasOwn(payload.application, field), false);
+    assert.equal(payload.application.applicationFormVersion, "jobstreet-croatia-v2");
     assert.equal(payload.application.recentJobTitle, "Not collected by this form");
     assert.equal(payload.application.skills, "Not collected by this form");
+    assert.equal(payload.application.profile?.firstName, input.applicantDetails.firstName);
+    assert.equal(payload.application.profile?.address, input.applicantDetails.currentAddress);
+    assert.equal(payload.application.profile?.destinationCountry, input.destinationCountry);
+    assert.equal(payload.application.profile?.currentWorkCountry, input.country);
+    assert.equal(payload.application.profile?.dateOfBirth, input.applicantDetails.dateOfBirth);
+    assert.equal(payload.application.profile?.termsAccepted, true);
     return { ok: true, applicationId: application.id, reference: application.reference, row: 3, duplicate: false };
   } });
   assert.equal(delivered.delivered, 1);
