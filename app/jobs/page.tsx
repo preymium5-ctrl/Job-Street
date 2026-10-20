@@ -8,6 +8,7 @@ import { getPublicJobs } from "@/lib/public-jobs";
 import { JobDirectory } from "@/components/jobs/JobDirectory";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { breadcrumbData, jobDirectoryData, pageMetadata } from "@/lib/seo";
+import { workerImageSrc } from "@/lib/worker-images";
 import styles from "./jobs.module.css";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export default async function JobsPage() {
           <a href="#job-results" className={styles.browse}>Explore the opportunities <ArrowDown size={16} aria-hidden="true" /></a>
         </div>
         <div className={styles.heroVisual}>
-          <div className={styles.heroImage}><Image src="/images/street-v2/hero-skills.webp" alt="AI-generated illustration of skilled Filipino workers collaborating in a workshop" fill loading="eager" fetchPriority="high" sizes="(max-width:700px) 100vw, 35vw" /></div>
+          <div className={styles.heroImage}><Image src={workerImageSrc("/images/street-v2/hero-skills.webp")} alt="AI-generated illustration of skilled Filipino workers collaborating in a workshop" fill loading="eager" fetchPriority="high" sizes="(max-width:700px) 100vw, 35vw" /></div>
           <div className={styles.roleCount}><strong>{String(jobs.length).padStart(2, "0")}</strong><span>roles.<br />new beginnings.</span></div>
           <span className={styles.visualCaption}>Built on skill. Driven by possibility.</span>
         </div>

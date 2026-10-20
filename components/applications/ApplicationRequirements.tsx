@@ -1,27 +1,21 @@
-import { CalendarClock, CheckCircle2, FileCheck2 } from "lucide-react";
 import { fairDocuments, fairDocumentTiming, fairNc2Requirements, fairOptionalDocument, nc2ElectricalNote } from "@/data/job-fair";
 import styles from "./ApplicationRequirements.module.css";
 
 export function ApplicationRequirements() {
   return (
     <section className={styles.requirements} aria-labelledby="application-requirements-heading">
-      <div className={styles.heading}>
-        <span className={styles.headingIcon}><FileCheck2 size={22} aria-hidden="true" /></span>
-        <div>
-          <h3 id="application-requirements-heading">Document requirements</h3>
-          <p>All positions:</p>
-        </div>
-      </div>
+      <h2 className={styles.heading} id="application-requirements-heading">Document requirements</h2>
+      <p className={styles.positions}><strong>All positions:</strong></p>
       <ul className={styles.documentList}>
         {fairDocuments.map((document) => (
-          <li key={document}><CheckCircle2 size={19} aria-hidden="true" /><span>{document}</span></li>
+          <li key={document}>{document}</li>
         ))}
       </ul>
       <p className={styles.optional}>{fairOptionalDocument}</p>
 
       <div className={styles.timing}>
-        <CalendarClock size={23} aria-hidden="true" />
-        <div><strong>IMPORTANT</strong><p>{fairDocumentTiming}</p></div>
+        <strong>IMPORTANT</strong>
+        <p>{fairDocumentTiming}</p>
       </div>
       <div className={styles.tableWrap}>
         <table className={styles.table}>

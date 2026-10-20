@@ -10,6 +10,7 @@ import { getPublicJobs } from "@/lib/public-jobs";
 import { industries } from "@/data/industries";
 import { site } from "@/data/site";
 import { pageMetadata } from "@/lib/seo";
+import { workerImageSrc } from "@/lib/worker-images";
 
 export const dynamic = "force-dynamic";
 export const metadata = { ...pageMetadata({ title: "Hiring Filipino Workers in Croatia", description: site.description, path: "/" }), title: { absolute: site.title } };
@@ -38,7 +39,7 @@ export default async function Home() {
     <section className="street-process street-space" id="how-it-works"><div className="container street-process-grid"><div className="street-process-heading" data-reveal><span className="street-kicker">From here to what’s next</span><h2>A clear path<br /><em>forward.</em></h2><p>Four steps to start your application.<br />One new direction to explore.</p><Link href="/jobs" className="street-pill">Take the first step <span><ArrowUpRight size={18} /></span></Link></div><div className="street-steps">{steps.map((step, index) => <div key={step.title} data-reveal><span>0{index + 1}</span><div><h3>{step.title}</h3><p>{step.text}</p></div><Check size={20} /></div>)}</div></div></section>
     <CommunityMarquees />
     <section className="container street-faq street-space" id="faq"><div data-reveal><span className="street-kicker">Before your next move</span><h2>Good <em>questions.</em><br />Clear answers.</h2><p>Everything starts with understanding your next step.</p><Link href="/contact" className="street-text-link">Get application help <ArrowUpRight size={18} /></Link></div><div data-reveal><Faq /></div></section>
-    <section className="street-final" id="your-future"><Image src="/images/street-v2/hero-future.webp" alt="" fill sizes="100vw" /><div className="container street-final-inner"><span className="street-kicker" data-reveal>Your next chapter starts here</span><h2 data-reveal>Bring your skills.<br />Find your <em>future.</em></h2><div data-reveal><p>Croatia is your next direction.<br />Let’s find the role that takes you there.</p><Link href="/jobs" className="street-pill">Explore available jobs <span><ArrowUpRight size={18} /></span></Link></div></div></section>
+    <section className="street-final" id="your-future"><Image src={workerImageSrc("/images/street-v2/hero-future.webp")} alt="" fill sizes="100vw" /><div className="container street-final-inner"><span className="street-kicker" data-reveal>Your next chapter starts here</span><h2 data-reveal>Bring your skills.<br />Find your <em>future.</em></h2><div data-reveal><p>Croatia is your next direction.<br />Let’s find the role that takes you there.</p><Link href="/jobs" className="street-pill">Explore available jobs <span><ArrowUpRight size={18} /></span></Link></div></div></section>
     <PageMotion />
   </>;
 }

@@ -1,0 +1,99 @@
+{
+  "mode": "built-in imagegen",
+  "edited": "2026-10-20",
+  "request": "Replace women with adult Filipino men while preserving work scenes, equipment, safety clothing, lighting and composition.",
+  "compression": {
+    "format": "WebP",
+    "quality": 85
+  },
+  "assets": [
+    {
+      "slug": "hero-career",
+      "prompt": "Use case: precise-object-edit. Edit target: the supplied Jobs Street Croatia homepage recruitment photograph. Replace only the woman on the left of the three workers with a natural adult Filipino man aged about 33, with short dark hair, a clean-shaven oval face and realistic skin. Keep his dark work jacket with lime trim, hand positions and technical drawing interaction. Preserve the two existing men, factory, control cabinet, workwear, equipment, warm sunlight, photographic quality, people grouped on the right and open left-side space. The result must show three distinct adult Filipino MEN only, including any distant people. Preserve the wide 16:9 composition and image dimensions. No text, logos or watermark.",
+      "designPath": "design/images/street-v2/hero-career.png",
+      "webPath": "public/images/street-v2/hero-career.webp",
+      "width": 1672,
+      "height": 941
+    },
+    {
+      "slug": "hero-skills",
+      "prompt": "Use case: precise-object-edit. Edit target: the supplied Jobs Street Croatia workshop photograph. Replace only the woman holding the drawing with a natural adult Filipino man aged about 36, short neat dark hair, clean-shaven face, round wire-frame safety glasses and realistic skin. Preserve the grey workwear with yellow details, drawing, hands, gloved older male colleague, stationary metal assembly, cool teal workshop background, soft window lighting, photographic quality, right-of-centre group and generous left-side space. All visible workers must be adult Filipino MEN only. Preserve wide 16:9 framing and image dimensions. No text, logos or watermark.",
+      "designPath": "design/images/street-v2/hero-skills.png",
+      "webPath": "public/images/street-v2/hero-skills.webp",
+      "width": 1672,
+      "height": 941
+    },
+    {
+      "slug": "hero-future",
+      "prompt": "Use case: precise-object-edit. Edit target: the supplied Jobs Street Croatia workshop shift-change photograph. Replace only the woman on the right with a natural adult Filipino man aged about 40, round face, short dark hair under the existing white hard hat, clean-shaven face and warm natural smile. Preserve the blue workwear, clipboard, hand positions, existing man in olive workwear, modern workshop entrance, trees, sunset lighting, photographic quality, subjects toward the right and darker empty left-side space. All visible people must be adult Filipino MEN only. Preserve the wide 16:9 composition and image dimensions. No text, logos or watermark.",
+      "designPath": "design/images/street-v2/hero-future.png",
+      "webPath": "public/images/street-v2/hero-future.webp",
+      "width": 1672,
+      "height": 941
+    },
+    {
+      "slug": "tig-rel-welder",
+      "prompt": "Use case: precise-object-edit\nAsset type: photorealistic recruitment website job image.\nInput image: edit target.\nPrimary request: Replace the foreground female welder with a natural-looking adult Filipino man in his thirties, with short dark hair and an attentive, skilled expression. He is checking the stainless pipe joint by hand with his welding helmet raised and is not actively welding. Preserve the dark protective welding jacket, heavy protective gloves and raised welding helmet.\nConstraints: Change only the subject as requested. Preserve the original industrial workplace, precise machinery, equipment, tools, safe PPE, camera viewpoint, close-up framing, composition, 4:3 landscape aspect ratio, natural lighting, color palette and photographic realism. Keep the new man in the same location, performing the same task; natural anatomy and convincing hands. No women anywhere in the scene. Do not add text, logos or watermarks. Keep the image as a full-bleed rectangular photograph.",
+      "designPath": "design/images/street-v2/tig-rel-welder.png",
+      "webPath": "public/images/street-v2/tig-rel-welder.webp",
+      "width": 1448,
+      "height": 1086
+    },
+    {
+      "slug": "mg-winding-insulator",
+      "prompt": "Use case: precise-object-edit\nAsset type: photorealistic recruitment website job image.\nInput image: edit target.\nPrimary request: Replace the foreground female motor winding insulator with a natural-looking adult Filipino man in his forties, with short dark hair beneath the same gray work cap and a focused expression. Preserve the gray workwear, work cap, clear safety glasses and knit protective gloves, the position of his hands and his task inserting a pale insulating strip into the motor stator.\nConstraints: Change only the subject as requested. Preserve the original industrial workplace, precise machinery, equipment, tools, safe PPE, camera viewpoint, close-up framing, composition, 4:3 landscape aspect ratio, natural lighting, color palette and photographic realism. Keep the new man in the same location, performing the same task; natural anatomy and convincing hands. No women anywhere in the scene. Do not add text, logos or watermarks. Keep the image as a full-bleed rectangular photograph.",
+      "designPath": "design/images/street-v2/mg-winding-insulator.png",
+      "webPath": "public/images/street-v2/mg-winding-insulator.webp",
+      "width": 1448,
+      "height": 1086
+    },
+    {
+      "slug": "mg-winding-processing-worker",
+      "prompt": "Use case: precise-object-edit\nAsset type: photorealistic recruitment website job image.\nInput image: edit target.\nPrimary request: Replace the foreground female motor winding processing worker with a natural-looking adult Filipino man in his forties, with short dark hair and a focused expression. Preserve the burgundy workwear, clear safety glasses and teal protective gloves, his pose and his task inspecting the copper-wound motor stator.\nConstraints: Change only the subject as requested. Preserve the original industrial workplace, precise machinery, equipment, tools, safe PPE, camera viewpoint, close-up framing, composition, 4:3 landscape aspect ratio, natural lighting, color palette and photographic realism. Keep the new man in the same location, performing the same task; natural anatomy and convincing hands. No women anywhere in the scene. Do not add text, logos or watermarks. Keep the image as a full-bleed rectangular photograph.",
+      "designPath": "design/images/street-v2/mg-winding-processing-worker.png",
+      "webPath": "public/images/street-v2/mg-winding-processing-worker.webp",
+      "width": 1448,
+      "height": 1086
+    },
+    {
+      "slug": "mg-assembly-fitter",
+      "prompt": "Use case: precise-object-edit\nAsset type: photorealistic recruitment website job image.\nInput image: edit target.\nPrimary request: Replace the foreground female motor assembly fitter with a natural-looking adult Filipino man in his thirties, with short dark hair and a focused, calm expression. Preserve the navy workwear with reflective gray shoulder patches, clear safety glasses and gray protective gloves, his pose and his task using the same torque wrench on the blue motor. Ensure the blurred background worker is also an adult man.\nConstraints: Change only the subject as requested. Preserve the original industrial workplace, precise machinery, equipment, tools, safe PPE, camera viewpoint, close-up framing, composition, 4:3 landscape aspect ratio, natural lighting, color palette and photographic realism. Keep the new man in the same location, performing the same task; natural anatomy and convincing hands. No women anywhere in the scene. Do not add text, logos or watermarks. Keep the image as a full-bleed rectangular photograph.",
+      "designPath": "design/images/street-v2/mg-assembly-fitter.png",
+      "webPath": "public/images/street-v2/mg-assembly-fitter.webp",
+      "width": 1448,
+      "height": 1086
+    },
+    {
+      "slug": "electrical-installer",
+      "prompt": "Use case: precise-object-edit.\nAsset type: photorealistic recruitment website job image.\nInput image: the supplied image is the edit target.\nPrimary request: replace the female worker with a natural adult Filipino man in his early thirties with short black hair and a clean-shaven face. Preserve the same electrical installer working carefully inside an industrial electrical cabinet, white hardhat, clear safety glasses and teal reflective coveralls.\nConstraints: Change only the person so the worker is clearly an adult man. Preserve the original task, hand positions, equipment, safe workwear and PPE, composition, camera angle, workshop background, colors, natural lighting and landscape aspect ratio. Realistic facial features, anatomy, hands and fabric. No women, no female background figures, no text, no logos, no watermark.",
+      "designPath": "design/images/street-v2/electrical-installer.png",
+      "webPath": "public/images/street-v2/electrical-installer.webp",
+      "width": 1448,
+      "height": 1086
+    },
+    {
+      "slug": "welder",
+      "prompt": "Use case: precise-object-edit.\nAsset type: photorealistic recruitment website job image.\nInput image: the supplied image is the edit target.\nPrimary request: replace the female worker with a natural adult Filipino man in his forties with short black hair and a broad face. Preserve the same welder examining a joint of a metal frame with a small flashlight, raised welding helmet, dark navy work shirt, thick leather apron and gloves, blue welding curtains.\nConstraints: Change only the person so the worker is clearly an adult man. Preserve the original task, hand positions, equipment, safe workwear and PPE, composition, camera angle, workshop background, colors, natural lighting and landscape aspect ratio. Realistic facial features, anatomy, hands and fabric. No women, no female background figures, no text, no logos, no watermark.",
+      "designPath": "design/images/street-v2/welder.png",
+      "webPath": "public/images/street-v2/welder.webp",
+      "width": 1448,
+      "height": 1086
+    },
+    {
+      "slug": "cnc-operator",
+      "prompt": "Use case: precise-object-edit.\nAsset type: photorealistic recruitment website job image.\nInput image: the supplied image is the edit target.\nPrimary request: replace the female worker with a natural adult Filipino man in his thirties with short black hair and a lean face. Preserve the same CNC operator measuring a metal component with a micrometer, dark cap, clear safety glasses and dark gray coveralls in front of the white and teal CNC machine.\nConstraints: Change only the person so the worker is clearly an adult man. Preserve the original task, hand positions, equipment, safe workwear and PPE, composition, camera angle, workshop background, colors, natural lighting and landscape aspect ratio. Realistic facial features, anatomy, hands and fabric. No women, no female background figures, no text, no logos, no watermark.",
+      "designPath": "design/images/street-v2/cnc-operator.png",
+      "webPath": "public/images/street-v2/cnc-operator.webp",
+      "width": 1448,
+      "height": 1086
+    },
+    {
+      "slug": "grinder-and-cleaner",
+      "prompt": "Use case: precise-object-edit.\nAsset type: photorealistic recruitment website job image.\nInput image: the supplied image is the edit target.\nPrimary request: replace the female worker with a natural adult Filipino man in his forties with short black hair and a slightly rugged clean-shaven face. Preserve the same metal workshop worker inspecting a metal plate, gray coveralls, gloves, safety glasses, cap and raised face shield, angle grinder resting on the workbench.\nConstraints: Change only the person so the worker is clearly an adult man. Preserve the original task, hand positions, equipment, safe workwear and PPE, composition, camera angle, workshop background, colors, natural lighting and landscape aspect ratio. Realistic facial features, anatomy, hands and fabric. No women, no female background figures, no text, no logos, no watermark.",
+      "designPath": "design/images/street-v2/grinder-and-cleaner.png",
+      "webPath": "public/images/street-v2/grinder-and-cleaner.webp",
+      "width": 1448,
+      "height": 1086
+    }
+  ]
+}

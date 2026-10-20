@@ -2,16 +2,13 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { ArrowLeft, ArrowRight, ArrowUpRight, Check, CheckCircle2, FileText, LockKeyhole, MapPin } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, CheckCircle2, ClipboardCheck, FileText, LockKeyhole } from "lucide-react";
 import type { ApplicantDetails, ApplicationInput, Job } from "@/lib/types";
 import { formatApplicantAddress } from "@/lib/applicant-address";
 import { applicationSchema, fieldErrors } from "@/lib/validation";
 import { additionalPositionOptions, currentWorkCountries, nationalityOptions } from "@/data/application-options";
 import { MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, referenceApplicationUploads, type ReferenceUploadId, type SupportingDocumentCategory } from "@/lib/document-uploads";
 import { BrandLockup } from "@/components/ui/Brand";
-import { JobSalary } from "@/components/jobs/JobSalary";
-import { NoPlacementFee } from "@/components/jobs/EmploymentBenefits";
 import { ApplicationRequirements } from "./ApplicationRequirements";
 import { ApplicationUpload } from "./ApplicationUpload";
 import styles from "./ApplicationForm.module.css";
@@ -37,7 +34,6 @@ function uploadErrorKey(id: ReferenceUploadId): "resume" | `document:${Supportin
 
 export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; jobs?: Job[] }) {
   const availableJobs = jobs?.filter((job) => job.status === "published") || [initialJob];
-  const [reviewing, setReviewing] = useState(false);
   const [values, setValues] = useState<ApplicationInput>({
     applicationFormVersion: 2, destinationCountry: "Croatia", termsAccepted: false,
     jobId: initialJob.id, fullName: "", email: "", phone: "", country: "", consent: false,
@@ -99,7 +95,6 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
   }
 
   function showErrors(next: FormErrors) {
-    setReviewing(false);
     setErrors(next);
     requestAnimationFrame(() => {
       const invalid = formRef.current?.querySelector<HTMLElement>("[aria-invalid='true']");
@@ -107,17 +102,6 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
       else if (invalid) invalid.focus();
       else formRef.current?.querySelector<HTMLElement>("#documents-error")?.focus();
     });
-  }
-
-  function changeView(review: boolean) {
-    setReviewing(review); setError(""); setErrors({});
-    requestAnimationFrame(() => headingRef.current?.focus());
-  }
-
-  function reviewApplication() {
-    const next = validateAll();
-    if (Object.keys(next).length) { showErrors(next); return; }
-    changeView(true);
   }
 
   function submit() {
@@ -167,7 +151,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
       <input id={errorKey} name={errorKey} type={options.type || "text"} value={values.applicantDetails?.[key] || ""}
         placeholder={options.placeholder} autoComplete={options.autoComplete} maxLength={limits[key]} disabled={busy}
         max={options.type === "date" ? new Date().toISOString().slice(0, 10) : undefined}
-        aria-required={!options.optional} aria-invalid={Boolean(errors[errorKey])}
+        required={!options.optional} aria-required={!options.optional} aria-invalid={Boolean(errors[errorKey])}
         aria-describedby={[options.help ? `${errorKey}-help` : undefined, errors[errorKey] ? `${errorKey}-error` : undefined].filter(Boolean).join(" ") || undefined}
         onChange={(event) => updateDetails(key, event.target.value as ApplicantDetails[typeof key])} />
       {options.help && <p id={`${errorKey}-help`} className={styles.formNote}>{options.help}</p>}
@@ -180,7 +164,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
       <label htmlFor={key}>{label}<span aria-label="required">*</span></label>
       <input id={key} name={key} type={key === "email" ? "email" : "tel"} value={values[key]} placeholder={placeholder}
         autoComplete={key === "email" ? "email" : "tel"} maxLength={key === "email" ? 254 : 30} disabled={busy}
-        aria-required="true" aria-invalid={Boolean(errors[key])}
+        required aria-required="true" aria-invalid={Boolean(errors[key])}
         aria-describedby={[help ? `${key}-help` : undefined, errors[key] ? `${key}-error` : undefined].filter(Boolean).join(" ") || undefined}
         onChange={(event) => update(key, event.target.value)} />
       {help && <p id={`${key}-help`} className={styles.formNote}>{help}</p>}
@@ -195,7 +179,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
     const value = nested ? values.applicantDetails?.[key] || "" : values[key];
     return <div className={styles.field}>
       <label htmlFor={errorKey}>{label}<span aria-label="required">*</span></label>
-      <select id={errorKey} name={errorKey} value={value} disabled={busy} aria-required="true" aria-invalid={Boolean(errors[errorKey])}
+      <select id={errorKey} name={errorKey} value={value} disabled={busy} required aria-required="true" aria-invalid={Boolean(errors[errorKey])}
         aria-describedby={[help ? `${errorKey}-help` : undefined, errors[errorKey] ? `${errorKey}-error` : undefined].filter(Boolean).join(" ") || undefined}
         onChange={(event) => {
           if (key === "nationality" || key === "secondaryPosition") updateDetails(key, event.target.value);
@@ -212,13 +196,13 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
 
   function choices(key: "gender" | "englishProficiency", label: string, options: readonly string[]) {
     const errorKey = `applicantDetails.${key}` as const;
-    return <fieldset className={`${styles.field} ${styles.full}`} role="radiogroup" aria-required="true"
+    return <fieldset className={styles.field} role="radiogroup" aria-required="true"
       aria-invalid={Boolean(errors[errorKey])} aria-describedby={errors[errorKey] ? `${errorKey}-error` : undefined}>
       <legend className={styles.choiceLabel}>{label} <span aria-label="required">*</span></legend>
       <div className={styles.choiceGroup}>{options.map((option) => <label key={option}
         className={`${styles.choiceCard} ${values.applicantDetails?.[key] === option ? styles.choiceSelected : ""}`}>
         <input className={styles.radio} type="radio" name={errorKey} value={option} checked={values.applicantDetails?.[key] === option}
-          disabled={busy} onChange={() => updateDetails(key, option as ApplicantDetails[typeof key])} />
+          required disabled={busy} onChange={() => updateDetails(key, option as ApplicantDetails[typeof key])} />
         <span className={styles.choiceCopy}>{option}</span>
       </label>)}</div>
       {errors[errorKey] && <p id={`${errorKey}-error`} className={styles.fieldError}>{errors[errorKey]}</p>}
@@ -229,29 +213,17 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
 
   return <div className={styles.page}><div className="container">
     <Link href={`/jobs/${job.slug}`} className={styles.back}><ArrowLeft size={16} /> Back to the opportunity</Link>
-    <div className={styles.shell}>
+    <div className={styles.shell} role="region" aria-label="Application">
       <header className={styles.masthead}>
         <div className={styles.mastheadBrand}><BrandLockup /></div>
-        <div className={styles.mastheadCopy}><p className="eyebrow">Your next chapter starts here</p>
-          <h1>Great opportunities.<br /><span>Let’s start with you.</span></h1>
-          <p>Tell us about yourself, share your experience and take the next step toward working in Croatia.</p>
-        </div>
-        <div className={styles.mastheadBadge}><NoPlacementFee /></div>
+        <p className={styles.mastheadLabel}>Application form</p>
       </header>
-      <div className={styles.layout}>
-        <section className={styles.roleSummary} aria-label="Selected opportunity">
-          <div className={styles.roleImage}><Image src={job.image} alt={job.imageAlt} fill sizes="160px"
-            style={{ objectFit: "cover", objectPosition: job.imagePosition || "center" }} /></div>
-          <div className={styles.roleSummaryContent}><p className="eyebrow">You’re applying for</p><h2>{job.title}</h2>
-            <p><MapPin size={15} aria-hidden="true" /> {job.location}</p><JobSalary job={job} compact />
-            <Link href={`/jobs/${job.slug}#overview`} target="_blank" rel="noopener noreferrer">View role details <ArrowUpRight size={15} aria-hidden="true" /><span className="sr-only"> (opens in a new tab)</span></Link>
-          </div>
-        </section>
+      <div>
         {job.isExample && <p className={styles.example}><strong>Development example vacancy.</strong> Use fictitious details for this demonstration application.</p>}
         <section className={styles.formSection}>
           {result ? <div className={styles.success}>
             <CheckCircle2 size={56} strokeWidth={1.5} /><p className="eyebrow">Application received</p>
-            <h2 ref={headingRef} tabIndex={-1}>Your next chapter<br />is one step closer.</h2>
+            <h1 ref={headingRef} tabIndex={-1}>Your next chapter<br />is one step closer.</h1>
             <p>Application submitted successfully for <strong>{result.jobTitle}</strong>.</p>
             <div className={styles.reference}><span>Your application reference</span><strong>{result.reference}</strong>
               <button type="button" onClick={async () => {
@@ -262,25 +234,16 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
             <p>Save this reference for your records. The recruitment team will review your application and contact you about the next steps for this role.</p>
             <Link href="/jobs" className="button button-primary">Explore more opportunities <ArrowUpRight size={18} /></Link>
           </div> : <>
-            <ol className={styles.steps} aria-label="Application progress">{["Complete your application", "Review & submit"].map((label, index) => {
-              const current = reviewing ? 1 : 0;
-              return <li key={label} className={`${index === current ? styles.current : ""} ${index < current ? styles.completed : ""}`} aria-current={index === current ? "step" : undefined}>
-                <span>{index < current ? <Check size={16} /> : `0${index + 1}`}</span><div>{label}</div>
-              </li>;
-            })}</ol>
-            <div className={styles.formHeading}><p className="eyebrow">{reviewing ? "One last look" : "Application form"}</p>
-              <h2 ref={headingRef} tabIndex={-1}>{reviewing ? "Ready for your next step?" : "Welcome! Please tell us about yourself."}</h2>
-              <p>{reviewing ? "Check your answers before submitting." : "Please enter these details as they appear on your passport."}</p>
+            <div className={styles.formHeading}>
+              <h1 ref={headingRef} tabIndex={-1}>Welcome! Please tell us about yourself.</h1>
+              <p>Please enter these details as they appear on your passport.</p>
             </div>
-            <form ref={formRef} aria-label={`${job.title} application form`} noValidate onSubmit={(event) => { event.preventDefault(); if (reviewing) submit(); else reviewApplication(); }}>
+            <form ref={formRef} aria-label={`${job.title} application form`} noValidate onSubmit={(event) => { event.preventDefault(); submit(); }}>
               <div className={styles.honeypot} aria-hidden="true"><label htmlFor="website">Website</label><input id="website" value={website}
                 onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} autoComplete="off" /></div>
-              <div className={styles.formBody} key={reviewing ? "review" : "application"}>
-                {!reviewing ? <>
-                  <nav className={styles.sectionLinks} aria-label="Application sections"><a href="#personal-details">01 Personal details</a><a href="#work-experience">02 Work experience</a>
-                    <a href="#application-documents">03 Documents</a><a href="#important-notices">04 Important notices</a><a href="#application-terms">05 Terms</a></nav>
-                  <section id="personal-details" className={styles.sectionCard} aria-labelledby="personal-details-heading">
-                    <SectionHeading number="01" id="personal-details-heading" title="Personal details" />
+              <p className={styles.required}><span aria-hidden="true">*</span> Required information</p>
+              <div className={styles.formBody}>
+                  <section id="personal-details" className={styles.sectionCard} aria-label="Personal details">
                     <div className={styles.grid}>
                       {profileText("firstName", "Your first name", { placeholder: "Enter your first name", autoComplete: "given-name" })}
                       {profileText("lastName", "Your last name", { placeholder: "Enter your last name", autoComplete: "family-name" })}
@@ -303,7 +266,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
                     </div>
                   </section>
                   <section id="work-experience" className={styles.sectionCard} aria-labelledby="work-heading">
-                    <SectionHeading number="02" id="work-heading" title="Work Experience" />
+                    <SectionHeading id="work-heading" title="Work Experience" />
                     <div className={styles.questionStack}>
                       {selectField("country", "Where are you currently working?", nameOptions(currentWorkCountries), "Select the country where you currently work or are based.")}
                       {selectField("jobId", "What job position are you primarily applying for?", availableJobs.map((candidate) => ({ value: candidate.id, label: candidate.title })), positionHelp, false)}
@@ -313,11 +276,11 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
                   </section>
                   <section id="application-documents" className={styles.sectionCard} aria-label="Document requirements and uploads">
                     <ApplicationRequirements />
-                    <div className={styles.uploadHeading}><h3 className={styles.sectionTitle} id="documents-heading">Document Uploads</h3>
+                    <div className={styles.uploadHeading}><h2 className={styles.sectionTitle} id="documents-heading">Document Uploads</h2>
                       <p className={styles.sectionIntro}>For this application, attach your CV, valid passport, and residence ID. Attach the work permit documents below if you have them available.</p>
                     </div>
-                    <div className={styles.uploadStatus} role="status" aria-live="polite"><strong>{requiredReady} of 3 required documents ready</strong>
-                      <p>{(totalBytes / 1024 / 1024).toFixed(1)} MB of 4 MB used. Keep all files together within 4 MB; aim for under 1 MB each.</p>
+                    <div className={styles.uploadStatus} role="status" aria-live="polite"><ClipboardCheck size={22} aria-hidden="true" /><div><strong>{requiredReady} of 3 required documents ready</strong>
+                      <p>{(totalBytes / 1024 / 1024).toFixed(1)} MB of 4 MB used. Keep all files together within 4 MB; aim for under 1 MB each.</p></div>
                     </div>
                     <div className={styles.uploadsGrid}>{referenceApplicationUploads.map((upload) => <ApplicationUpload key={upload.id}
                       id={upload.id === "resume" ? "resume" : `attachment-${upload.id}`} label={upload.label} description={upload.description}
@@ -327,47 +290,30 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
                     <p className={styles.private}><LockKeyhole size={17} aria-hidden="true" /> Your files are private and available only to authorized recruitment staff.</p>
                   </section>
                   <section id="important-notices" className={styles.sectionCard} aria-labelledby="notices-heading">
-                    <SectionHeading number="04" id="notices-heading" title="IMPORTANT NOTICES" />
+                    <SectionHeading id="notices-heading" title="IMPORTANT NOTICES" />
                     {choices("englishProficiency", "We require all candidates to display basic proficiency in English. Are you able to speak, read, and write English at a basic level?", ["Yes", "No"])}
-                    <div className={styles.feeNote}><NoPlacementFee /><p>No placement fee.</p></div>
+                    <p className={styles.feeNote}>No placement fee.</p>
                   </section>
                   <section id="application-terms" className={styles.sectionCard} aria-labelledby="terms-heading">
-                    <SectionHeading number="05" id="terms-heading" title="Terms and Conditions" />
-                    <label className={styles.consent}><input id="termsAccepted" type="checkbox" aria-required="true" checked={Boolean(values.termsAccepted)} disabled={busy}
+                    <SectionHeading id="terms-heading" title="Terms and Conditions" />
+                    <label className={styles.consent}><input id="termsAccepted" type="checkbox" required aria-required="true" checked={Boolean(values.termsAccepted)} disabled={busy}
                       aria-invalid={Boolean(errors.termsAccepted)} aria-describedby={errors.termsAccepted ? "termsAccepted-error" : undefined}
                       onChange={(event) => update("termsAccepted", event.target.checked)} />
                       <span>I agree to the <Link href="/terms" target="_blank" rel="noopener noreferrer">terms and conditions</Link> provided by Jobs Street Croatia. By providing my contact details, I agree to receive messages about my application.</span>
                     </label>
                     {errors.termsAccepted && <p id="termsAccepted-error" className={styles.fieldError}>{errors.termsAccepted}</p>}
-                    <label className={styles.consent}><input id="consent" type="checkbox" aria-required="true" checked={values.consent} disabled={busy}
+                    <label className={styles.consent}><input id="consent" type="checkbox" required aria-required="true" checked={values.consent} disabled={busy}
                       aria-invalid={Boolean(errors.consent)} aria-describedby={errors.consent ? "consent-error" : undefined}
                       onChange={(event) => update("consent", event.target.checked)} />
                       <span>I agree to the <Link href="/privacy" target="_blank" rel="noopener noreferrer">privacy policy</Link> provided by Jobs Street Croatia and understand that my information will be used in accordance with the policy.</span>
                     </label>
                     {errors.consent && <p id="consent-error" className={styles.fieldError}>{errors.consent}</p>}
                   </section>
-                </> : <div className={styles.sectionCard}>
-                  <ReviewSection title="Personal details" onEdit={() => changeView(false)} items={[
-                    ["Your first name", values.applicantDetails?.firstName || ""], ["Your last name", values.applicantDetails?.lastName || ""],
-                    ["Gender", values.applicantDetails?.gender || ""], ["Email", values.email], ["Nationality", values.applicantDetails?.nationality || ""],
-                    ["WhatsApp number", values.phone], ["Telegram number", values.applicantDetails?.telegram || "Not provided"],
-                    ["Street", values.applicantDetails?.street || ""], ["City", values.applicantDetails?.city || ""], ["Province", values.applicantDetails?.province || ""], ["Postal code", values.applicantDetails?.postalCode || ""],
-                    ["Date of birth", values.applicantDetails?.dateOfBirth || ""], ["Place of birth", values.applicantDetails?.placeOfBirth || ""],
-                    ["Father’s full name", values.applicantDetails?.fatherName || "Not provided"], ["Mother’s full name", values.applicantDetails?.motherName || "Not provided"],
-                    ["Country applying to", values.destinationCountry || "Croatia"],
-                  ]} />
-                  <ReviewSection title="Work Experience" onEdit={() => changeView(false)} items={[
-                    ["Currently working / based in", values.country], ["Primary position", job.title], ["Additional experienced position", values.applicantDetails?.secondaryPosition || ""],
-                    ["Other position", values.applicantDetails?.otherPosition || "Not provided"], ["Basic English", values.applicantDetails?.englishProficiency || ""],
-                  ]} />
-                  <ReviewSection title="Document Uploads" onEdit={() => changeView(false)} items={referenceApplicationUploads.map((upload): [string, string] => [upload.label, files[upload.id]?.name || "Not attached"])} />
-                  <ReviewSection title="Terms and Conditions" onEdit={() => changeView(false)} items={[["Terms and application messages", "Agreed"], ["Privacy policy", "Agreed"]]} />
-                </div>}
               </div>
               {error && <div className={styles.error} role="alert">{error}</div>}
               {busy && <div className={styles.progress} role="status"><div><span>{progress < 100 ? "Uploading your application" : "Confirming receipt…"}</span><span>{progress}%</span></div><progress value={progress} max={100} aria-label="Application upload progress" /></div>}
-              <div className={styles.actions}>{reviewing ? <button type="button" className={styles.previous} onClick={() => changeView(false)} disabled={busy}><ArrowLeft size={17} /> Edit application</button> : <span className={styles.required}>* Required information</span>}
-                <button type="submit" className="button button-primary" disabled={busy}>{busy ? "Submitting…" : reviewing ? "Submit" : "Review my application"}<ArrowRight size={18} /></button>
+              <div className={styles.actions}>
+                <button type="submit" className="button button-primary" disabled={busy}>{busy ? "Submitting…" : "Submit"}</button>
               </div>
               <p className={styles.saveNote}><LockKeyhole size={14} aria-hidden="true" /> Check your answers before submitting. Your application is sent only when you select Submit.</p>
               <div className={styles.policyLinks}><Link href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link><span aria-hidden="true">|</span><Link href="/terms" target="_blank" rel="noopener noreferrer">Terms of Service</Link></div>
@@ -379,10 +325,6 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
   </div></div>;
 }
 
-function SectionHeading({ number, title, id }: { number: string; title: string; id: string }) {
-  return <div className={styles.sectionHeading}><span className={styles.sectionNumber} aria-hidden="true">{number}</span><h3 id={id} className={styles.sectionTitle}>{title}</h3></div>;
-}
-
-function ReviewSection({ title, items, onEdit }: { title: string; items: [string, string][]; onEdit: () => void }) {
-  return <section className={styles.reviewSection}><div><h3>{title}</h3><button type="button" onClick={onEdit}>Edit <ArrowUpRight size={14} /></button></div><dl>{items.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section>;
+function SectionHeading({ title, id }: { title: string; id: string }) {
+  return <div className={styles.sectionHeading}><h2 id={id} className={styles.sectionTitle}>{title}</h2></div>;
 }

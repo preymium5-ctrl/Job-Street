@@ -7,6 +7,7 @@ import { JobCard } from "@/components/jobs/JobCard";
 import { Faq } from "@/components/ui/Faq";
 import type { Job } from "@/lib/types";
 import { ProposedTermsNotice } from "@/components/jobs/JobSalary";
+import { workerImageSrc } from "@/lib/worker-images";
 
 export function Introduction() {
   return (
@@ -41,7 +42,7 @@ export function Introduction() {
       <div className="intro-visual-row">
         <div className="intro-image" data-reveal>
           <Image
-            src="/images/street-v2/hero-skills.webp"
+            src={workerImageSrc("/images/street-v2/hero-skills.webp")}
             alt="AI-generated illustration of Filipino technicians collaborating on a motor assembly"
             fill
             sizes="(max-width: 700px) 100vw, 60vw"
@@ -355,7 +356,7 @@ export function FinalCta() {
     <section id="your-future" className="final-cta" aria-labelledby="future-heading">
       <div className="final-cta-background" aria-hidden="true">
         <Image
-          src="/images/street-v2/hero-future.webp"
+          src={workerImageSrc("/images/street-v2/hero-future.webp")}
           alt=""
           fill
           sizes="100vw"

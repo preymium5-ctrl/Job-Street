@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowDown, ArrowUpRight } from "lucide-react";
 import { useRef } from "react";
+import { workerImageSrc } from "@/lib/worker-images";
 
 export function Hero({
   count,
@@ -72,7 +73,7 @@ export function Hero({
       >
         <div className="hero-image-wrap" ref={imageRef}>
           <Image
-            src="/images/street-v2/hero-career.webp"
+            src={workerImageSrc("/images/street-v2/hero-career.webp")}
             alt="AI-generated illustration of Filipino technicians reviewing a technical drawing in a workshop"
             fill
             loading="eager"

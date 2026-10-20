@@ -15,6 +15,12 @@ The 17 role filenames match their job slugs. The three full-width photographs ar
 
 Images are compressed and responsively served through Next Image. The logo and social icons retain the existing brand assets. The organization marks have been removed from this website. The new image collection belongs to this separate Jobs Street Croatia project.
 
+## Male worker image update — 20 October 2026
+
+At the site owner's request, the three wide images and eight role images that previously featured women now feature adult Filipino men. The built-in image generation tool edited each image individually, preserving the work scene, equipment, safety clothing, lighting and composition. The remaining nine role images already featured men and retain their original images.
+
+The selected PNGs replace their corresponding files in `design/images/street-v2/`, and the website versions replace the matching files in `public/images/street-v2/` as WebP at quality 85. The exact edit prompts and saved asset paths are recorded in `docs/STREET_MALE_IMAGE_EDITS_2026_10_20.json`. The original generation prompt collection remains a historical record.
+
 ## Content migration
 
 The catalog image refresh matches a role's known ID, slug and previous bundled image path. It changes only the image and alternative description, preserving other job fields, staff-uploaded photographs, applications and private documents.

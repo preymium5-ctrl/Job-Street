@@ -4,24 +4,25 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowDown, ArrowUpRight } from "lucide-react";
+import { workerImageSrc } from "@/lib/worker-images";
 
 const slides = [
   {
-    image: "/images/street-v2/hero-career.webp",
+    image: workerImageSrc("/images/street-v2/hero-career.webp"),
     lines: ["Your skills.", "Your future."],
     emphasis: "In Croatia.",
     copy: "For skilled Filipino workers ready for their next move. Explore opportunities in Croatia, with no placement fee.",
     label: "Your future in Croatia",
   },
   {
-    image: "/images/street-v2/hero-skills.webp",
+    image: workerImageSrc("/images/street-v2/hero-skills.webp"),
     lines: ["Build a career.", "Make your"],
     emphasis: "next move.",
     copy: "Bring your experience to a new opportunity. Discover roles for skilled Filipino tradespeople and find the right fit for your skills.",
     label: "Put your skills to work",
   },
   {
-    image: "/images/street-v2/hero-future.webp",
+    image: workerImageSrc("/images/street-v2/hero-future.webp"),
     lines: ["Good work.", "New possibilities."],
     emphasis: "No placement fee.",
     copy: "Take the next step with confidence. Explore opportunities in Croatia, review the requirements, and apply directly with your CV.",

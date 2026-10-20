@@ -28,7 +28,7 @@ export function ApplicationUpload({ id, label, description, required, accept, fi
 
   return (
     <div className={`${styles.card} ${disabled ? styles.disabled : ""}`}>
-      <label className={styles.label} htmlFor={id}>{label}<span>{required ? "Required" : "Optional"}</span></label>
+      <label className={styles.label} htmlFor={id}>{label}<span data-required={required}>{required ? "Required" : "Optional"}</span></label>
       <p className={styles.description} id={`${id}-description`}>{description}</p>
       <div className={`${styles.dropzone} ${dragging ? styles.dragging : ""} ${error ? styles.invalid : ""}`}
         onDragOver={(event) => { event.preventDefault(); if (!disabled) event.dataTransfer.dropEffect = "copy"; }}

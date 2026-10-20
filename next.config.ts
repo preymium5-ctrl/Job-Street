@@ -4,6 +4,10 @@ const config: NextConfig = {
   outputFileTracingRoot: process.cwd(),
   images: {
     maximumRedirects: 0,
+    localPatterns: [
+      { pathname: "/**", search: "" },
+      { pathname: "/images/street-v2/**", search: "?v=male-20261020" },
+    ],
     remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
   },
   serverExternalPackages: ["@electric-sql/pglite", "postgres"],
