@@ -291,7 +291,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
                   <section id="application-documents" className={styles.sectionCard} aria-label="Documents that may be required and uploads">
                     <ApplicationRequirements />
                     <div className={styles.uploadHeading}><h2 className={styles.sectionTitle} id="documents-heading">Document Uploads</h2>
-                      <p className={styles.sectionIntro}>Attach your updated CV and valid passport. A residence ID is required for applicants working outside the Philippines, and a driver’s license is required for driver applicants. You may upload other supporting documents if available.</p>
+                      <p className={styles.sectionIntro}>Attach your updated CV / Resume and valid passport. A residence ID is required for applicants working outside the Philippines, and a driver’s license is required for driver applicants. You may upload other supporting documents if available.</p>
                     </div>
                     <div className={styles.uploadStatus} role="status" aria-live="polite"><ClipboardCheck size={22} aria-hidden="true" /><div><strong>{requiredReady} of {requiredUploads.length} required documents ready</strong>
                       <p>{(totalBytes / 1024 / 1024).toFixed(1)} MB of 4 MB used. Keep all files together within 4 MB; aim for under 1 MB each.</p></div>

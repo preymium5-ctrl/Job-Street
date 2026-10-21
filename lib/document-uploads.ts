@@ -16,7 +16,7 @@ export const SUPPORTING_DOCUMENT_ACCEPT = ".pdf,.doc,.docx,.jpg,.jpeg,.png";
 export const MAX_REFERENCE_FILE_BYTES = 3 * 1024 * 1024;
 export const MAX_REFERENCE_UPLOAD_BYTES = 4 * 1024 * 1024;
 export const referenceApplicationUploads = [
-  { id: "resume", label: "Please upload your CV", description: "Maximum one file. Please make sure your CV is updated.", required: true, accept: ".pdf,.doc,.docx" },
+  { id: "resume", label: "Please upload your CV / Resume", description: "Maximum one file. Please make sure your CV / Resume is updated.", required: true, accept: ".pdf,.doc,.docx" },
   { id: "passport", label: "Please upload a copy of your valid passport", description: "A clear copy of your passport, valid for at least 2 years.", required: true, accept: SUPPORTING_DOCUMENT_ACCEPT },
   { id: "residence-id", label: "Please upload your updated and valid residence ID (front & back)", description: "For Filipinos living outside the Philippines. Combine the front and back in one readable file.", required: false, accept: SUPPORTING_DOCUMENT_ACCEPT },
   { id: "diploma", label: "Please upload your high school diploma", description: "May be required for the work permit application. Upload your high school diploma if available.", required: false, accept: SUPPORTING_DOCUMENT_ACCEPT },
