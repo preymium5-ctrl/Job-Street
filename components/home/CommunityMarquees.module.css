@@ -14,12 +14,23 @@
 .socialIcon img { object-fit: contain; }
 .screenReaderOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .separator { margin-left: 24px; color: var(--brand-teal); font-size: 24px; font-weight: 400; }
-.socialWindow:has(.socialLink:focus-visible) { overflow: visible; mask-image: none; }
-.socialWindow:has(.socialLink:focus-visible) .track { animation: none; transform: none; width: 100%; }
-.socialWindow:has(.socialLink:focus-visible) .group { width: 100%; min-width: 0; flex-wrap: wrap; justify-content: center; gap: 24px; padding: 8px var(--space); }
-.socialWindow:has(.socialLink:focus-visible) .group[aria-hidden="true"] { display: none; }
-.socialWindow:has(.socialLink:focus-visible) .socialItem { padding: 0; }
-.socialWindow:has(.socialLink:focus-visible) .separator { display: none; }
+.resourcesSection { border-top: 0; background: var(--paper); }
+.resourcesHeading { align-items: flex-start; }
+.resourcesHeading > span { max-width: 240px; text-align: right; }
+.resourcesTitle { max-width: 620px; font-size: clamp(18px, 1.8vw, 24px); line-height: 1.35; letter-spacing: -.02em; }
+.resourceRows { display: grid; gap: 14px; }
+.resourceGroup { margin: 0; padding: 0; list-style: none; }
+.resourceItem { flex: 0 0 auto; padding-inline: 12px; }
+.resourceLink { display: flex; align-items: center; justify-content: center; width: 196px; height: 110px; border: 1px solid var(--line); border-radius: 12px; background: #fff; transition: border-color .2s, box-shadow .2s; }
+.resourceLink:hover { border-color: var(--brand-teal); box-shadow: inset 0 0 0 1px var(--brand-teal); }
+.resourceLogo { position: relative; display: block; width: 164px; height: 76px; }
+.resourceLogo img { object-fit: contain; }
+.socialWindow:has(:is(.socialLink, .resourceLink):focus-visible) { overflow: visible; mask-image: none; }
+.socialWindow:has(:is(.socialLink, .resourceLink):focus-visible) .track { animation: none; transform: none; width: 100%; }
+.socialWindow:has(:is(.socialLink, .resourceLink):focus-visible) .group { width: 100%; min-width: 0; flex-wrap: wrap; justify-content: center; gap: 24px; padding: 8px var(--space); }
+.socialWindow:has(:is(.socialLink, .resourceLink):focus-visible) .group[aria-hidden="true"] { display: none; }
+.socialWindow:has(:is(.socialLink, .resourceLink):focus-visible) :is(.socialItem, .resourceItem) { padding: 0; }
+.socialWindow:has(:is(.socialLink, .resourceLink):focus-visible) .separator { display: none; }
 @keyframes community-drift { to { transform: translateX(-50%); } }
 @media (max-width: 700px) {
  .section { padding-block: 25px 28px; }
@@ -30,6 +41,12 @@
  .socialIcon { width: 46px; height: 46px; }
  .socialIcon img, .socialIcon svg { width: 25px; height: 25px; }
  .separator { margin-left: 18px; }
+ .resourcesHeading { flex-direction: column; gap: 10px; }
+ .resourcesHeading > span { max-width: none; font-size: 11px; text-align: left; }
+ .resourceRows { gap: 12px; }
+ .resourceItem { padding-inline: 8px; }
+ .resourceLink { width: 166px; height: 96px; }
+ .resourceLogo { width: 138px; height: 66px; }
 }
 @media (prefers-reduced-motion: reduce) {
  .track { animation: none; transform: none; width: 100%; }
@@ -37,6 +54,8 @@
  .socialWindow { mask-image: none; }
  .group { width: 100%; min-width: 0; flex-wrap: wrap; justify-content: center; }
  .socialGroup { gap: 24px; padding-inline: var(--space); }
+ .resourceGroup { gap: 16px; padding: 4px var(--space); }
+ .resourceItem { padding: 0; }
  .socialItem { padding: 0; font-size: 22px; }
  .separator { display: none; }
 }
