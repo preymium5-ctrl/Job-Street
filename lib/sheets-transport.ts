@@ -211,7 +211,7 @@ async function receiverCapabilities(url: string, signal: AbortSignal, requireExp
     // Schema 6 supports the compact 35-column tracker and the original 54-column
     // layout. Never downgrade a complete application to a partial delivery.
     const expandedProfile = discoverySource && (health!.schemaVersion as number) >= 6 &&
-      (health!.columns === 35 || health!.columns === 54);
+      (health!.columns === 35 || health!.columns === 36 || health!.columns === 54);
     return { discoverySource, expandedProfile };
   } catch {
     // Existing legacy deliveries can continue; full-profile delivery must wait.
