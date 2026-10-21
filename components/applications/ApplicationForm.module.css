@@ -29,7 +29,7 @@
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px 24px; }
 .full { grid-column: 1 / -1; }
 .field { min-width: 0; margin: 0; padding: 0; border: 0; }
-.field > label { display: flex; align-items: baseline; gap: 7px; margin-bottom: 9px; color: #263b49; font-size: 14px; font-weight: 400; line-height: 1.5; }
+.field > label { display: flex; align-items: baseline; gap: 7px; margin-bottom: 9px; color: #147d43; font-size: 16px; font-weight: 600; line-height: 1.5; }
 .field > label > span { flex-shrink: 0; color: #67737e; font-size: 11px; }
 .field > label > svg { flex-shrink: 0; align-self: center; }
 .whatsappIcon { color: #25d366; }
@@ -45,7 +45,7 @@
 .field > input:disabled, .field > select:disabled { cursor: not-allowed; background: #f5f7f9; opacity: .7; }
 .formNote { margin: 8px 0 0; color: #5b6972; font-size: 12px; line-height: 1.8; }
 .fieldError { margin: 8px 0 0; color: #a81828; font-size: 13px; line-height: 1.7; }
-.choiceLabel { margin: 0 0 14px; padding: 0; color: #263b49; font-size: 14px; font-weight: 400; line-height: 1.8; }
+.choiceLabel { margin: 0 0 14px; padding: 0; color: #147d43; font-size: 16px; font-weight: 600; line-height: 1.8; }
 .choiceGroup { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
 .choiceCard { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 9px 13px; border: 1px solid #d8dcdf; border-radius: 4px; background: #fff; cursor: pointer; }
 .choiceCard:hover, .choiceSelected { border-color: #35668b; background: #f2f7fc; }
@@ -53,7 +53,7 @@
 .choiceCopy { color: #263b49; font-size: 14px; }
 .radio { flex: 0 0 auto; width: 18px; height: 18px; margin: 0; accent-color: #35668b; }
 .addressGroup { min-width: 0; margin: 0; padding: 18px 0 0; border: 0; }
-.addressGroup > legend { padding: 0; color: #263b49; font-size: 14px; font-weight: 600; }
+.addressGroup > legend { padding: 0; color: #147d43; font-size: 16px; font-weight: 600; }
 .questionStack { display: grid; gap: 28px; }
 .uploadHeading { margin: 42px 0 12px; }
 .sectionIntro { margin: 26px 0 0; font-size: 16px; line-height: 1.8; }
