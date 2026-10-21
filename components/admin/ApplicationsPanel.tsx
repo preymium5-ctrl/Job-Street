@@ -258,7 +258,7 @@ export default function ApplicationsPanel({
                   ["WhatsApp / contact number", selected.phone],
                   [modernForm ? "Country currently working in" : "Current country", selected.country],
                   ...personalProfile.filter(([, value]) => Boolean(value)),
-                  ...(!modernForm ? [["Discovered us through", selected.discoverySource || "Not provided"] as [string, string]] : []),
+                  ["Where did you find us?", selected.discoverySource || "Not provided"],
                 ]}
               />
               <Details

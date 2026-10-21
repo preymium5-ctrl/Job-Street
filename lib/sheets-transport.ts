@@ -208,7 +208,7 @@ async function receiverCapabilities(url: string, signal: AbortSignal, requireExp
     const discoverySource = health?.ok === true && health.service === "chapter-applications" && health.version === 1 &&
       Number.isSafeInteger(health.schemaVersion) && (health.schemaVersion as number) >= 4 &&
       Number.isSafeInteger(health.columns) && (health.columns as number) >= 30;
-    // Schema 6 supports the compact 35-column tracker and the original 54-column
+    // Accept the staged 35-to-36-column upgrade and the original 54-column
     // layout. Never downgrade a complete application to a partial delivery.
     const expandedProfile = discoverySource && (health!.schemaVersion as number) >= 6 &&
       (health!.columns === 35 || health!.columns === 36 || health!.columns === 54);

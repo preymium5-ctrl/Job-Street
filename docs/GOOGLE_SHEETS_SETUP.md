@@ -1,6 +1,6 @@
 # Google Sheets application delivery
 
-## Current production connection (20 October 2026)
+## Current production connection (21 October 2026)
 
 The production site uses `APPLICATION_STORAGE=google-sheets`. Set these values in
 the Vercel project's **Production** environment, then deploy the website:
@@ -15,11 +15,40 @@ This explicit mode saves applications in Google Sheets and uploads in private
 Google Drive. It needs no temporary filesystem, PostgreSQL database or S3 bucket.
 The database-backed website staff workspace remains a separate configuration.
 
-The receiver already deployed for this tracker uses protocol version 3 and
-receiver schema 6. The current **Applications** tab has 35 columns; the receiver
-also supports its earlier 54-column layout. `integrations/google-sheets/Code.gs`
-matches that existing receiver source. This website change does not redeploy the
-receiver, restructure the tracker or change file sharing.
+The application payload uses protocol version 3. Receiver schema 7 adds
+**Where did you find us?** at **AJ (36)**, after the existing 35 columns in the
+**Applications** tab. Columns A:AI retain their values and coordinates. The
+receiver also accepts the previous 35-column compact tracker and the earlier
+54-column layout. Both websites sharing this tracker may send `discoverySource`
+or the older `referralSource` alias. Conflicting nonempty aliases are rejected.
+
+The new column stores the selected Facebook, TikTok, Instagram, Reddit, Threads,
+X (Twitter), YouTube, LinkedIn, Google search, Friend or family, or Other answer
+as literal text. Applications with no collected answer retain blank cells; no
+answer is inferred. Private document links, Google sharing, connection secrets,
+and existing source attribution in the application ID notes remain unchanged.
+The checked-in receiver matches the shared live Version 14 deployment. Its
+SHA-256 is `AB5E9DCBF752AF42665F02D4079035851D4011C0711F584A7B82C73957AE810E`.
+
+Deploy the website transport compatibility change before changing the shared
+receiver or tracker: it accepts health responses with 35, 36, or 54 columns for
+complete profile delivery. Publish the updated existing receiver deployment,
+then run owner-only `setupChapterSync`. For the existing 35-column tracker, it
+first creates and verifies a hidden backup, then appends AJ without moving A:AI.
+It fills AJ only from discovery answers already retained in receiver metadata,
+adds the dropdown, and extends filtering while preserving existing criteria.
+Existing applicant cells and notes, Script Properties, and private Drive folders
+are preserved. Unexpected headers stop the upgrade. Enable the website question
+only after verifying the receiver and visible AJ column.
+
+During this staged upgrade the receiver accepts submissions against the
+35-column tracker and durably retains discovery answers in the application ID
+cell's technical metadata. The owner setup restores those exact retained answers
+into AJ. The 36-column tracker writes and reads the visible answer at AJ, and an
+exact retry preserves the original answer, row, and private files. A conflicting
+nonempty answer is rejected. The previous 54-column layout continues writing the
+answer to its established AD column. A retry may fill a blank discovery cell
+from the same signed application; it does not replace a nonempty answer.
 
 The current form's personal details, Telegram, structured address, birth details,
 parents' names, destination, work country, additional role, English answer and
@@ -34,9 +63,11 @@ a conflict. Google storage uses the receiver's existing `Jobs in Croatia` quota
 namespace, with `jobstreet-croatia-v2` as the separate form identifier.
 
 Verification must include a clearly labeled test application through the live
-website endpoint, readback of the complete tracker row and an exact retry that
-returns the same receipt without another row. Local unit tests alone do not
-confirm a production connection. A 403 from `/api/applications` means the
+website endpoint with a discovery answer, readback of the complete tracker row
+including AJ, and an exact retry that returns the same receipt without another
+row or file. Public health should advertise schema 7 and 36 columns, with
+supported layouts 36, 35, and 54. Local unit tests alone do not confirm a
+production connection. A 403 from `/api/applications` means the
 configured origin does not match the website. Receiver failures return an error
 instead of an unconfirmed successful submission.
 

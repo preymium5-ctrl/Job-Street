@@ -86,7 +86,7 @@ before(() => {
     assert.equal(init?.redirect, "manual");
     assert.equal(init?.cache, "no-store");
     if (init?.method === "GET") return Response.json({
-      ok: true, service: "chapter-applications", version: 1, schemaVersion: 6, columns: 35,
+      ok: true, service: "chapter-applications", version: 1, schemaVersion: 7, columns: 36, supportedColumns: [36, 35, 54],
     });
     assert.equal(init?.method, "POST");
     const envelope = JSON.parse(String(init?.body)) as { timestamp: number; payload: string; signature: string };

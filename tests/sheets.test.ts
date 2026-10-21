@@ -192,8 +192,8 @@ test("full profile never truncates saturated applicant text or silently drops in
     (error: unknown) => error instanceof SheetsDeliveryError && error.code === "INVALID_APPLICATION_PROFILE");
 });
 
-test("schema 6 sends every profile answer and upload after a verified health response", async () => {
-  for (const columns of [35, 54]) await withWebhook(async () => {
+test("compatible receiver schemas send every profile answer and upload through the staged 36-column upgrade", async () => {
+  for (const [schemaVersion, columns] of [[6, 35], [6, 36], [6, 54], [7, 36]]) await withWebhook(async () => {
     const application = referenceApplicant();
     const documents = (["passport", "residence-id", "employment-certificate"] as const)
       .map((category) => ({ id: randomUUID(), category, name: `${category}.pdf`, mime: "application/pdf", base64: resume.toString("base64") }));
@@ -204,7 +204,7 @@ test("schema 6 sends every profile answer and upload after a verified health res
       if (init?.method === "GET") {
         assert.equal(init.body, undefined);
         assert.equal(init.headers, undefined);
-        return Response.json({ ok: true, service: "chapter-applications", version: 1, schemaVersion: 6, columns });
+        return Response.json({ ok: true, service: "chapter-applications", version: 1, schemaVersion, columns });
       }
       assert.equal(calls, 2);
       const envelope = JSON.parse(String(init?.body));

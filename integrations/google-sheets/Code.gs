@@ -15,11 +15,13 @@ const CHAPTER_HEADERS = Object.freeze([
   'Application source'
 ]);
 const CHAPTER_REMOVED_COLUMNS = Object.freeze([6, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 26, 27, 29, 33, 34, 53]);
-const CHAPTER_FORM_COLUMNS = Object.freeze(CHAPTER_HEADERS.map(function (_, index) { return index; }).filter(function (index) {
+const CHAPTER_V6_FORM_COLUMNS = Object.freeze(CHAPTER_HEADERS.map(function (_, index) { return index; }).filter(function (index) {
   return CHAPTER_REMOVED_COLUMNS.indexOf(index) === -1;
 }));
+// Append the restored question; keep every existing A:AI tracker position stable.
+const CHAPTER_FORM_COLUMNS = Object.freeze(CHAPTER_V6_FORM_COLUMNS.concat([29]));
 const CHAPTER_FORM_HEADERS = Object.freeze(CHAPTER_FORM_COLUMNS.map(function (index) {
-  return index === 4 ? 'WhatsApp number' : index === 8 ? 'CV document' : index === 21 ? 'Privacy consent' : CHAPTER_HEADERS[index];
+  return index === 4 ? 'WhatsApp number' : index === 8 ? 'CV document' : index === 21 ? 'Privacy consent' : index === 29 ? 'Where did you find us?' : CHAPTER_HEADERS[index];
 }));
 const CHAPTER_NOTE_MARKER = '\n\nCHAPTER_RECEIVER_METADATA_V1\n';
 const CHAPTER_REFERRAL_SOURCES = Object.freeze([
@@ -34,8 +36,8 @@ const CHAPTER_FILE_FIELDS = 'id,name,mimeType,size,trashed,parents,appProperties
 
 /** Public health response intentionally exposes no configuration or applicant data. */
 function doGet() {
-  return chapterJson_({ ok: true, service: 'chapter-applications', version: 1, schemaVersion: 6,
-    columns: CHAPTER_FORM_HEADERS.length, supportedColumns: [CHAPTER_FORM_HEADERS.length, CHAPTER_HEADERS.length] });
+  return chapterJson_({ ok: true, service: 'chapter-applications', version: 1, schemaVersion: 7,
+    columns: CHAPTER_FORM_HEADERS.length, supportedColumns: [CHAPTER_FORM_HEADERS.length, CHAPTER_V6_FORM_COLUMNS.length, CHAPTER_HEADERS.length] });
 }
 
 function doPost(event) {
@@ -73,6 +75,12 @@ function doPost(event) {
     const existing = chapterFindRow_(sheet, application.id, application.reference);
     if (existing) {
       const stored = chapterReadLogicalRow_(sheet, existing, layout);
+      const referral = application.referralSource || application.discoverySource || '';
+      let recoverReferral = false;
+      if (referral) {
+        chapterAssert_(!stored[29] || stored[29] === referral, 'EXISTING_PROFILE_MISMATCH');
+        if (!stored[29]) { stored[29] = referral; recoverReferral = true; }
+      }
       const cvLink = String(stored[8]);
       chapterExistingPrivateFile_(config, application, payload.resume, cvLink);
       const extended = stored.slice(30);
@@ -115,9 +123,14 @@ function doPost(event) {
         if (fill) {
           if (layout.compact) {
             const logical = stored.slice(0, 30).concat(recovered);
-            chapterWriteCompactValues_(config, sheet, existing, logical, true);
+            chapterWriteCompactValues_(config, sheet, existing, logical, true, layout);
+            recoverReferral = false;
           } else chapterWriteValues_(config, existing, 'AE', 'BB', recovered);
         }
+      }
+      if (recoverReferral) {
+        if (layout.compact) chapterWriteCompactValues_(config, sheet, existing, stored, true, layout);
+        else chapterWriteValues_(config, existing, 'AD', 'AD', [referral]);
       }
       return chapterJson_({ ok: true, applicationId: application.id,
         reference: application.reference, row: existing, duplicate: true, cvUrl: cvLink });
@@ -139,7 +152,7 @@ function doPost(event) {
     // The script lock serializes writers and the ID/reference check makes retries safe.
     const rowNumber = sheet.getLastRow() + 1;
     if (rowNumber > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), 100);
-    if (layout.compact) chapterWriteCompactValues_(config, sheet, rowNumber, row, false);
+    if (layout.compact) chapterWriteCompactValues_(config, sheet, rowNumber, row, false, layout);
     else chapterWriteValues_(config, rowNumber, 'A', 'BB', row);
     return chapterJson_({ ok: true, applicationId: application.id,
       reference: application.reference, row: rowNumber, duplicate: false,
@@ -183,7 +196,7 @@ function setupChapterSync() {
       const criteria = [];
       if (filter) {
         const range = filter.getRange();
-        CHAPTER_FORM_COLUMNS.forEach(function (index) {
+        CHAPTER_V6_FORM_COLUMNS.forEach(function (index) {
           criteria.push(index + 1 >= range.getColumn() && index + 1 < range.getColumn() + range.getNumColumns()
             ? filter.getColumnFilterCriteria(index + 1) : null);
         });
@@ -193,19 +206,27 @@ function setupChapterSync() {
         sheet.deleteColumns(group[0], group[1]);
       });
       [4, 8, 21].forEach(function (index) {
-        const column = CHAPTER_FORM_COLUMNS.indexOf(index) + 1;
+        const column = CHAPTER_V6_FORM_COLUMNS.indexOf(index) + 1;
         sheet.getRange(1, column).setValue(CHAPTER_FORM_HEADERS[column - 1]);
       });
-      const compactFilter = sheet.getRange(1, 1, sheet.getMaxRows(), CHAPTER_FORM_HEADERS.length).createFilter();
+      const compactFilter = sheet.getRange(1, 1, sheet.getMaxRows(), CHAPTER_V6_FORM_COLUMNS.length).createFilter();
       criteria.forEach(function (criterion, index) {
         if (criterion) compactFilter.setColumnFilterCriteria(index + 1, criterion);
       });
+    }
+    if (chapterCompactLayout_(sheet) && chapterCompactLayout_(sheet).columns === CHAPTER_V6_FORM_COLUMNS.length) {
+      // Preserve the original compact sheet before adding its first new question.
+      if (!backupName) backupName = chapterBackupSheet_(sheet);
+      chapterAppendReferralColumn_(config, sheet);
     }
     const layout = chapterVerifyHeaders_(sheet);
     chapterAssert_(layout.compact, 'HEADER_MISMATCH');
     sheet.setFrozenRows(1);
     sheet.setFrozenColumns(3);
     if (!sheet.getFilter()) sheet.getRange(1, 1, sheet.getMaxRows(), CHAPTER_FORM_HEADERS.length).createFilter();
+    if (sheet.getMaxRows() > 1) sheet.getRange(2, CHAPTER_FORM_HEADERS.length, sheet.getMaxRows() - 1, 1).setDataValidation(
+      SpreadsheetApp.newDataValidation().requireValueInList(CHAPTER_REFERRAL_SOURCES.slice(), true).setAllowInvalid(false).build()
+    );
     if (!config.folderId) {
       const folder = chapterGoogleJson_(
         'https://www.googleapis.com/drive/v3/files?fields=id',
@@ -225,6 +246,35 @@ function setupChapterSync() {
   } finally {
     lock.releaseLock();
   }
+}
+
+/** Add AJ with literal values, including referrals retained during the rollout. */
+function chapterAppendReferralColumn_(config, sheet) {
+  if (sheet.getMaxColumns() < CHAPTER_FORM_HEADERS.length)
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), CHAPTER_FORM_HEADERS.length - sheet.getMaxColumns());
+  const count = sheet.getLastRow() - 1;
+  const notes = count > 0 ? sheet.getRange(2, 1, count, 1).getNotes() : [];
+  const values = [CHAPTER_FORM_HEADERS[35]].concat(notes.map(function (row) {
+    return chapterParseMetadata_(row[0]).referralSource || '';
+  })).map(function (value) { return { values: [{ userEnteredValue: { stringValue: value } }] }; });
+  const result = chapterGoogleJson_(
+    'https://sheets.googleapis.com/v4/spreadsheets/' + config.sheetId + ':batchUpdate',
+    { method: 'post', contentType: 'application/json', payload: JSON.stringify({ requests: [
+      { updateCells: { start: { sheetId: sheet.getSheetId(), rowIndex: 0, columnIndex: CHAPTER_FORM_HEADERS.length - 1 },
+        rows: values, fields: 'userEnteredValue' } }
+    ] }) }, 'SHEET_WRITE_FAILED'
+  );
+  chapterAssert_(result.spreadsheetId === config.sheetId && Array.isArray(result.replies) && result.replies.length === 1, 'SHEET_WRITE_UNCONFIRMED');
+  const filter = sheet.getFilter();
+  const criteria = [];
+  if (filter) {
+    const range = filter.getRange();
+    for (let column = 1; column <= CHAPTER_V6_FORM_COLUMNS.length; column++)
+      criteria.push(column >= range.getColumn() && column < range.getColumn() + range.getNumColumns() ? filter.getColumnFilterCriteria(column) : null);
+    filter.remove();
+  }
+  const expandedFilter = sheet.getRange(1, 1, sheet.getMaxRows(), CHAPTER_FORM_HEADERS.length).createFilter();
+  criteria.forEach(function (criterion, index) { if (criterion) expandedFilter.setColumnFilterCriteria(index + 1, criterion); });
 }
 
 /** Expand only recognized older schemas before the native-column migration. */
@@ -336,7 +386,8 @@ function chapterGetSheet_(config, create) {
 }
 
 function chapterVerifyHeaders_(sheet) {
-  if (chapterHasCompactHeaders_(sheet)) return { compact: true, columns: CHAPTER_FORM_HEADERS.length };
+  const compact = chapterCompactLayout_(sheet);
+  if (compact) return compact;
   chapterAssert_(sheet.getMaxColumns() >= CHAPTER_HEADERS.length, 'HEADER_MISMATCH');
   const headers = sheet.getRange(1, 1, 1, CHAPTER_HEADERS.length).getValues()[0];
   chapterAssert_(headers.every(function (header, index) { return chapterHeaderMatches_(header, index); }), 'HEADER_MISMATCH');
@@ -345,10 +396,18 @@ function chapterVerifyHeaders_(sheet) {
 }
 
 function chapterHasCompactHeaders_(sheet) {
-  return sheet.getMaxColumns() >= CHAPTER_FORM_HEADERS.length && sheet.getLastColumn() <= CHAPTER_FORM_HEADERS.length &&
-    sheet.getRange(1, 1, 1, CHAPTER_FORM_HEADERS.length).getValues()[0].every(function (header, index) {
-      return header === CHAPTER_FORM_HEADERS[index];
-    });
+  return Boolean(chapterCompactLayout_(sheet));
+}
+
+function chapterCompactLayout_(sheet) {
+  const sizes = [CHAPTER_FORM_HEADERS.length, CHAPTER_V6_FORM_COLUMNS.length];
+  for (let index = 0; index < sizes.length; index++) {
+    const columns = sizes[index];
+    if (sheet.getMaxColumns() >= columns && sheet.getLastColumn() <= columns &&
+      sheet.getRange(1, 1, 1, columns).getValues()[0].every(function (header, column) { return header === CHAPTER_FORM_HEADERS[column]; }))
+      return { compact: true, columns: columns };
+  }
+  return null;
 }
 
 function chapterHeaderMatches_(header, index) {
@@ -359,16 +418,17 @@ function chapterReadLogicalRow_(sheet, rowNumber, layout) {
   const values = sheet.getRange(rowNumber, 1, 1, layout.columns).getValues()[0];
   if (!layout.compact) return values;
   const row = CHAPTER_HEADERS.map(function () { return ''; });
-  CHAPTER_FORM_COLUMNS.forEach(function (index, column) { row[index] = values[column]; });
+  CHAPTER_FORM_COLUMNS.slice(0, layout.columns).forEach(function (index, column) { row[index] = values[column]; });
   const metadata = chapterParseMetadata_(sheet.getRange(rowNumber, 1).getNote());
   row[26] = metadata.otherDocumentUrl || '';
   row[27] = metadata.driverLicenseDetails || '';
   row[53] = metadata.source || (String(row[0]).indexOf('gs-') === 0 ? 'Jobs in Croatia' : '');
+  if (layout.columns === CHAPTER_V6_FORM_COLUMNS.length) row[29] = metadata.referralSource || '';
   return row;
 }
 
 function chapterLogicalMetadata_(row) {
-  return { source: row[53] || '', otherDocumentUrl: row[26] || '', driverLicenseDetails: row[27] || '' };
+  return { source: row[53] || '', otherDocumentUrl: row[26] || '', driverLicenseDetails: row[27] || '', referralSource: row[29] || '' };
 }
 
 function chapterParseMetadata_(note) {
@@ -378,8 +438,8 @@ function chapterParseMetadata_(note) {
   try { metadata = JSON.parse(note.slice(marker + CHAPTER_NOTE_MARKER.length)); }
   catch (_) { chapterAssert_(false, 'INVALID_ROW_METADATA'); }
   chapterAssert_(metadata && typeof metadata === 'object' && !Array.isArray(metadata) &&
-    Object.keys(metadata).every(function (key) { return ['source', 'otherDocumentUrl', 'driverLicenseDetails'].indexOf(key) !== -1; }) &&
-    ['source', 'otherDocumentUrl', 'driverLicenseDetails'].every(function (key) {
+    Object.keys(metadata).every(function (key) { return ['source', 'otherDocumentUrl', 'driverLicenseDetails', 'referralSource'].indexOf(key) !== -1; }) &&
+    ['source', 'otherDocumentUrl', 'driverLicenseDetails', 'referralSource'].every(function (key) {
       return !Object.prototype.hasOwnProperty.call(metadata, key) || typeof metadata[key] === 'string';
     }), 'INVALID_ROW_METADATA');
   return metadata;
@@ -662,9 +722,9 @@ function chapterWriteValues_(config, rowNumber, startColumn, endColumn, values) 
 }
 
 /** Atomically commit literal cell values and only the ID cell's technical note. */
-function chapterWriteCompactValues_(config, sheet, rowNumber, logical, profileOnly) {
+function chapterWriteCompactValues_(config, sheet, rowNumber, logical, profileOnly, layout) {
   const firstColumn = profileOnly ? CHAPTER_FORM_COLUMNS.indexOf(30) : 0;
-  const values = CHAPTER_FORM_COLUMNS.slice(firstColumn).map(function (index) {
+  const values = CHAPTER_FORM_COLUMNS.slice(firstColumn, layout.columns).map(function (index) {
     const value = logical[index];
     // Explicit stringValue prevents applicant text from becoming a formula.
     return { userEnteredValue: typeof value === 'number' ? { numberValue: value } : { stringValue: String(value == null ? '' : value) } };

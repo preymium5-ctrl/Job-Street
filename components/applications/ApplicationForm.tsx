@@ -4,6 +4,7 @@ import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowUpRight, CheckCircle2, ClipboardCheck, FileText, LockKeyhole } from "lucide-react";
 import type { ApplicantDetails, ApplicationInput, Job } from "@/lib/types";
+import { discoverySources } from "@/lib/types";
 import { formatApplicantAddress } from "@/lib/applicant-address";
 import { applicationSchema, fieldErrors } from "@/lib/validation";
 import { additionalPositionOptions, currentWorkCountries, destinationCountries } from "@/data/application-options";
@@ -38,7 +39,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
   const availableJobs = jobs?.filter((job) => job.status === "published") || [initialJob];
   const [values, setValues] = useState<ApplicationInput>({
     applicationFormVersion: 2, destinationCountry: destinationCountries.find((country) => country === initialJob.location) || "Croatia", termsAccepted: false,
-    jobId: initialJob.id, fullName: "", email: "", phone: "", country: "", consent: false,
+    jobId: initialJob.id, fullName: "", email: "", phone: "", country: "", discoverySource: "", consent: false,
     applicantDetails: {
       firstName: "", lastName: "", gender: "", telegram: "", currentAddress: "",
       street: "", city: "", province: "", postalCode: "", dateOfBirth: "", placeOfBirth: "",
@@ -180,18 +181,20 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
     </div>;
   }
 
-  function selectField(key: "country" | "jobId" | "destinationCountry" | "secondaryPosition", label: string,
+  function selectField(key: "country" | "jobId" | "destinationCountry" | "secondaryPosition" | "discoverySource", label: string,
     options: readonly { value: string; label: string; group?: string }[], help?: string, placeholder = true) {
     const nested = key === "secondaryPosition";
     const errorKey = nested ? `applicantDetails.${key}` as const : key;
     const value = nested ? values.applicantDetails?.[key] || "" : values[key];
+    const required = key !== "discoverySource";
     return <div className={styles.field}>
-      <label htmlFor={errorKey}>{label}<span aria-label="required">*</span></label>
-      <select id={errorKey} name={errorKey} value={value} disabled={busy} required aria-required="true" aria-invalid={Boolean(errors[errorKey])}
+      <label htmlFor={errorKey}>{label}{required ? <span aria-label="required">*</span> : <span>Optional</span>}</label>
+      <select id={errorKey} name={errorKey} value={value} disabled={busy} required={required} aria-required={required} aria-invalid={Boolean(errors[errorKey])}
         aria-describedby={[help ? `${errorKey}-help` : undefined, errors[errorKey] ? `${errorKey}-error` : undefined].filter(Boolean).join(" ") || undefined}
         onChange={(event) => {
           if (key === "secondaryPosition") updateDetails(key, event.target.value);
           else if (key === "destinationCountry") update(key, event.target.value as ApplicationInput["destinationCountry"]);
+          else if (key === "discoverySource") update(key, event.target.value as ApplicationInput["discoverySource"]);
           else update(key, event.target.value);
         }}>
         {placeholder && <option value="">Select an option</option>}
@@ -287,6 +290,10 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
                       {selectField("secondaryPosition", "Please select an additional role in which you have relevant experience", nameOptions(additionalPositionOptions), "Choose a role other than the one you are applying for. Select ‘No other position’ if none applies.")}
                       {profileText("otherPosition", "If the job you’re applying for is not listed above, please enter it here", { optional: true })}
                     </div>
+                  </section>
+                  <section id="discovery-source" className={styles.sectionCard} aria-labelledby="discovery-heading">
+                    <SectionHeading id="discovery-heading" title="How you found us" />
+                    {selectField("discoverySource", "Where did you find us?", nameOptions(discoverySources), "Choose where you first heard about Jobs Street Croatia.")}
                   </section>
                   <section id="application-documents" className={styles.sectionCard} aria-label="Documents that may be required and uploads">
                     <ApplicationRequirements />

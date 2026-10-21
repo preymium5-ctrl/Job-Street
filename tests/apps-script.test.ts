@@ -5,7 +5,7 @@ import vm from "node:vm";
 import { test } from "node:test";
 import { buildSheetsPayload, type SheetsAcknowledgement, type SheetsTransport } from "../lib/sheets-transport";
 import { saveApplicationToGoogle } from "../lib/google-application-storage";
-import type { Application, ApplicationInput, Job } from "../lib/types";
+import { discoverySources, type Application, type ApplicationInput, type Job } from "../lib/types";
 import type { SupportingDocumentCategory } from "../lib/document-uploads";
 
 const source = readFileSync(new URL("../integrations/google-sheets/Code.gs", import.meta.url), "utf8");
@@ -61,9 +61,14 @@ function fixture() {
       state.columnMetadata.splice(column - 1, count);
     },
     insertRowsAfter: (after: number, count: number) => { assert.equal(after, state.maxRows); state.maxRows += count; },
-    insertColumnsAfter: (after: number, count: number) => { assert.equal(after, state.maxColumns); state.maxColumns += count; },
+    insertColumnsAfter: (after: number, count: number) => {
+      assert.equal(after, state.maxColumns); state.maxColumns += count;
+      for (let index = 0; index < count; index++) state.columnMetadata.push({ format: "default", validation: "default" });
+    },
     getLastColumn: () => Math.max(0, ...state.rows.map((row) => row.length)),
     getRange: (row: number, column: number, count = 1, columns = 1) => ({
+      getColumn: () => column,
+      getNumColumns: () => columns,
       getValues: () => Array.from({ length: count }, (_, index) =>
         Array.from({ length: columns }, (_, offset) => state.rows[row - 1 + index]?.[column - 1 + offset] ?? "")),
       getValue: () => state.rows[row - 1]?.[column - 1] ?? "",
@@ -164,6 +169,18 @@ function fixture() {
       if (url.endsWith(":batchUpdate")) {
         assert.equal(options.method, "post");
         const requests = JSON.parse(options.payload as string).requests;
+        if (requests.length === 1) {
+          const write = requests[0].updateCells;
+          assert.equal(write.fields, "userEnteredValue");
+          assert.deepEqual(write.start, { sheetId: 0, rowIndex: 0, columnIndex: 35 });
+          if (state.writeFailures-- > 0) return response({ error: "Private Google failure detail" }, 503);
+          write.rows.forEach((row: { values: { userEnteredValue: { stringValue: string } }[] }, index: number) => {
+            assert.equal(row.values.length, 1);
+            assert.equal(typeof row.values[0].userEnteredValue.stringValue, "string");
+            (state.rows[index] ??= [])[35] = row.values[0].userEnteredValue.stringValue;
+          });
+          return response({ spreadsheetId: "1v9-lAvpJPUCxCqr03EkVwKKAfedEDtckHir4ro6cyeU", replies: state.writeWrongAck ? [] : [{}] });
+        }
         assert.equal(requests.length, 2);
         const write = requests[0].updateCells;
         const note = requests[1].updateCells;
@@ -175,7 +192,7 @@ function fixture() {
         assert.equal(note.start.columnIndex, 0);
         assert.equal(note.rows[0].values.length, 1);
         assert.ok([0, 14].includes(write.start.columnIndex));
-        assert.equal(write.rows[0].values.length, 35 - write.start.columnIndex);
+        assert.equal(write.rows[0].values.length, state.rows[0].length - write.start.columnIndex);
         if (state.writeFailures-- > 0) return response({ error: "Private Google failure detail" }, 503);
         const target = state.rows[write.start.rowIndex] ??= [];
         write.rows[0].values.forEach((cell: { userEnteredValue: { stringValue?: string; numberValue?: number; formulaValue?: string } }, index: number) => {
@@ -187,20 +204,20 @@ function fixture() {
       }
       if (url.includes("/values/")) {
         assert.equal(options.method, "put");
-        const match = /\/values\/'Applications'!(A|AE)(\d+):BB(\d+)\?valueInputOption=RAW$/.exec(decodeURIComponent(url));
+        const match = /\/values\/'Applications'!(A|AD|AE)(\d+):(AD|BB)(\d+)\?valueInputOption=RAW$/.exec(decodeURIComponent(url));
         assert.ok(match);
         const rowNumber = Number(match[2]);
-        assert.equal(rowNumber, Number(match[3]));
-        const firstColumn = match[1] === "A" ? 0 : 30;
+        assert.equal(rowNumber, Number(match[4]));
+        const firstColumn = match[1] === "A" ? 0 : match[1] === "AD" ? 29 : 30;
         if (firstColumn === 0) assert.equal(rowNumber, state.rows.length + 1);
         else assert.ok(rowNumber >= 2 && rowNumber <= state.rows.length);
         if (state.writeFailures-- > 0) return response({ error: "Private Google failure detail" }, 503);
         const row = JSON.parse(options.payload as string).values[0];
-        assert.equal(row.length, 54 - firstColumn);
+        assert.equal(row.length, match[3] === "AD" ? 1 : 54 - firstColumn);
         const target = state.rows[rowNumber - 1] ??= [];
         row.forEach((value: unknown, index: number) => { target[firstColumn + index] = value; });
         return response({ updatedRows: 1, updatedColumns: state.writeWrongAck ? 1 : row.length,
-          updatedRange: "'Applications'!" + match[1] + rowNumber + ":BB" + rowNumber });
+          updatedRange: "'Applications'!" + match[1] + rowNumber + ":" + match[3] + rowNumber });
       }
       const file = state.files.find((item) => url.includes("/files/" + item.id + "?"));
       if (file) return response(file);
@@ -443,7 +460,7 @@ test("Apps Script stops on changed headers, conflicting references, or public CV
 test("Apps Script health endpoint has no applicant data or secret", () => {
   const { context, properties } = fixture();
   properties.clear();
-  assert.deepEqual(vm.runInContext("doGet()", context), { ok: true, service: "chapter-applications", version: 1, schemaVersion: 6, columns: 35, supportedColumns: [35, 54] });
+  assert.deepEqual(vm.runInContext("doGet()", context), { ok: true, service: "chapter-applications", version: 1, schemaVersion: 7, columns: 36, supportedColumns: [36, 35, 54] });
 });
 
 test("referral sources append after every existing recruiter column and legacy payloads leave AD blank", () => {
@@ -510,8 +527,8 @@ test("website profile and every uploaded identity document deliver into distinct
   // Match the compact form layout already used by the production receiver.
   vm.runInContext("setupChapterSync()", context);
   assert.equal(post(payload).ok, true);
-  assert.equal(state.rows[0].length, 35);
-  assert.equal(state.rows[1].length, 35);
+  assert.equal(state.rows[0].length, 36);
+  assert.equal(state.rows[1].length, 36);
   assert.deepEqual(state.rows[1].slice(14, 32), ["Test", "Applicant", "Female", "17 Sample Street", "Manila", "Metro Manila", "0017",
     "1990-01-01", "Manila", "Applicant Father", "Applicant Mother", "North Macedonia", "Romania", "Welder", "Warehouse operator", "No", "+639179876543", "Yes"]);
   for (const index of [7, 9, 10, 11, 12, 13, 32, 33, 34]) assert.match(String(state.rows[1][index]), /^https:\/\/drive.google.com\/file\/d\/private-cv-\d+\/view$/);
@@ -538,7 +555,7 @@ test("Google primary storage delivers current form answers and private uploads i
     const input: ApplicationInput = {
       applicationFormVersion: 2, destinationCountry: "Serbia", termsAccepted: true,
       jobId: "integration-driver", fullName: "Google Primary Applicant", email: "google-primary@example.test",
-      phone: "+639171234567", country: "Romania", consent: true,
+      phone: "+639171234567", country: "Romania", consent: true, discoverySource: "Instagram",
       applicantDetails: { firstName: "Google", lastName: "Primary Applicant", gender: "Female",
         currentAddress: "17 Sample Street, Manila, Metro Manila, 0017", street: "17 Sample Street", city: "Manila", province: "Metro Manila", postalCode: "0017",
         dateOfBirth: "1990-01-01", placeOfBirth: "Manila", fatherName: "Applicant Father", motherName: "Applicant Mother",
@@ -576,6 +593,7 @@ test("Google primary storage delivers current form answers and private uploads i
       "1990-01-01", "Manila", "Applicant Father", "Applicant Mother", "Serbia", "Romania", "Welder", "Warehouse operator", "Yes", "+639179876543", "Yes"]);
     for (const index of [7, 13, 32, 33]) assert.match(String(current.state.rows[1][index]), /^https:\/\/drive.google.com\/file\/d\/private-cv-\d+\/view$/);
     assert.match(current.state.notes[1][0], /Jobs in Croatia/);
+    assert.equal(current.state.rows[1][35], "Instagram");
     current.state.hideSearchResults = true;
     assert.deepEqual(await saveApplicationToGoogle(input, job, submissionKey, requestHash, resume, uploads, transport), { ...receipt, duplicate: true });
     await assert.rejects(saveApplicationToGoogle({ ...input, email: "changed@example.test" }, job, submissionKey, "b".repeat(64), resume, uploads, transport), { code: "DUPLICATE_CONFLICT" });
@@ -875,7 +893,7 @@ test("extended header migration refuses conflicting nonempty columns without ove
   }
 });
 
-test("a v3 retry recovers an older 30-column delivery by filling only blank AE:BB cells, then remains idempotent", () => {
+test("a v3 retry recovers an older delivery by filling blank referral and AE:BB cells, then remains idempotent", () => {
   const { state, post, context } = fixture();
   const current = profileApplication();
   const legacy = { ...application(), version: 2, application: {
@@ -897,20 +915,21 @@ test("a v3 retry recovers an older 30-column delivery by filling only blank AE:B
   const writesBefore = state.calls.filter(({ url }) => url.includes("/values/")).length;
   const searchesBefore = state.calls.filter(({ url }) => url.includes("/files?q=")).length;
   assert.equal(post(retry).duplicate, true);
-  assert.deepEqual(state.rows[1].slice(0, 30), originalBase);
+  assert.deepEqual(state.rows[1].slice(0, 29), originalBase.slice(0, 29));
+  assert.equal(state.rows[1][29], current.application.referralSource);
   assert.equal(state.rows[1][30], "=SUM(1,1)");
   assert.equal(state.rows[1][46], "Existing recruiter note");
   assert.equal(state.rows[1][53], "Jobs in Croatia");
   assert.ok(state.rows[1].slice(50, 53).every((link) => /^https:\/\/drive.google.com\/file\/d\/private-cv-\d+\/view$/.test(String(link))));
   assert.equal(state.files.length, 10);
   assert.equal(state.rows.length, 2);
-  const backfill = state.calls.filter(({ url }) => url.includes("/values/")).at(-1)!;
+  const backfill = state.calls.filter(({ url }) => decodeURIComponent(url).includes("!AE2:BB2")).at(-1)!;
   assert.match(decodeURIComponent(backfill.url), /'Applications'!AE2:BB2\?valueInputOption=RAW$/);
   assert.equal(JSON.parse(backfill.options.payload as string).values[0].length, 24);
-  assert.equal(state.calls.filter(({ url }) => url.includes("/values/")).length, writesBefore + 1);
+  assert.equal(state.calls.filter(({ url }) => url.includes("/values/")).length, writesBefore + 2);
   assert.equal(state.calls.filter(({ url }) => url.includes("/files?q=")).length, searchesBefore + 3);
   assert.equal(post(retry).duplicate, true);
-  assert.equal(state.calls.filter(({ url }) => url.includes("/values/")).length, writesBefore + 1);
+  assert.equal(state.calls.filter(({ url }) => url.includes("/values/")).length, writesBefore + 2);
   assert.equal(state.calls.filter(({ url }) => url.includes("/files?q=")).length, searchesBefore + 3);
   assert.equal(state.files.length, 10);
   assert.equal(state.rows.length, 2);
@@ -986,16 +1005,16 @@ test("owner compaction preserves applicant values, links, notes and native colum
   const originalColumns = structuredClone(state.columnMetadata);
   const kept = [...vm.runInContext("CHAPTER_FORM_COLUMNS", context)] as number[];
   const result = vm.runInContext("setupChapterSync()", context);
-  assert.equal(result.columns, 35);
+  assert.equal(result.columns, 36);
   assert.match(result.backupSheetName, /^Applications backup \d{4}-\d{2}-\d{2}$/);
   assert.equal(state.backups.length, 1);
   assert.equal(state.backups[0].hidden, true);
   assert.deepEqual(state.backups[0].rows, originalRows);
   assert.deepEqual(state.backups[0].notes, originalNotes);
   assert.deepEqual(state.backups[0].columnMetadata, originalColumns);
-  assert.equal(state.maxColumns, 35);
+  assert.equal(state.maxColumns, 36);
   assert.deepEqual(state.rows[1], kept.map((index) => originalRows[1][index]));
-  assert.deepEqual(state.columnMetadata, kept.map((index) => originalColumns[index]));
+  assert.deepEqual(state.columnMetadata.slice(0, 35), kept.slice(0, 35).map((index) => originalColumns[index]));
   assert.equal(state.rows[0][4], "WhatsApp number");
   assert.equal(state.rows[0][7], "CV document");
   assert.equal(state.rows[0][8], "Privacy consent");
@@ -1003,19 +1022,21 @@ test("owner compaction preserves applicant values, links, notes and native colum
   assert.equal(state.notes[1][kept.indexOf(36)], "City verified");
   assert.match(state.notes[1][0], /^Recruiter original note\n\nCHAPTER_RECEIVER_METADATA_V1\n/);
   const metadata = JSON.parse(state.notes[1][0].split("CHAPTER_RECEIVER_METADATA_V1\n")[1]);
-  assert.deepEqual(metadata, { source: "Jobs in Croatia", otherDocumentUrl: originalRows[1][26], driverLicenseDetails: payload.application.driverLicenseDetails });
-  assert.equal(state.filter!.columns, 35);
+  assert.deepEqual(metadata, { source: "Jobs in Croatia", otherDocumentUrl: originalRows[1][26], driverLicenseDetails: payload.application.driverLicenseDetails,
+    referralSource: payload.application.referralSource });
+  assert.equal(state.filter!.columns, 36);
   assert.deepEqual(state.filter!.criteria, { [kept.indexOf(36) + 1]: { city: "Manila" } });
   assert.equal(state.frozenRows, 1);
   assert.equal(state.frozenColumns, 3);
-  assert.equal(state.validationChanges.length, 0);
+  assert.equal(state.validationChanges.length, 1);
+  assert.equal(state.validationChanges[0].column, 36);
   const compactRows = structuredClone(state.rows);
   const compactNotes = structuredClone(state.notes);
   vm.runInContext("setupChapterSync()", context);
   assert.equal(state.backups.length, 1);
   assert.deepEqual(state.rows, compactRows);
   assert.deepEqual(state.notes, compactNotes);
-  assert.equal(state.validationChanges.length, 0);
+  assert.equal(state.validationChanges.length, 2);
   state.hideSearchResults = true;
   const callsBefore = state.calls.length;
   assert.equal(post(payload).duplicate, true);
@@ -1035,9 +1056,9 @@ test("compact submissions atomically save exactly the current form fields and pr
     "Diploma / education document", "NC2 document", "NBI / apostille document", "Form 18a document", "Driver license document", "First name", "Last name", "Gender",
     "Street", "City", "Province / State", "Postal code", "Date of birth", "Place of birth", "Father’s full name", "Mother’s full name", "Destination country",
     "Current work country", "Additional experienced role", "Other job choice", "English proficiency", "Telegram number", "Terms accepted", "Passport document",
-    "Residence ID document", "Employment certificate document",
+    "Residence ID document", "Employment certificate document", "Where did you find us?",
   ]);
-  assert.equal(state.rows[1].length, 35);
+  assert.equal(state.rows[1].length, 36);
   assert.equal(state.rows[1][2], "=SUM(1,1)");
   assert.equal(state.rows[1][4], "+63 917 123 4567");
   assert.equal(state.rows[1][7], "https://drive.google.com/file/d/private-cv-10/view");
@@ -1047,12 +1068,13 @@ test("compact submissions atomically save exactly the current form fields and pr
     "=SUM(1,1)", "Applicant", "Female", "17 Sample Street", "Manila", "Metro Manila", "0017", "1990-01-01", "Manila", "Applicant Father", "Applicant Mother",
     "Macedonia", "Philippines", "Welder", "Warehouse operator", "Yes", "+63 917 123 4567", "Yes",
   ]);
-  assert.deepEqual(state.rows[1].slice(32), [7, 8, 9].map((id) => `https://drive.google.com/file/d/private-cv-${id}/view`));
+  assert.deepEqual(state.rows[1].slice(32, 35), [7, 8, 9].map((id) => `https://drive.google.com/file/d/private-cv-${id}/view`));
+  assert.equal(state.rows[1][35], payload.application.referralSource);
   assert.equal(state.notes[1][1], "Existing reference comment");
   assert.match(state.notes[1][0], /^Existing ID comment/);
   assert.match(state.notes[1][0], /private-cv-5/);
   assert.ok(!state.rows[0].some((header) => /^(Nationality|Country|Current address|Expected NC2|Application source|Other document)/.test(String(header))));
-  const write = state.calls.find(({ url }) => url.endsWith(":batchUpdate"))!;
+  const write = state.calls.find(({ url, options }) => url.endsWith(":batchUpdate") && JSON.parse(options.payload as string).requests.length === 2)!;
   assert.ok(write);
   const requests = JSON.parse(write.options.payload as string).requests;
   assert.equal(requests[0].updateCells.fields, "userEnteredValue");
@@ -1120,8 +1142,8 @@ test("compact legacy recovery fills only retained profile columns and new identi
   assert.equal(state.rows[1][14], current.application.profile.firstName);
   assert.equal(state.rows[1][18], "Manila");
   assert.equal(state.rows[1][25], "Macedonia");
-  assert.ok(state.rows[1].slice(32).every((link) => /^https:\/\/drive\.google\.com\/file\/d\//.test(String(link))));
-  assert.equal(state.rows[1].length, 35);
+  assert.ok(state.rows[1].slice(32, 35).every((link) => /^https:\/\/drive\.google\.com\/file\/d\//.test(String(link))));
+  assert.equal(state.rows[1].length, 36);
   assert.equal(state.files.length, 10);
   assert.equal(state.calls.slice(callsBefore).filter(({ url }) => url.includes("/files?q=")).length, 3);
   const write = state.calls.slice(callsBefore).find(({ url }) => url.endsWith(":batchUpdate"))!;
@@ -1185,9 +1207,113 @@ test("owner setup chooses a unique native backup title and initializes a blank c
   blank.state.rows = [];
   blank.state.filter = null;
   vm.runInContext("setupChapterSync()", blank.context);
-  assert.equal(blank.state.rows[0].length, 35);
-  assert.equal(blank.state.maxColumns, 35);
+  assert.equal(blank.state.rows[0].length, 36);
+  assert.equal(blank.state.maxColumns, 36);
   assert.equal(blank.state.backups.length, 0);
-  assert.equal(blank.state.filter!.columns, 35);
+  assert.equal(blank.state.filter!.columns, 36);
   assert.equal(blank.post(profileApplication()).ok, true);
+});
+
+test("every website discovery choice and shared referral alias is stored literally in appended AJ with safe retries", () => {
+  for (const answer of [...discoverySources, "Google Search", ""]) {
+    const { state, post, context } = fixture();
+    vm.runInContext("setupChapterSync()", context);
+    const original = profileApplication();
+    const { referralSource: _source, ...details } = original.application;
+    const payload = { ...original, application: { ...details, discoverySource: answer } };
+    assert.equal(post(payload).ok, true);
+    assert.equal(state.rows[0][35], "Where did you find us?");
+    assert.equal(state.rows[1][35], answer);
+    const saved = structuredClone(state.rows);
+    state.hideSearchResults = true;
+    const calls = state.calls.length;
+    assert.equal(post(payload).duplicate, true);
+    assert.deepEqual(state.rows, saved);
+    assert.equal(state.files.length, 10);
+    assert.ok(!state.calls.slice(calls).some(({ url }) => url.includes("uploadType=") || url.endsWith(":batchUpdate")));
+    if (answer) {
+      const changed = answer === "Facebook" ? "Instagram" : "Facebook";
+      assert.equal(post({ ...payload, application: { ...payload.application, discoverySource: changed } }).code, "EXISTING_PROFILE_MISMATCH");
+      assert.deepEqual(state.rows, saved);
+    }
+  }
+});
+
+test("staged receiver saves discovery answers in compact35 metadata and exact retries preserve the retained answer", () => {
+  const { state, post, context } = fixture();
+  vm.runInContext("setupChapterSync()", context);
+  state.rows[0] = state.rows[0].slice(0, 35);
+  state.maxColumns = 35;
+  const source = profileApplication();
+  const { referralSource: _source, ...details } = source.application;
+  const legacy = { ...source, application: details };
+  state.calls.length = 0;
+  assert.equal(post(source).ok, true);
+  assert.equal(state.rows[1].length, 35);
+  const metadata = JSON.parse(state.notes[1][0].split("CHAPTER_RECEIVER_METADATA_V1\n")[1]);
+  assert.equal(metadata.referralSource, "Google Search");
+  assert.equal(post(source).duplicate, true);
+  assert.equal(post(legacy).duplicate, true);
+  assert.equal(state.files.length, 10);
+  assert.equal(state.rows.length, 2);
+  const rows = structuredClone(state.rows);
+  assert.equal(post({ ...legacy, application: { ...legacy.application, discoverySource: "Facebook" } }).code, "EXISTING_PROFILE_MISMATCH");
+  assert.deepEqual(state.rows, rows);
+});
+
+test("owner referral upgrade backs up compact35 and appends retained discovery answers at AJ without moving existing data", () => {
+  const { state, post, context, properties } = fixture();
+  vm.runInContext("setupChapterSync()", context);
+  const original = profileApplication();
+  const { referralSource: _source, ...details } = original.application;
+  state.rows[0] = state.rows[0].slice(0, 35);
+  state.maxColumns = 35;
+  assert.equal(post({ ...original, application: { ...details, discoverySource: "Threads" } }).ok, true);
+  state.notes[1][3] = "Staff email note";
+  state.filter!.columns = 35;
+  state.filter!.criteria[19] = { city: "Manila" };
+  const rows = structuredClone(state.rows);
+  const notes = structuredClone(state.notes);
+  const columns = structuredClone(state.columnMetadata);
+  const configured = [...properties];
+  const backups = state.backups.length;
+  const upgrade = vm.runInContext("setupChapterSync()", context);
+  assert.equal(upgrade.columns, 36);
+  assert.deepEqual(state.rows.map((row) => row.slice(0, 35)), rows);
+  assert.equal(state.rows[0][35], "Where did you find us?");
+  assert.equal(state.rows[1][35], "Threads");
+  assert.deepEqual(state.notes, notes);
+  assert.deepEqual(state.columnMetadata.slice(0, 35), columns.slice(0, 35));
+  assert.deepEqual([...properties], configured);
+  assert.equal(state.backups.length, backups + 1);
+  assert.equal(state.backups.at(-1)?.hidden, true);
+  assert.deepEqual(state.backups.at(-1)?.rows, rows);
+  assert.deepEqual(state.filter!.criteria, { 19: { city: "Manila" } });
+  assert.equal(state.filter!.columns, 36);
+  assert.equal(state.validationChanges.at(-1)?.column, 36);
+  const writes = state.validationChanges.length;
+  assert.equal(vm.runInContext("setupChapterSync()", context).columns, 36);
+  assert.equal(state.validationChanges.length, writes + 1);
+  assert.equal(state.backups.length, backups + 1);
+  // The exact signed retry still resolves to the existing row and private files.
+  assert.equal(post({ ...original, application: { ...details, discoverySource: "Threads" } }).duplicate, true);
+  assert.deepEqual(state.rows[1].slice(0, 35), rows[1]);
+  assert.equal(state.rows[1][35], "Threads");
+  assert.equal(state.files.length, 10);
+  const saved = structuredClone(state.rows);
+  const calls = state.calls.length;
+  assert.equal(post({ ...original, application: { ...details, discoverySource: "Threads" } }).duplicate, true);
+  assert.deepEqual(state.rows, saved);
+  assert.ok(!state.calls.slice(calls).some(({ url }) => url.endsWith(":batchUpdate") || url.includes("uploadType=")));
+});
+
+test("AJ header conflicts fail closed before altering rows or uploading documents", () => {
+  const { state, post, context } = fixture();
+  vm.runInContext("setupChapterSync()", context);
+  state.rows[0][35] = "Recruiter notes";
+  const original = structuredClone(state.rows);
+  assert.throws(() => vm.runInContext("setupChapterSync()", context), /HEADER_MISMATCH/);
+  assert.equal(post(profileApplication()).code, "HEADER_MISMATCH");
+  assert.deepEqual(state.rows, original);
+  assert.equal(state.files.length, 0);
 });
