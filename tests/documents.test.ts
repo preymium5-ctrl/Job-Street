@@ -13,7 +13,7 @@ import { hashPassword } from "../lib/auth";
 import { readObject, validateResume, validateSupportingDocument } from "../lib/storage";
 import { drainSheetsQueue } from "../lib/sheets-queue";
 import type { ApplicationDocument } from "../lib/types";
-import { getReferenceApplicationUploads, MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, referenceApplicationUploads } from "../lib/document-uploads";
+import { getReferenceApplicationUploads, MAX_APPLICATION_UPLOAD_BYTES, MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, MAX_SUPPORTING_DOCUMENT_BYTES, referenceApplicationUploads } from "../lib/document-uploads";
 import { POST as submit } from "../app/api/applications/route";
 import { POST as signIn } from "../app/api/admin/session/route";
 import { GET as download } from "../app/api/admin/applications/[id]/documents/[documentId]/route";
@@ -21,6 +21,9 @@ import { GET as download } from "../app/api/admin/applications/[id]/documents/[d
 const original = { ...process.env };
 const origin = "http://localhost:3000";
 const pdf = Buffer.from("%PDF-1.4\nSynthetic supporting document\n%%EOF\n");
+function sizedPdf(size: number) {
+  const bytes = Buffer.alloc(size, " "); bytes.write("%PDF-1.4\n"); bytes.write("\n%%EOF\n", size - 8); return bytes;
+}
 let directory = "";
 before(async () => {
   directory = await mkdtemp(path.join(tmpdir(), "chapter-documents-test-"));
@@ -37,8 +40,11 @@ after(async () => {
 
 test("supporting uploads validate real bytes and sanitize scans", async () => {
   assert.equal((await validateSupportingDocument(new File([pdf], "diploma.pdf"))).mime, "application/pdf");
+  assert.equal(MAX_SUPPORTING_DOCUMENT_BYTES, 5 * 1024 * 1024);
+  const maximumPdf = sizedPdf(MAX_SUPPORTING_DOCUMENT_BYTES);
+  assert.equal((await validateSupportingDocument(new File([new Uint8Array(maximumPdf)], "maximum-diploma.pdf"))).bytes.length, MAX_SUPPORTING_DOCUMENT_BYTES);
   await assert.rejects(validateSupportingDocument(new File([Buffer.from("not a scan")], "diploma.png")));
-  await assert.rejects(validateSupportingDocument(new File([Buffer.alloc(3 * 1024 * 1024 + 1)], "diploma.pdf")));
+  await assert.rejects(validateSupportingDocument(new File([new Uint8Array(sizedPdf(MAX_SUPPORTING_DOCUMENT_BYTES + 1))], "diploma.pdf")), /5 MB/);
   await assert.rejects(validateSupportingDocument(new File([pdf], "diploma.exe")));
   const png = await sharp({ create: { width: 100, height: 80, channels: 3, background: "white" } }).png().toBuffer();
   const image = await validateSupportingDocument(new File([new Uint8Array(png)], "school.png"));
@@ -135,7 +141,7 @@ test("driver license collection is restricted to the PDF roles, including attach
   assert.equal((await getApplications()).length, count);
 });
 
-test("reference form requires residence ID abroad, enforces its smaller limits and preserves exact retries", async () => {
+test("reference form requires residence ID abroad, permits 5 MB per file within 15 MB total and preserves exact retries", async () => {
   const job = (await getJobs())[0];
   const input = {
     applicationFormVersion: 2, destinationCountry: "Croatia", termsAccepted: true,
@@ -154,10 +160,9 @@ test("reference form requires residence ID abroad, enforces its smaller limits a
     if (duplicatePassport) form.append("document:passport", new File([pdf], "second-passport.pdf"));
     return new NextRequest(`${origin}/api/applications`, { method: "POST", headers: { origin }, body: form });
   }
-  function sizedPdf(size: number) {
-    const bytes = Buffer.alloc(size, " "); bytes.write("%PDF-1.4\n"); bytes.write("\n%%EOF\n", size - 8); return bytes;
-  }
-  assert.equal(MAX_REFERENCE_UPLOAD_BYTES, 4 * 1024 * 1024);
+  assert.equal(MAX_REFERENCE_FILE_BYTES, 5 * 1024 * 1024);
+  assert.equal(MAX_REFERENCE_UPLOAD_BYTES, 15 * 1024 * 1024);
+  assert.equal(MAX_APPLICATION_UPLOAD_BYTES, 15 * 1024 * 1024);
   assert.deepEqual(referenceApplicationUploads.filter(({ required }) => required).map(({ id }) => id), ["resume", "passport"]);
   assert.deepEqual(getReferenceApplicationUploads({ country: input.country, jobTitle: job.title }).filter(({ required }) => required).map(({ id }) => id), ["resume", "passport", "residence-id"]);
   const beforeCount = (await getApplications()).length;
@@ -167,15 +172,17 @@ test("reference form requires residence ID abroad, enforces its smaller limits a
     assert.ok((await response.json()).fieldErrors[field]);
   }
   const oversized = sizedPdf(MAX_REFERENCE_FILE_BYTES + 1);
-  assert.equal((await validateResume(new File([new Uint8Array(oversized)], "legacy-cv.pdf"))).bytes.length, oversized.length);
+  await assert.rejects(validateResume(new File([new Uint8Array(oversized)], "oversized-cv.pdf")), /5 MB/);
   for (const field of ["resume", "document:passport"]) {
     const response = await submit(request({ [field]: oversized }));
     assert.equal(response.status, 422);
-    assert.match((await response.json()).fieldErrors[field], /3 MB/);
+    assert.match((await response.json()).fieldErrors[field], /5 MB/);
   }
-  const totalLimit = await submit(request({ resume: sizedPdf(2 * 1024 * 1024), "document:passport": sizedPdf(2 * 1024 * 1024) }));
+  const maximumPdf = sizedPdf(MAX_REFERENCE_FILE_BYTES);
+  const boundaryFiles = { resume: maximumPdf, "document:passport": maximumPdf, "document:residence-id": maximumPdf };
+  const totalLimit = await submit(request({ ...boundaryFiles, "document:diploma": pdf }));
   assert.equal(totalLimit.status, 422);
-  assert.match((await totalLimit.json()).fieldErrors.documents, /4 MB/);
+  assert.match((await totalLimit.json()).fieldErrors.documents, /15 MB/);
   const other = await submit(request({ "document:other": pdf }));
   assert.equal(other.status, 422);
   assert.match((await other.json()).fieldErrors.documents, /not collected/);
@@ -183,6 +190,13 @@ test("reference form requires residence ID abroad, enforces its smaller limits a
   assert.equal(duplicate.status, 422);
   assert.match((await duplicate.json()).fieldErrors["document:passport"], /one file/);
   assert.equal((await getApplications()).length, beforeCount);
+
+  const boundaryAccepted = await submit(request(boundaryFiles, randomUUID()));
+  assert.equal(boundaryAccepted.status, 201);
+  const boundaryReceipt = await boundaryAccepted.json();
+  const boundaryApplication = (await getApplications()).find((record) => record.reference === boundaryReceipt.reference)!;
+  assert.equal((await readObject(boundaryApplication.resumeKey)).length, MAX_REFERENCE_FILE_BYTES);
+  assert.equal(boundaryApplication.documents?.reduce((total, document) => total + document.size, MAX_REFERENCE_FILE_BYTES), MAX_REFERENCE_UPLOAD_BYTES);
 
   const accepted = await submit(request()); assert.equal(accepted.status, 201);
   const receipt = await accepted.json();

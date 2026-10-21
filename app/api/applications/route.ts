@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { NextRequest } from "next/server";
-import { failure, json, limitedFormData, serverFailure } from "@/lib/api";
+import { failure, json, limitedFormData, limitedJson, serverFailure } from "@/lib/api";
 import {
   rateLimit,
   requireApplicationConfiguration,
@@ -29,9 +29,10 @@ import { saveApplicationToGoogle, usesGoogleApplicationStorage } from "@/lib/goo
 import { sheetsConfiguration, SheetsDeliveryError } from "@/lib/sheets-transport";
 import { proposedJobs } from "@/data/jobs";
 import { additionalApplicationJobs } from "@/data/application-jobs";
+import { restoreStagedFormData, StagedUploadError } from "@/lib/staged-uploads";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 300;
 export async function POST(request: NextRequest) {
   const stagedKeys: string[] = [];
   try {
@@ -46,8 +47,16 @@ export async function POST(request: NextRequest) {
       requireStorageConfiguration();
       await requireApplicationConfiguration();
     }
-    // The current form's 4 MB uploads plus bounded multipart fields fit the hosting request limit.
-    const form = await limitedFormData(request, googleStorage
+    // Larger forms arrive through authenticated staging; validate the reconstructed form identically.
+    let form: FormData;
+    if (request.headers.get("content-type")?.split(";")[0].trim() === "application/json") {
+      if (!googleStorage) return failure("Use the website application form.", 400);
+      const staged = await limitedJson(request, 32 * 1024);
+      if (!staged || typeof staged !== "object" || Array.isArray(staged) || Object.keys(staged).length !== 1 ||
+        !("stagedUploadTicket" in staged) || typeof staged.stagedUploadTicket !== "string")
+        return failure("Use the website application form.", 400);
+      form = await restoreStagedFormData(staged.stagedUploadTicket);
+    } else form = await limitedFormData(request, googleStorage
       ? MAX_REFERENCE_UPLOAD_BYTES + 64 * 1024
       : MAX_APPLICATION_UPLOAD_BYTES + 1024 * 1024);
     if (String(form.get("website") || "").trim())
@@ -86,7 +95,7 @@ export async function POST(request: NextRequest) {
       jobTitle: job?.title,
     });
     const maximumUploadBytes = referenceForm ? MAX_REFERENCE_UPLOAD_BYTES : MAX_APPLICATION_UPLOAD_BYTES;
-    const combinedLimitMessage = `Keep all uploads together within ${referenceForm ? 4 : 15} MB.`;
+    const combinedLimitMessage = "Keep all uploads together within 15 MB.";
     const referenceCategories = new Set<string>(referenceUploads.map(({ id }) => id));
     const documentTypes = supportingDocumentTypes.filter(({ id }) => !referenceForm || referenceCategories.has(id));
     if (referenceForm) {
@@ -99,7 +108,7 @@ export async function POST(request: NextRequest) {
         fieldErrors: { resume: "Attach a PDF, DOC, or DOCX resume." },
       });
     if (referenceForm && file.size > MAX_REFERENCE_FILE_BYTES)
-      return failure("Your CV must be 3 MB or smaller.", 422, { fieldErrors: { resume: "Your CV must be 3 MB or smaller." } });
+      return failure("Your CV must be 5 MB or smaller.", 422, { fieldErrors: { resume: "Your CV must be 5 MB or smaller." } });
     const resume = await validateResume(file);
     const documents: { category: (typeof supportingDocumentTypes)[number]["id"]; document: Awaited<ReturnType<typeof validateSupportingDocument>> }[] = [];
     let uploadBytes = file.size;
@@ -229,6 +238,10 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     await Promise.all(stagedKeys.map((key) => deleteObject(key).catch(() => console.error("Orphan application upload cleanup failed."))));
+    if (error instanceof StagedUploadError)
+      return failure(error.message, error.status, { code: error.code, ...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}) });
+    if (error instanceof SyntaxError)
+      return failure("Use the website application form.", 400);
     if (error instanceof UploadError)
       return failure(error.message, 422, {
         fieldErrors: { resume: error.message },
@@ -236,7 +249,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error && error.message === "BODY_TOO_LARGE")
       return failure(
         usesGoogleApplicationStorage()
-          ? "The upload is too large. Keep all files together within 4 MB."
+          ? "The upload is too large. Keep all files together within 15 MB."
           : "The upload is too large. Keep all files together within 15 MB.",
         413,
       );

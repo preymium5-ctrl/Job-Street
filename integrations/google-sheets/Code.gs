@@ -30,14 +30,20 @@ const CHAPTER_REFERRAL_SOURCES = Object.freeze([
 ]);
 const CHAPTER_SHEET_ID = '1v9-lAvpJPUCxCqr03EkVwKKAfedEDtckHir4ro6cyeU';
 const CHAPTER_MAX_CV_BYTES = 5 * 1024 * 1024;
+const CHAPTER_MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;
 const CHAPTER_MAX_BODY_CHARS = 23000000;
+const CHAPTER_UPLOAD_CHUNK_BYTES = 2 * 1024 * 1024;
+const CHAPTER_UPLOAD_STAGE_PREFIX = 'CHAPTER_UPLOAD_STAGE_';
+const CHAPTER_UPLOAD_STAGE_LIFETIME = 60 * 60 * 1000;
 const CHAPTER_DOCUMENT_CATEGORIES = ['diploma', 'nc2', 'nbi', 'form18a', 'other', 'driver-license', 'passport', 'residence-id', 'employment-certificate'];
 const CHAPTER_FILE_FIELDS = 'id,name,mimeType,size,trashed,parents,appProperties,driveId';
 
 /** Public health response intentionally exposes no configuration or applicant data. */
 function doGet() {
   return chapterJson_({ ok: true, service: 'chapter-applications', version: 1, schemaVersion: 7,
-    columns: CHAPTER_FORM_HEADERS.length, supportedColumns: [CHAPTER_FORM_HEADERS.length, CHAPTER_V6_FORM_COLUMNS.length, CHAPTER_HEADERS.length] });
+    columns: CHAPTER_FORM_HEADERS.length, supportedColumns: [CHAPTER_FORM_HEADERS.length, CHAPTER_V6_FORM_COLUMNS.length, CHAPTER_HEADERS.length],
+    stagedUploads: 1, maxFileBytes: CHAPTER_MAX_CV_BYTES, maxUploadBytes: 15 * 1024 * 1024,
+    uploadChunkBytes: CHAPTER_UPLOAD_CHUNK_BYTES });
 }
 
 function doPost(event) {
@@ -63,7 +69,19 @@ function doPost(event) {
       difference |= expected.charCodeAt(index) ^ envelope.signature.charCodeAt(index);
     }
     chapterAssert_(difference === 0, 'INVALID_SIGNATURE');
-    const payload = chapterValidatePayload_(chapterParse_(envelope.payload));
+    const parsed = chapterParse_(envelope.payload);
+    if (parsed && typeof parsed.operation === 'string' && parsed.operation.indexOf('upload-stage-') === 0) {
+      // Acknowledged parts are immutable. Downloads can run concurrently without
+      // holding the lock used by quota reservations, part writes and sheet rows.
+      if (parsed.operation !== 'upload-stage-read') {
+        lock = LockService.getScriptLock();
+        locked = lock.tryLock(25000);
+        chapterAssert_(locked, 'BUSY_RETRY');
+      }
+      chapterPrivateFolder_(config.folderId);
+      return chapterJson_(chapterUploadStage_(config, parsed));
+    }
+    const payload = chapterValidatePayload_(parsed);
 
     lock = LockService.getScriptLock();
     locked = lock.tryLock(25000);
@@ -163,6 +181,173 @@ function doPost(event) {
   } finally {
     if (locked) lock.releaseLock();
   }
+}
+
+/** Temporary multipart parts never share the durable application's file namespace. */
+function chapterUploadStage_(config, payload) {
+  const operation = payload.operation;
+  const init = operation === 'upload-stage-init';
+  chapterAssert_(init || operation === 'upload-stage-write' || operation === 'upload-stage-read', 'UPLOAD_STAGE_INVALID');
+  chapterKeys_(payload, init ? ['operation', 'version', 'manifest'] :
+    operation === 'upload-stage-write' ? ['operation', 'version', 'sessionId', 'index', 'base64'] : ['operation', 'version', 'sessionId', 'index']);
+  chapterAssert_(payload.version === 1, 'UPLOAD_STAGE_INVALID');
+  const properties = PropertiesService.getScriptProperties();
+  const now = Date.now();
+  if (init) {
+    const manifest = payload.manifest;
+    chapterKeys_(manifest, ['id', 'idempotencyKey', 'size', 'chunkSize', 'chunkCount', 'sha256', 'contentType', 'expiresAt', 'source', 'emailKey', 'clientKey']);
+    chapterAssert_(chapterUploadUuid_(manifest.id) && chapterUploadUuid_(manifest.idempotencyKey) &&
+      Number.isSafeInteger(manifest.size) && manifest.size > 0 && manifest.size <= 16 * 1024 * 1024 &&
+      manifest.chunkSize === CHAPTER_UPLOAD_CHUNK_BYTES && Number.isSafeInteger(manifest.chunkCount) &&
+      manifest.chunkCount === Math.ceil(manifest.size / CHAPTER_UPLOAD_CHUNK_BYTES) && manifest.chunkCount <= 8 &&
+      chapterUploadHash_(manifest.sha256) && chapterUploadHash_(manifest.emailKey) && chapterUploadHash_(manifest.clientKey) &&
+      typeof manifest.contentType === 'string' && manifest.contentType.length <= 160 &&
+      /^multipart\/form-data;\s*boundary=(?:[A-Za-z0-9'()+_,./:=?-]{1,70}|"[A-Za-z0-9'()+_,./:=?-]{1,70}")$/.test(manifest.contentType) &&
+      Number.isSafeInteger(manifest.expiresAt) && manifest.expiresAt <= now + CHAPTER_UPLOAD_STAGE_LIFETIME &&
+      (manifest.source === 'Jobs in Croatia' || manifest.source === 'Jobstreet Croatia'), 'UPLOAD_STAGE_INVALID');
+    chapterAssert_(manifest.expiresAt > now, 'UPLOAD_STAGE_EXPIRED');
+    chapterUploadCleanup_(config, properties, now);
+    const key = CHAPTER_UPLOAD_STAGE_PREFIX + manifest.id;
+    const prior = properties.getProperty(key);
+    let state;
+    if (prior) {
+      state = chapterParse_(prior);
+      chapterAssert_(chapterUploadSameManifest_(state.manifest, manifest), 'UPLOAD_STAGE_CONFLICT');
+    } else {
+      const all = properties.getProperties();
+      const records = Object.keys(all).filter(function (name) { return name.indexOf(CHAPTER_UPLOAD_STAGE_PREFIX) === 0; })
+        .map(function (name) { return chapterParse_(all[name]); });
+      const recent = records.filter(function (record) { return record.createdAt > now - CHAPTER_UPLOAD_STAGE_LIFETIME; });
+      chapterAssert_(records.length < 64 &&
+        recent.filter(function (record) { return record.manifest.source === manifest.source; }).length < 20 &&
+        recent.filter(function (record) { return record.manifest.emailKey === manifest.emailKey; }).length < 3 &&
+        recent.filter(function (record) { return record.manifest.clientKey === manifest.clientKey; }).length < 20, 'UPLOAD_STAGE_RATE_LIMIT');
+      state = { manifest: manifest, createdAt: now, ids: [], parts: [], cleanupIndex: 0 };
+      // Reserve quota before any Drive call; abandoning an upload does not reset it.
+      properties.setProperty(key, JSON.stringify(state));
+    }
+    if (!state.ids.length) {
+      const generated = chapterGoogleJson_('https://www.googleapis.com/drive/v3/files/generateIds?count=' + manifest.chunkCount + '&space=drive&type=files', {}, 'RECEIVER_ERROR');
+      chapterAssert_(Array.isArray(generated.ids) && generated.ids.length === manifest.chunkCount &&
+        generated.ids.every(function (id) { return typeof id === 'string' && /^[A-Za-z0-9_-]{10,200}$/.test(id); }) &&
+        new Set(generated.ids).size === generated.ids.length, 'RECEIVER_ERROR');
+      state.ids = generated.ids;
+      properties.setProperty(key, JSON.stringify(state));
+    }
+    return { ok: true, sessionId: manifest.id };
+  }
+  chapterAssert_(chapterUploadUuid_(payload.sessionId) && Number.isSafeInteger(payload.index), 'UPLOAD_STAGE_INVALID');
+  const key = CHAPTER_UPLOAD_STAGE_PREFIX + payload.sessionId;
+  const stored = properties.getProperty(key);
+  chapterAssert_(stored, 'UPLOAD_STAGE_NOT_FOUND');
+  const state = chapterParse_(stored);
+  chapterAssert_(state.manifest.expiresAt > now, 'UPLOAD_STAGE_EXPIRED');
+  chapterAssert_(state.ids.length === state.manifest.chunkCount && payload.index >= 0 && payload.index < state.ids.length, 'UPLOAD_STAGE_INVALID');
+  const index = payload.index;
+  const expectedSize = Math.min(CHAPTER_UPLOAD_CHUNK_BYTES, state.manifest.size - index * CHAPTER_UPLOAD_CHUNK_BYTES);
+  const id = state.ids[index];
+  if (operation === 'upload-stage-write') {
+    chapterAssert_(typeof payload.base64 === 'string' && payload.base64.length > 0 &&
+      payload.base64.length <= Math.ceil(expectedSize / 3) * 4 && payload.base64.length % 4 === 0 &&
+      !/[^A-Za-z0-9+/]/.test(payload.base64.replace(/={1,2}$/, '')), 'UPLOAD_STAGE_INVALID');
+    let bytes;
+    try { bytes = Utilities.base64Decode(payload.base64); } catch (_) { chapterAssert_(false, 'UPLOAD_STAGE_INVALID'); }
+    chapterAssert_(bytes.length === expectedSize, 'UPLOAD_STAGE_INVALID');
+    const digest = chapterUploadDigest_(bytes);
+    const previous = state.parts[index];
+    chapterAssert_(!previous || previous.size === expectedSize && previous.sha256 === digest, 'UPLOAD_STAGE_CONFLICT');
+    let file = chapterUploadFile_(id, true);
+    if (!file) {
+      const metadata = { id: id, name: 'Temporary application upload ' + payload.sessionId + ' part ' + (index + 1),
+        mimeType: 'application/octet-stream', parents: [config.folderId], appProperties: {
+          chapterUploadId: payload.sessionId, chapterUploadIndex: String(index), chapterUploadSha256: digest,
+          chapterUploadExpiresAt: String(state.manifest.expiresAt) } };
+      const response = chapterGoogleFetch_('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=' + encodeURIComponent(CHAPTER_FILE_FIELDS),
+        { method: 'post', contentType: 'application/json; charset=UTF-8', headers: {
+          'X-Upload-Content-Type': 'application/octet-stream', 'X-Upload-Content-Length': String(bytes.length)
+        }, payload: JSON.stringify(metadata) }, 'RECEIVER_ERROR');
+      const headers = response.getAllHeaders();
+      const locationKey = Object.keys(headers).find(function (name) { return name.toLowerCase() === 'location'; });
+      const location = locationKey && headers[locationKey];
+      chapterAssert_(typeof location === 'string' && /^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files\?/.test(location), 'RECEIVER_ERROR');
+      file = chapterGoogleJson_(location, { method: 'put', contentType: 'application/octet-stream',
+        payload: Utilities.newBlob(bytes, 'application/octet-stream') }, 'RECEIVER_ERROR');
+    }
+    chapterUploadVerifyFile_(config, state, index, file, digest, expectedSize);
+    chapterPrivatePermissions_(id);
+    state.parts[index] = { size: expectedSize, sha256: digest };
+    // A direct, allocated file ID is acknowledged only after this durable ledger write.
+    properties.setProperty(key, JSON.stringify(state));
+    return { ok: true, sessionId: payload.sessionId, index: index, size: expectedSize };
+  }
+  const part = state.parts[index];
+  chapterAssert_(part && part.size === expectedSize, 'UPLOAD_STAGE_NOT_FOUND');
+  const file = chapterUploadFile_(id, false);
+  chapterUploadVerifyFile_(config, state, index, file, part.sha256, expectedSize);
+  chapterPrivatePermissions_(id);
+  const response = chapterGoogleFetch_('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id) + '?alt=media', {}, 'RECEIVER_ERROR');
+  const bytes = response.getContent();
+  chapterAssert_(bytes.length === expectedSize && chapterUploadDigest_(bytes) === part.sha256, 'UPLOAD_STAGE_CONFLICT');
+  return { ok: true, sessionId: payload.sessionId, index: index, base64: Utilities.base64Encode(bytes) };
+}
+
+function chapterUploadUuid_(value) {
+  return typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(value);
+}
+function chapterUploadHash_(value) {
+  return typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+}
+function chapterUploadDigest_(bytes) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, bytes).map(function (byte) {
+    return ('0' + ((byte + 256) % 256).toString(16)).slice(-2);
+  }).join('');
+}
+function chapterUploadSameManifest_(left, right) {
+  return left && Object.keys(right).every(function (key) { return left[key] === right[key]; }) && Object.keys(left).length === Object.keys(right).length;
+}
+function chapterUploadFile_(id, allowMissing) {
+  let response;
+  try {
+    response = UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id) + '?fields=' + encodeURIComponent(CHAPTER_FILE_FIELDS),
+      { muteHttpExceptions: true, followRedirects: false, headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() } });
+  } catch (_) { chapterAssert_(false, 'RECEIVER_ERROR'); }
+  if (response.getResponseCode() === 404 && allowMissing) return null;
+  chapterAssert_(response.getResponseCode() >= 200 && response.getResponseCode() < 300, allowMissing ? 'RECEIVER_ERROR' : 'UPLOAD_STAGE_NOT_FOUND');
+  try { return JSON.parse(response.getContentText()); } catch (_) { chapterAssert_(false, 'RECEIVER_ERROR'); }
+}
+function chapterUploadVerifyFile_(config, state, index, file, digest, size) {
+  const properties = file && file.appProperties;
+  chapterAssert_(file && file.id === state.ids[index] && !file.trashed && !file.driveId &&
+    file.mimeType === 'application/octet-stream' && Number(file.size) === size && Array.isArray(file.parents) &&
+    file.parents.indexOf(config.folderId) !== -1 && properties && !properties.chapterApplicationId &&
+    properties.chapterUploadId === state.manifest.id && properties.chapterUploadIndex === String(index) &&
+    properties.chapterUploadSha256 === digest && properties.chapterUploadExpiresAt === String(state.manifest.expiresAt), 'UPLOAD_STAGE_CONFLICT');
+}
+/** Bounded, recoverable cleanup touches only exact IDs allocated by this ledger. */
+function chapterUploadCleanup_(config, properties, now) {
+  const all = properties.getProperties();
+  let remaining = 8;
+  Object.keys(all).filter(function (key) { return key.indexOf(CHAPTER_UPLOAD_STAGE_PREFIX) === 0; }).forEach(function (key) {
+    const state = chapterParse_(all[key]);
+    if (state.manifest.expiresAt > now) return;
+    while (state.cleanupIndex < state.ids.length && remaining > 0) {
+      const index = state.cleanupIndex;
+      const file = chapterUploadFile_(state.ids[index], true);
+      remaining--;
+      if (file && !file.trashed) {
+        const properties = file.appProperties;
+        chapterAssert_(Array.isArray(file.parents) && file.parents.indexOf(config.folderId) !== -1 && properties &&
+          !properties.chapterApplicationId && properties.chapterUploadId === state.manifest.id &&
+          properties.chapterUploadIndex === String(index) && properties.chapterUploadExpiresAt === String(state.manifest.expiresAt), 'UPLOAD_STAGE_CONFLICT');
+        chapterGoogleJson_('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(state.ids[index]) + '?fields=id,trashed',
+          { method: 'patch', contentType: 'application/json', payload: JSON.stringify({ trashed: true }) }, 'RECEIVER_ERROR');
+      }
+      state.cleanupIndex++;
+      properties.setProperty(key, JSON.stringify(state));
+    }
+    // Keep the quota reservation for a full hour even if a shorter upload expires.
+    if (state.cleanupIndex === state.ids.length && state.createdAt <= now - CHAPTER_UPLOAD_STAGE_LIFETIME) properties.deleteProperty(key);
+  });
 }
 
 /** Run once as the sheet owner after setting Script Properties. Never erases a tab. */
@@ -564,7 +749,7 @@ function chapterValidatePayload_(payload) {
       !identifiers[document.id] && CHAPTER_DOCUMENT_CATEGORIES.indexOf(document.category) !== -1 && !categories[document.category], 'INVALID_DOCUMENT');
     categories[document.category] = true;
     identifiers[document.id] = true;
-    const documentBytes = chapterValidateFile_(document, 3 * 1024 * 1024, true);
+    const documentBytes = chapterValidateFile_(document, CHAPTER_MAX_DOCUMENT_BYTES, true);
     totalBytes += documentBytes.length;
     chapterAssert_(totalBytes <= 15 * 1024 * 1024, 'INVALID_DOCUMENT');
     return Object.assign({}, document, { bytes: documentBytes });
@@ -667,7 +852,7 @@ function chapterExistingPrivateFile_(config, application, document, link, docume
 function chapterVerifyCv_(file, folderId, application, resume, documentId) {
   chapterAssert_(file && /^[A-Za-z0-9_-]+$/.test(file.id) && !file.trashed && !file.driveId &&
     Array.isArray(file.parents) && file.parents.indexOf(folderId) !== -1 && file.mimeType === resume.mime &&
-    Number(file.size) > 0 && Number(file.size) <= (documentId ? 3 * 1024 * 1024 : CHAPTER_MAX_CV_BYTES) && file.appProperties &&
+    Number(file.size) > 0 && Number(file.size) <= (documentId ? CHAPTER_MAX_DOCUMENT_BYTES : CHAPTER_MAX_CV_BYTES) && file.appProperties &&
     file.appProperties.chapterApplicationId === application.id && file.appProperties.chapterReference === application.reference &&
     (documentId ? file.appProperties.chapterDocumentId === documentId : !file.appProperties.chapterDocumentId), 'CV_METADATA_MISMATCH');
 }

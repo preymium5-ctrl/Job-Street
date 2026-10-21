@@ -22,8 +22,8 @@ export function ApplicationUpload({ id, label, description, required, accept, fi
   const [dragging, setDragging] = useState(false);
   const supportsImages = /(?:jpe?g|png)/i.test(accept);
   const limits = supportsImages
-    ? "PDF, DOC, DOCX, JPG, JPEG, PNG · Maximum 3 MB per file"
-    : "PDF, DOC, DOCX · Maximum 3 MB per file";
+    ? "PDF, DOC, DOCX, JPG, JPEG, PNG · Maximum 5 MB per file"
+    : "PDF, DOC, DOCX · Maximum 5 MB per file";
   const describedBy = [`${id}-description`, `${id}-help`, `${id}-limits`, error ? `${id}-error` : undefined].filter(Boolean).join(" ");
 
   return (

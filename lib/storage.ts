@@ -269,7 +269,7 @@ export async function storeResume(resume: ValidatedResume) {
 }
 export async function validateSupportingDocument(file: File) {
   if (!file.size || file.size > MAX_SUPPORTING_DOCUMENT_BYTES)
-    throw new UploadError("Each supporting document must be 3 MB or smaller.");
+    throw new UploadError("Each supporting document must be 5 MB or smaller.");
   const bytes = Buffer.from(await file.arrayBuffer());
   if (/\.(pdf|doc|docx)$/i.test(file.name)) return validateResumeBytes(bytes, file.name);
   if (!/\.(jpe?g|png)$/i.test(file.name))
@@ -284,7 +284,7 @@ export async function validateSupportingDocument(file: File) {
     if (sanitized.length > MAX_SUPPORTING_DOCUMENT_BYTES) throw new Error("Scan too large");
     return { bytes: sanitized, extension: "jpg" as const, mime: "image/jpeg",
       name: path.basename(file.name.replace(/\\/g, "/")).replace(/[^a-zA-Z0-9._ ()-]/g, "_").replace(/\.(png|jpe?g)$/i, "").slice(0, 140) + ".jpg" };
-  } catch { throw new UploadError("Upload a valid JPG or PNG scan no larger than 3 MB."); }
+  } catch { throw new UploadError("Upload a valid JPG or PNG scan no larger than 5 MB."); }
 }
 export async function storeSupportingDocument(document: Awaited<ReturnType<typeof validateSupportingDocument>>) {
   const key = `documents/${randomUUID()}.${document.extension}`;

@@ -460,7 +460,8 @@ test("Apps Script stops on changed headers, conflicting references, or public CV
 test("Apps Script health endpoint has no applicant data or secret", () => {
   const { context, properties } = fixture();
   properties.clear();
-  assert.deepEqual(vm.runInContext("doGet()", context), { ok: true, service: "chapter-applications", version: 1, schemaVersion: 7, columns: 36, supportedColumns: [36, 35, 54] });
+  assert.deepEqual(vm.runInContext("doGet()", context), { ok: true, service: "chapter-applications", version: 1, schemaVersion: 7, columns: 36, supportedColumns: [36, 35, 54],
+    stagedUploads: 1, maxFileBytes: 5 * 1024 * 1024, maxUploadBytes: 15 * 1024 * 1024, uploadChunkBytes: 2 * 1024 * 1024 });
 });
 
 test("referral sources append after every existing recruiter column and legacy payloads leave AD blank", () => {

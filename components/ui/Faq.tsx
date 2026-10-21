@@ -6,7 +6,7 @@ export const applicationFaqs = [
   ],
   [
     "What documents are required?",
-    "Attach your updated CV and valid passport. A residence ID with readable front and back is required for applicants working outside the Philippines, and a driver's license is required for driver applicants. Other documents may be required, including a diploma, NC2 certificate, NBI clearance, and Form 18a for Croatia applicants. Each file must be 3 MB or smaller, with all uploads together within 4 MB.",
+    "Attach your updated CV and valid passport. A residence ID with readable front and back is required for applicants working outside the Philippines, and a driver's license is required for driver applicants. Other documents may be required, including a diploma, NC2 certificate, NBI clearance, and Form 18a for Croatia applicants. Each file must be 5 MB or smaller, with all uploads together within 15 MB.",
   ],
   [
     "Can I apply for multiple positions?",

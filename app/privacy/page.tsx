@@ -66,8 +66,8 @@ export default function Privacy() {
           outside the Philippines, and driver’s license copies are required for driver applicants.
           NC2 certificates, diplomas, NBI clearance with apostille, Form 18a for Croatia applicants,
           and employment certificates may be required; you may upload them now if available.
-          Each file must be 3 MB or
-          smaller, with all uploads together within 4 MB. The tracker includes your form answers
+          Each file must be 5 MB or
+          smaller, with all uploads together within 15 MB. The tracker includes your form answers
           and private links to your passport copy, residence ID, and certificate of employment
           when uploaded. Requests for correction
           or deletion should include your reference so staff can locate both

@@ -7,6 +7,7 @@ import type { ApplicantDetails, ApplicationInput, Job } from "@/lib/types";
 import { discoverySources } from "@/lib/types";
 import { formatApplicantAddress } from "@/lib/applicant-address";
 import { applicationSchema, fieldErrors } from "@/lib/validation";
+import { prepareApplicationUpload, stageApplicationUpload, resetStagedUpload, type PreparedApplicationUpload } from "@/lib/application-upload-client";
 import { additionalPositionOptions, currentWorkCountries, destinationCountries } from "@/data/application-options";
 import { isAdditionalApplicationJob } from "@/data/application-jobs";
 import { MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, getReferenceApplicationUploads, type ReferenceUploadId, type SupportingDocumentCategory } from "@/lib/document-uploads";
@@ -25,7 +26,7 @@ function validateUpload(id: ReferenceUploadId, file: File | undefined, uploads: 
   const definition = uploads.find((upload) => upload.id === id)!;
   if (!file) return definition.required ? "Attach this required document." : undefined;
   if (!file.size) return "Choose a file that is not empty.";
-  if (file.size > MAX_REFERENCE_FILE_BYTES) return "Choose a file no larger than 3 MB.";
+  if (file.size > MAX_REFERENCE_FILE_BYTES) return "Choose a file no larger than 5 MB.";
   const extension = file.name.toLowerCase().match(/\.[^.]+$/)?.[0];
   if (!extension || !definition.accept.split(",").includes(extension))
     return id === "resume" ? "Choose a PDF, DOC or DOCX file." : "Choose a PDF, DOC, DOCX, JPG, JPEG or PNG file.";
@@ -61,12 +62,14 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
   const formRef = useRef<HTMLFormElement>(null);
   const submittingRef = useRef(false);
   const idempotencyRef = useRef<string | null>(null);
+  const preparedUploadRef = useRef<PreparedApplicationUpload | null>(null);
   const totalBytes = Object.values(files).reduce((sum, file) => sum + (file?.size || 0), 0);
   const requiredUploads = uploads.filter((upload) => upload.required);
   const requiredReady = requiredUploads.filter((upload) => !validateUpload(upload.id, files[upload.id], uploads)).length;
 
   function update<K extends keyof ApplicationInput>(key: K, value: ApplicationInput[K]) {
     idempotencyRef.current = null;
+    preparedUploadRef.current = null;
     const selectedJob = key === "jobId" ? availableJobs.find((candidate) => candidate.id === value) : undefined;
     const destination = selectedJob && destinationCountries.find((country) => country === selectedJob.location);
     setValues((current) => ({ ...current, [key]: value, ...(destination ? { destinationCountry: destination } : {}) }));
@@ -77,6 +80,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
 
   function updateDetails<K extends keyof ApplicantDetails>(key: K, value: ApplicantDetails[K]) {
     idempotencyRef.current = null;
+    preparedUploadRef.current = null;
     setValues((current) => {
       const applicantDetails = { ...current.applicantDetails!, [key]: value };
       if (addressFields.some((field) => field === key)) applicantDetails.currentAddress = formatApplicantAddress(applicantDetails);
@@ -88,6 +92,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
 
   function chooseFile(id: ReferenceUploadId, file?: File) {
     idempotencyRef.current = null;
+    preparedUploadRef.current = null;
     setFiles((current) => ({ ...current, [id]: file }));
     setErrors((current) => ({ ...current, [uploadErrorKey(id)]: file ? validateUpload(id, file, uploads) : undefined, documents: undefined }));
   }
@@ -99,7 +104,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
       const message = validateUpload(upload.id, files[upload.id], uploads);
       if (message) next[uploadErrorKey(upload.id)] = message;
     }
-    if (totalBytes > MAX_REFERENCE_UPLOAD_BYTES) next.documents = "Keep all files together within 4 MB; aim for under 1 MB each.";
+    if (totalBytes > MAX_REFERENCE_UPLOAD_BYTES) next.documents = "Keep all files together within 15 MB. Each file can be up to 5 MB.";
     return next;
   }
 
@@ -113,7 +118,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
     });
   }
 
-  function submit() {
+  async function submit() {
     if (submittingRef.current) return;
     const next = validateAll();
     if (Object.keys(next).length) { showErrors(next); return; }
@@ -127,24 +132,37 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
       if (upload.id !== "resume" && files[upload.id]) body.append(`document:${upload.id}`, files[upload.id]!);
     }
     body.append("website", website); body.append("idempotencyKey", idempotencyRef.current);
-    const xhr = new XMLHttpRequest(); xhr.open("POST", "/api/applications"); xhr.timeout = 120000;
-    xhr.upload.onprogress = (event) => { if (event.lengthComputable) setProgress(Math.round(event.loaded / event.total * 100)); };
     const fail = (message: string) => { setError(message); setBusy(false); submittingRef.current = false; };
+    let transmission: Awaited<ReturnType<typeof stageApplicationUpload>>;
+    try {
+      if (preparedUploadRef.current?.key !== idempotencyRef.current)
+        preparedUploadRef.current = await prepareApplicationUpload(body, idempotencyRef.current);
+      transmission = await stageApplicationUpload(preparedUploadRef.current, setProgress);
+    } catch (error) {
+      fail(error instanceof Error ? error.message : "We couldn’t upload your files. Select Submit to retry.");
+      return;
+    }
+    const xhr = new XMLHttpRequest(); xhr.open("POST", "/api/applications"); xhr.timeout = 300000;
+    if (transmission.contentType) xhr.setRequestHeader("Content-Type", transmission.contentType);
+    xhr.upload.onprogress = (event) => { if (event.lengthComputable) setProgress(Math.round((transmission.staged ? 90 : 0) + (event.loaded / event.total) * (transmission.staged ? 10 : 100))); };
     xhr.onerror = () => fail("We couldn’t connect. Your application has not been confirmed. Check your connection and try again.");
     xhr.ontimeout = () => fail("The request timed out. Please try again; your reference will be recovered if the submission was received.");
     xhr.onload = () => {
-      let response: { error?: string; fieldErrors?: FormErrors; reference?: string; jobTitle?: string };
+      let response: { error?: string; code?: string; fieldErrors?: FormErrors; reference?: string; jobTitle?: string };
       try { response = JSON.parse(xhr.responseText); }
       catch { fail("We couldn’t confirm your application. Please try again."); return; }
       if (xhr.status >= 200 && xhr.status < 300 && response.reference && response.jobTitle) {
         setResult({ reference: response.reference, jobTitle: response.jobTitle }); setBusy(false);
+        preparedUploadRef.current = null;
         requestAnimationFrame(() => headingRef.current?.focus());
       } else {
+        if (response.code && ["UPLOAD_STAGE_EXPIRED", "UPLOAD_STAGE_NOT_FOUND", "UPLOAD_STAGE_CONFLICT"].includes(response.code) && preparedUploadRef.current)
+          resetStagedUpload(preparedUploadRef.current);
         if (response.fieldErrors) showErrors(response.fieldErrors);
         fail(response.error || "We couldn’t submit your application. Please review your details and try again.");
       }
     };
-    xhr.send(body);
+    xhr.send(transmission.body);
   }
 
   function profileText(key: keyof ApplicantDetails, label: string, options: {
@@ -301,7 +319,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
                       <p className={styles.sectionIntro}>Attach your updated CV / Resume and valid passport. A residence ID is required for applicants working outside the Philippines, and a driver’s license is required for driver applicants. You may upload other supporting documents if available.</p>
                     </div>
                     <div className={styles.uploadStatus} role="status" aria-live="polite"><ClipboardCheck size={22} aria-hidden="true" /><div><strong>{requiredReady} of {requiredUploads.length} required documents ready</strong>
-                      <p>{(totalBytes / 1024 / 1024).toFixed(1)} MB of 4 MB used. Keep all files together within 4 MB; aim for under 1 MB each.</p></div>
+                      <p>{(totalBytes / 1024 / 1024).toFixed(1)} MB of 15 MB used. Each file can be up to 5 MB.</p></div>
                     </div>
                     <div className={styles.uploadsGrid}>{uploads.map((upload) => <ApplicationUpload key={upload.id}
                       id={upload.id === "resume" ? "resume" : `attachment-${upload.id}`} label={upload.label} description={upload.description}

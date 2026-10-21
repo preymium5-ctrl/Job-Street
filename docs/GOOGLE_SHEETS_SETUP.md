@@ -27,8 +27,13 @@ X (Twitter), YouTube, LinkedIn, Google search, Friend or family, or Other answer
 as literal text. Applications with no collected answer retain blank cells; no
 answer is inferred. Private document links, Google sharing, connection secrets,
 and existing source attribution in the application ID notes remain unchanged.
-The checked-in receiver matches the shared live Version 14 deployment. Its
-SHA-256 is `AB5E9DCBF752AF42665F02D4079035851D4011C0711F584A7B82C73957AE810E`.
+The receiver also supports authenticated temporary upload staging for forms
+larger than the hosting platform's request limit. The website sends the form in
+2 MB parts, reconstructs it on the server, and applies the same file signature,
+DOCX container, image sanitization, required-document, and application checks.
+Only a confirmed application creates a tracker row and final document links.
+The checked-in source matches the shared live Version 15 receiver, SHA-256
+`92AA687A21DB0DBBBA0CB06A7CCD45D500E3BA96BA6F6BFF613744F3E6C65583`.
 
 Deploy the website transport compatibility change before changing the shared
 receiver or tracker: it accepts health responses with 35, 36, or 54 columns for
@@ -54,7 +59,23 @@ The current form's personal details, Telegram, structured address, birth details
 parents' names, destination, work country, additional role, English answer and
 acknowledgements are mapped to the existing columns. All collected uploads,
 including passport, residence ID and employment certificates, are delivered to
-private Drive with links in the tracker. The combined upload limit is 4 MB.
+private Drive with links in the tracker. Each file can be up to 5 MB, with a
+15 MB combined limit. Temporary parts stay private, expire after one hour, and
+are moved to recoverable Drive Trash during the next upload initialization.
+Parts remain available until expiry so an interrupted final submission can
+recover its original reference without duplicate rows or document files.
+
+The signed staging protocol uses `upload-stage-init`, `upload-stage-write`, and
+`upload-stage-read` operations. Its manifest binds the submission UUID, exact
+multipart content type, length, SHA-256, part count, expiry, source, and hashed
+email/client quota keys. The receiver reserves pre-generated Drive IDs, checks
+the private folder and each part's ownership, and accepts exact part retries.
+The website issues the stable ticket before reserving a Google session, and the
+first part initializes the receiver with that ticket's exact manifest. A lost
+initialization response can therefore retry the same quota reservation and IDs.
+Public health advertises `stagedUploads: 1`, `maxFileBytes: 5242880`,
+`maxUploadBytes: 15728640`, and `uploadChunkBytes: 2097152`. Deploy this receiver
+capability before publishing the larger-file website transport.
 
 The website returns success only after an acknowledgement matching its signed
 application ID, reference and row. Retrying an identical submission reuses its
@@ -83,9 +104,9 @@ proficiency answers in `applicantDetails`. Version 2 (`applicationFormVersion: 2
 requires a CV, valid passport, and updated residence ID (front and back combined in
 one file). Diploma, NC2, NBI/apostille, Form 18a, employment certificate, and driver’s
 license uploads are optional. The generic `other` upload is not collected by this
-version. Each file, including the CV, must be no larger than 3 MB; all uploads
-together must stay within 4 MB. Existing unversioned submissions retain their
-5 MB CV, 3 MB per supporting file, and 15 MB combined limits, with only the CV
+version. Each file, including the CV, must be no larger than 5 MB; all uploads
+together must stay within 15 MB. Existing unversioned submissions use the same
+5 MB CV, 5 MB per supporting file, and 15 MB combined limits, with only the CV
 required. Passport, residence ID, and employment certificate files use the
 `passport`, `residence-id`, and `employment-certificate` categories.
 These answers and files are retained in the website's application database and
