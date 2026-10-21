@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, ArrowUpRight, BriefcaseBusiness, BusFront, CalendarDays, Check, Clock3, House, MapPin, Plus, ShieldCheck, Users } from "lucide-react";
 import type { Job } from "@/lib/types";
+import { formatOpeningRange, getJobOpeningRange } from "@/lib/job-openings";
 import { fairDocumentTiming, getJobFairRole } from "@/data/job-fair";
 import { maximumAgeRequirement, noPlacementFee, recruitmentBenefits, workingInCroatia } from "@/data/employment";
 import { MobileApply } from "./MobileApply";
@@ -30,11 +31,13 @@ function ApplyLink({ job, children = "Apply for this role" }: { job: Job; childr
 
 export function JobDetails({ job, relatedJobs }: { job: Job; relatedJobs: Job[] }) {
   const role = getJobFairRole(job);
+  const openings = getJobOpeningRange(job);
+  const isCroatia = /\bcroatia\b/i.test(job.location);
   const postedDate = new Intl.DateTimeFormat("en-PH", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Manila" }).format(new Date(job.postedAt));
   const benefits = [...new Set([...recruitmentBenefits, ...job.benefits])].filter((item) => item.trim().replace(/[.!]$/, "").toLowerCase() !== noPlacementFee.toLowerCase());
   const faqs = [
     { question: "What should I include in my application?", answer: "Describe experience and skills relevant to this position and attach your current CV. Use the responsibilities and requirements on this page as a guide." },
-    { question: "What documents should I prepare?", answer: "Prepare your updated CV and valid passport. A residence ID with readable front and back is required for applicants working outside the Philippines, and a driver's license is required for driver applicants. Other supporting documents may be required; Form 18a is for Croatia applicants. Each file must be 3 MB or smaller, with all uploads together within 4 MB." },
+    { question: "What documents should I prepare?", answer: `Prepare your updated CV and valid passport. A residence ID with readable front and back is required for applicants working outside the Philippines, and a driver's license is required for driver applicants. Other supporting documents may be required${isCroatia ? "; Form 18a is for Croatia applicants" : ""}. Each file must be 3 MB or smaller, with all uploads together within 4 MB.` },
     { question: "How do I know my application was received?", answer: "After a successful submission, you will see a confirmation with your position and unique application reference. Save the reference for your records. A confirmation appears only after your application has been saved." },
     { question: "Can I apply for another position?", answer: "Yes. Explore the job directory and submit a separate application for another relevant position. Each application is associated with its selected role." },
     { question: "What should I check before accepting a role?", answer: "Confirm the employer, work location, deductions, working hours, and written terms before accepting any offer." },
@@ -56,14 +59,14 @@ export function JobDetails({ job, relatedJobs }: { job: Job; relatedJobs: Job[] 
           <div className={styles.photo}>
             <Image src={job.image} alt={job.imageAlt} fill loading="eager" fetchPriority="high" sizes="(max-width: 800px) 100vw, 60vw" style={{ objectPosition: job.imagePosition || "center 35%" }} />
             <div className={styles.feeBadge} data-fee-glow="badge"><ShieldCheck size={22} aria-hidden="true" /><strong>{noPlacementFee}</strong></div>
-            <div className={styles.photoCaption}><span>Filipino talent. Croatian opportunities.</span>{job.salaryStatus !== "proposed-net" && <small>The people behind progress.</small>}</div>
+            <div className={styles.photoCaption}><span>Filipino talent. Opportunities in {job.location}.</span>{job.salaryStatus !== "proposed-net" && <small>The people behind progress.</small>}</div>
           </div>
           <aside className={styles.package} aria-label="Salary and application">
             <span className={styles.kicker}>Your next chapter starts here</span>
             <h2>Make your<br /><em>next move.</em></h2>
             {job.salary ? <JobSalary job={job} /> : <p className={styles.salaryPending}>Salary details to be confirmed.</p>}
             <div className={styles.packageFacts}>
-              {typeof job.openings === "number" && <div><Users size={16} aria-hidden="true" /><p><strong>{job.openings.toLocaleString("en-US")}</strong><span>positions available</span></p></div>}
+              {openings && <div><Users size={16} aria-hidden="true" /><p><strong>{formatOpeningRange(openings)}</strong><span>positions available</span></p></div>}
               <div><MapPin size={16} aria-hidden="true" /><p><strong>{job.location}</strong><span>{role ? "For Filipino applicants" : job.employmentType}</span></p></div>
             </div>
             <ApplyLink job={job} />
@@ -105,7 +108,7 @@ export function JobDetails({ job, relatedJobs }: { job: Job; relatedJobs: Job[] 
               <div className={styles.compensation}>
                 <div>{job.salary ? <JobSalary job={job} /> : <p className={styles.sectionLead}>No verified salary has been provided.</p>}</div>
                 <dl>
-                  {typeof job.openings === "number" && <div><dt>Available positions</dt><dd>{job.openings.toLocaleString("en-US")}</dd></div>}
+                  {openings && <div><dt>Available positions</dt><dd>{formatOpeningRange(openings)}</dd></div>}
                   <div><dt>Location</dt><dd>{job.location}</dd></div>
                   <div><dt>Experience</dt><dd>{job.experience}</dd></div>
                 </dl>
@@ -113,8 +116,8 @@ export function JobDetails({ job, relatedJobs }: { job: Job; relatedJobs: Job[] 
             </RoleSection>
             <RoleSection id="benefits" number="06" title="Benefits & support">
               <ul className={styles.benefitGrid}>{benefits.map((item) => <li key={item}><ShieldCheck size={18} aria-hidden="true" /><span>{item}</span></li>)}</ul>
-              <div className={styles.futureHeading}><span className={styles.kicker}>Think beyond your first day</span><h3>Build a future in Croatia.</h3></div>
-              <div className={styles.futureGrid}>{workingInCroatia.map((item) => <div key={item.title}><h4>{item.title}</h4><p>{item.text}</p><a href={item.source} target="_blank" rel="noopener noreferrer">Official guidance <ArrowUpRight size={13} aria-hidden="true" /></a></div>)}</div>
+              {isCroatia && <><div className={styles.futureHeading}><span className={styles.kicker}>Think beyond your first day</span><h3>Build a future in Croatia.</h3></div>
+              <div className={styles.futureGrid}>{workingInCroatia.map((item) => <div key={item.title}><h4>{item.title}</h4><p>{item.text}</p><a href={item.source} target="_blank" rel="noopener noreferrer">Official guidance <ArrowUpRight size={13} aria-hidden="true" /></a></div>)}</div></>}
             </RoleSection>
             <RoleSection id="application-process" number="07" title="Recruitment process">
               <p className={styles.sectionLead}>{job.isExample ? "This example demonstrates submission and record creation only. A genuine vacancy would typically follow these stages." : "A typical recruitment journey. The employer may adjust the sequence or request a role-specific assessment."}</p>

@@ -23,7 +23,7 @@ test("production indexing is enabled while local, preview and explicit pauses st
   assert.equal(privatePage.index, false);
 });
 
-test("sitemap includes official hiring roles and excludes form-only jobs, retired event pages, examples, closed jobs and applications", () => {
+test("sitemap includes all listed application roles and excludes retired event pages, examples, closed jobs and applications", () => {
   const base = proposedJobs[0];
   const jobs = [...proposedJobs, ...additionalApplicationJobs,
     { ...base, slug: "example-role", isExample: true },
@@ -31,10 +31,10 @@ test("sitemap includes official hiring roles and excludes form-only jobs, retire
     { ...base, slug: "draft-role", status: "draft" as const },
   ];
   const sitemap = buildSitemap(jobs, { VERCEL_ENV: "production" });
-  assert.equal(sitemap.length, proposedJobs.length + 4);
-  assert.equal(new Set(sitemap.map(({ url }) => url)).size, proposedJobs.length + 4);
+  assert.equal(sitemap.length, proposedJobs.length + additionalApplicationJobs.length + 4);
+  assert.equal(new Set(sitemap.map(({ url }) => url)).size, proposedJobs.length + additionalApplicationJobs.length + 4);
   assert.ok(sitemap.every(({ url }) => !url.includes("/job-fair")));
-  for (const job of proposedJobs) assert.ok(sitemap.some(({ url }) => url === siteUrl(`/jobs/${job.slug}`)));
+  for (const job of [...proposedJobs, ...additionalApplicationJobs]) assert.ok(sitemap.some(({ url }) => url === siteUrl(`/jobs/${job.slug}`)));
   assert.ok(sitemap.every(({ url }) => url.startsWith(site.url) && !/apply|example-role|closed-role|draft-role|localhost/.test(url)));
   assert.deepEqual(buildSitemap(jobs, { VERCEL_ENV: "preview", INDEX_SITE: "true" }), []);
 });
@@ -54,11 +54,16 @@ test("role metadata uses unique canonical URLs and Philippines hiring descriptio
   assert.doesNotMatch(JSON.stringify(metadata), /job fair|proposed net salary/i);
   assert.equal(metadata.alternates?.canonical, siteUrl("/jobs/electrical-installer"));
   assert.equal(metadata.openGraph?.url, siteUrl("/jobs/electrical-installer"));
+  const additionalRole = additionalApplicationJobs.find((job) => job.location !== "Croatia")!;
+  const additionalMetadata = jobPageMetadata(additionalRole);
+  assert.ok(String(additionalMetadata.title).includes(additionalRole.location));
+  assert.ok(additionalMetadata.description!.includes(additionalRole.location));
+  assert.equal(additionalMetadata.alternates?.canonical, siteUrl(`/jobs/${additionalRole.slug}`));
 });
 
 test("structured data describes published content and escapes untrusted script text", () => {
   const data = jobDirectoryData([...proposedJobs, ...additionalApplicationJobs, { ...proposedJobs[0], slug: "example", isExample: true }]);
-  assert.equal(data.mainEntity.itemListElement.length, proposedJobs.length);
+  assert.equal(data.mainEntity.itemListElement.length, proposedJobs.length + additionalApplicationJobs.length);
   assert.equal(data["@type"], "CollectionPage");
   const serialized = serializeJsonLd({ name: "</script><script>alert(1)</script>" });
   assert.equal(serialized.includes("<"), false);
@@ -92,11 +97,11 @@ test("database-free production renders the published fair catalog without touchi
     delete process.env.CHAPTER_LOCAL_MODE;
     const publicJobs = await getPublicJobs();
     const applicationJobs = await getApplicationJobs();
-    assert.equal(publicJobs.length, proposedJobs.length);
-    assert.equal(publicJobs.some(isAdditionalApplicationJob), false);
+    assert.equal(publicJobs.length, proposedJobs.length + additionalApplicationJobs.length);
+    assert.equal(publicJobs.filter(isAdditionalApplicationJob).length, additionalApplicationJobs.length);
     assert.equal(applicationJobs.length, proposedJobs.length + additionalApplicationJobs.length);
     assert.equal(applicationJobs.filter(isAdditionalApplicationJob).length, additionalApplicationJobs.length);
-    assert.equal(await getPublicJobBySlug(additionalApplicationJobs[0].slug), undefined);
+    assert.equal((await getPublicJobBySlug(additionalApplicationJobs[0].slug))?.id, additionalApplicationJobs[0].id);
     assert.equal((await getPublicJobBySlug("electrical-installer"))?.title, "Electrical Installer");
     assert.equal(await getPublicJobBySlug("missing-job"), undefined);
   } finally {

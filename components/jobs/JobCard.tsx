@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, BriefcaseBusiness, MapPin, ShieldCheck } from "lucide-react";
 import type { Job } from "@/lib/types";
+import { formatOpeningRange, getJobOpeningRange } from "@/lib/job-openings";
 import { JobSalary } from "./JobSalary";
 import { noPlacementFee } from "@/data/employment";
 import styles from "./JobCard.module.css";
@@ -11,7 +12,7 @@ export function JobCard({ job, index = 0, featured = false }: {
   index?: number;
   featured?: boolean;
 }) {
-  const workers = job.openings;
+  const openings = getJobOpeningRange(job);
 
   return (
     <article className={`job-card ${styles.card}`} data-reveal aria-labelledby={`job-card-${job.slug}`}>
@@ -29,7 +30,7 @@ export function JobCard({ job, index = 0, featured = false }: {
       <div className={styles.body}>
         <div className={styles.locationRow}>
           <span><MapPin size={13} aria-hidden="true" />{job.location}</span>
-          {typeof workers === "number" && <span className={styles.openings}><strong>{workers.toLocaleString("en-US")}</strong> openings</span>}
+          {openings && <span className={styles.openings}><strong>{formatOpeningRange(openings)}</strong> openings</span>}
         </div>
         <div className={styles.salary}><JobSalary job={job} /></div>
         <p className={styles.experience}><BriefcaseBusiness size={14} aria-hidden="true" />{job.experience}</p>

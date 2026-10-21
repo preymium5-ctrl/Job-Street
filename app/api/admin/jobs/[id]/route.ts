@@ -23,7 +23,11 @@ export async function PATCH(
     const update = await limitedJson(request);
     if (typeof update !== "object" || !update || Array.isArray(update))
       return failure("Invalid job details.");
-    const parsed = jobSchema.safeParse({ ...existing, ...update, id });
+    const details = { ...existing, ...update, id };
+    // PATCH uses explicit nulls to clear optional counts across JSON requests.
+    for (const field of ["openings", "openingsRange"] as const)
+      if (details[field] === null) delete details[field];
+    const parsed = jobSchema.safeParse(details);
     if (!parsed.success)
       return failure("Check the job details.", 422, {
         fieldErrors: fieldErrors(parsed.error),

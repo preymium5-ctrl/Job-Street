@@ -15,7 +15,7 @@ If dependencies need reinstalling, run `npm ci`. To create a production build, r
 
 ## Included
 
-- All 18 current listed roles, salary ranges and dated PHP estimates, plus additional application choices.
+- 115 listed roles, including all 97 additional positions from the application form, with salary ranges and dated PHP estimates. New listings show €850–€2,000 per month and 250–1,200 slots across the form's six destination countries.
 - The original qualifications, role-specific driver’s licence guidance, and document requirements.
 - Prominent no-placement-fee messaging, free transportation and accommodation, and the supplied overtime/holiday benefits.
 - Job search and filters, detailed role pages, a separate application form with CV/supporting-file uploads, and a private staff workspace.
@@ -46,7 +46,7 @@ Keep `CHAPTER_LOCAL_MODE=false` in production; never point `DATA_DIR` at a Verce
 
 ## Source and assets
 
-Recruitment content is copied from the current Jobs in Croatia project on 17 October 2026. Canonical data is in `data/jobs.ts`, `data/hiring-allocations.ts`, `data/job-fair.ts`, and `data/employment.ts`. Current public content uses `proposedJobs`; older exports are retained only for safe catalog migrations.
+Recruitment content is copied from the current Jobs in Croatia project on 17 October 2026. Canonical data is in `data/jobs.ts`, `data/hiring-allocations.ts`, `data/job-fair.ts`, and `data/employment.ts`. On 21 October 2026, the owner requested public listings for all additional application positions; these are in `data/application-jobs.ts` and `data/application-job-profiles.ts`. The public catalog combines these with `proposedJobs`; older exports are retained only for safe catalog migrations. Male-only illustrative category images and their generation prompts are recorded in `public/images/opportunities/SOURCES.md`.
 
 Public recruitment photographs are the existing AI-generated illustrations. Font and icon licences remain alongside their assets in `public/`. The J4RVIS website is a visual reference; its text, images, code and logos are not copied.
 

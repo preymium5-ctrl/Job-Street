@@ -9,18 +9,19 @@ import { JobDirectory } from "@/components/jobs/JobDirectory";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { breadcrumbData, jobDirectoryData, pageMetadata } from "@/lib/seo";
 import { workerImageSrc } from "@/lib/worker-images";
+import { formatOpeningRange, getTotalOpeningRange } from "@/lib/job-openings";
 import styles from "./jobs.module.css";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = pageMetadata({
   title: "Jobs Street Croatia — Hiring in the Philippines",
-  description: "Explore jobs in Croatia for Filipino workers: salary ranges, free transportation and accommodation, no placement fee, and online applications.",
+  description: "Explore jobs abroad for Filipino workers across our recruitment destinations, with salary ranges, available positions, no placement fee, and online applications.",
   path: "/jobs",
 });
 
 export default async function JobsPage() {
   const jobs = await getPublicJobs();
-  const workers = jobs.reduce((total, job) => total + (job.openings || 0), 0);
+  const openings = getTotalOpeningRange(jobs);
   const industries = new Set(jobs.map((job) => job.category)).size;
   return (
     <div className={styles.page}>
@@ -28,8 +29,8 @@ export default async function JobsPage() {
       <JsonLd data={breadcrumbData([{ name: "Home", path: "/" }, { name: "Jobs abroad", path: "/jobs" }])} />
       <section className={`container ${styles.hero}`}>
         <div className={styles.heroCopy}>
-          <div className={styles.eyebrow} data-enter><span />Croatia is calling. Filipino talent wanted.</div>
-          <h1 data-enter>Your next move,<br />in <em>Croatia.</em></h1>
+          <div className={styles.eyebrow} data-enter><span />Opportunities abroad. Filipino talent wanted.</div>
+          <h1 data-enter>Find your next<br />move <em>abroad.</em></h1>
           <p data-enter>Good work starts with the right opportunity. Discover roles that value your skills, and take your next step abroad.</p>
           <a href="#job-results" className={styles.browse}>Explore the opportunities <ArrowDown size={16} aria-hidden="true" /></a>
         </div>
@@ -43,7 +44,7 @@ export default async function JobsPage() {
         <span data-fee-glow="badge"><ShieldCheck size={18} aria-hidden="true" /><strong>No placement fee</strong></span>
         <span><House size={17} aria-hidden="true" />Free accommodation</span>
         <span><BusFront size={18} aria-hidden="true" />Free transportation</span>
-        <span className={styles.total}>{workers.toLocaleString("en-US")} positions <i /> {industries} industries</span>
+        <span className={styles.total}>{openings && <>{formatOpeningRange(openings)} positions <i /> </>}{industries} industries</span>
       </div>
       {jobs.some((job) => job.isExample) && <div className={`container ${styles.exampleNotice}`}>Example vacancies are for this development preview. No employer openings, compensation, or benefits are confirmed.</div>}
       <Suspense fallback={<div className="container loading-page">Loading opportunities…</div>}><JobDirectory jobs={jobs} /></Suspense>

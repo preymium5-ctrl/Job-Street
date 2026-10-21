@@ -38,6 +38,10 @@
 .activeFilters button { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); color: var(--brand-blue); background: var(--surface-soft); padding: 7px 10px; border-radius: 5px; font-size: 10px; text-align: left; }
 .activeFilters .reset { border: 0; background: transparent; text-decoration: underline; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); gap: 28px; align-items: stretch; }
+.loadMore { display: grid; justify-items: center; gap: 14px; margin-top: 32px; }
+.loadMore p { color: var(--muted); font-size: 11px; }
+.loadMore button { display: inline-flex; align-items: center; gap: 20px; padding: 15px 21px; border-radius: 8px; background: var(--brand-teal); color: #fff; font-size: 12px; }
+.loadMore button:hover { background: var(--brand-teal-hover); }
 .end { display: flex; justify-content: space-between; gap: 20px; margin-top: 35px; padding-top: 24px; border-top: 1px solid var(--line); font-size: 10px; line-height: 1.7; color: var(--muted); }
 .end a { white-space: nowrap; color: var(--brand-blue); }
 .empty { border: 1px dashed var(--line); padding: 60px 30px; border-radius: 16px; text-align: center; color: var(--brand-blue); }

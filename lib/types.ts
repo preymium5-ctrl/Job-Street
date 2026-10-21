@@ -26,6 +26,7 @@ export interface Job {
   schedule?: string;
   contract?: string;
   openings?: number;
+  openingsRange?: { min: number; max: number };
 }
 export const applicationStatuses = [
   "New",

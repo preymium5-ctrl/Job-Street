@@ -48,6 +48,7 @@ import { GET as downloadResume } from "../app/api/admin/applications/[id]/resume
 import { GET as publicImage } from "../app/api/images/[key]/route";
 import { POST as uploadPhoto } from "../app/api/admin/images/route";
 import { POST as createJob } from "../app/api/admin/jobs/route";
+import { PATCH as changeJob } from "../app/api/admin/jobs/[id]/route";
 
 let temporaryDirectory: string;
 const originalEnv = { ...process.env };
@@ -772,6 +773,30 @@ test("staff-only applicants, private downloads, status audits and session revoca
     }),
   );
   assert.equal(duplicateSlug.status, 409);
+  const editableJob = (await jobResponse.json()).job;
+  const patchJob = (update: Record<string, unknown>) => changeJob(
+    new NextRequest(`${origin}/api/admin/jobs/${editableJob.id}`, {
+      method: "PATCH", headers, body: JSON.stringify(update),
+    }),
+    { params: Promise.resolve({ id: editableJob.id }) },
+  );
+  const ranged = await patchJob({ openings: null, openingsRange: { min: 250, max: 1200 } });
+  assert.equal(ranged.status, 200);
+  const rangedJob = (await ranged.json()).job;
+  assert.deepEqual(rangedJob.openingsRange, { min: 250, max: 1200 });
+  assert.equal(rangedJob.openings, undefined);
+  const exact = await patchJob({ openings: 600, openingsRange: null });
+  assert.equal(exact.status, 200);
+  const exactJob = (await exact.json()).job;
+  assert.equal(exactJob.openings, 600);
+  assert.equal(exactJob.openingsRange, undefined);
+  assert.equal(exactJob.image, uploaded.url);
+  const cleared = await patchJob({ openings: null, openingsRange: null });
+  assert.equal(cleared.status, 200);
+  const clearedJob = (await cleared.json()).job;
+  assert.equal(clearedJob.openings, undefined);
+  assert.equal(clearedJob.openingsRange, undefined);
+  assert.equal((await patchJob({ openingsRange: { min: 1200, max: 250 } })).status, 422);
   const response = await downloadResume(
     new NextRequest(
       `${origin}/api/admin/applications/${application.id}/resume`,

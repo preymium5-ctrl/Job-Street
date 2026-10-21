@@ -37,7 +37,7 @@ function uploadErrorKey(id: ReferenceUploadId): "resume" | `document:${Supportin
 export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; jobs?: Job[] }) {
   const availableJobs = jobs?.filter((job) => job.status === "published") || [initialJob];
   const [values, setValues] = useState<ApplicationInput>({
-    applicationFormVersion: 2, destinationCountry: "Croatia", termsAccepted: false,
+    applicationFormVersion: 2, destinationCountry: destinationCountries.find((country) => country === initialJob.location) || "Croatia", termsAccepted: false,
     jobId: initialJob.id, fullName: "", email: "", phone: "", country: "", consent: false,
     applicantDetails: {
       firstName: "", lastName: "", gender: "", telegram: "", currentAddress: "",
@@ -66,7 +66,9 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
 
   function update<K extends keyof ApplicationInput>(key: K, value: ApplicationInput[K]) {
     idempotencyRef.current = null;
-    setValues((current) => ({ ...current, [key]: value }));
+    const selectedJob = key === "jobId" ? availableJobs.find((candidate) => candidate.id === value) : undefined;
+    const destination = selectedJob && destinationCountries.find((country) => country === selectedJob.location);
+    setValues((current) => ({ ...current, [key]: value, ...(destination ? { destinationCountry: destination } : {}) }));
     setErrors((current) => ({ ...current, [key]: undefined,
       ...(key === "country" ? { "document:residence-id": undefined } : {}),
       ...(key === "jobId" ? { "document:driver-license": undefined } : {}) }));
@@ -222,7 +224,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
   const nameOptions = (options: readonly string[]) => options.map((option) => ({ value: option, label: option }));
 
   return <div className={styles.page}><div className="container">
-    <Link href={isAdditionalApplicationJob(job) ? "/jobs" : `/jobs/${job.slug}`} className={styles.back}><ArrowLeft size={16} /> Back to opportunities</Link>
+    <Link href={`/jobs/${job.slug}`} className={styles.back}><ArrowLeft size={16} /> Back to opportunities</Link>
     <div className={styles.shell} role="region" aria-label="Application">
       <header className={styles.masthead}>
         <div className={styles.mastheadBrand}><BrandLockup /></div>

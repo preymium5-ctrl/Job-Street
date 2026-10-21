@@ -197,8 +197,13 @@ export const jobSchema = z
     schedule: z.string().trim().max(300).optional(),
     contract: z.string().trim().max(300).optional(),
     openings: z.number().int().min(1).max(10000).optional(),
+    openingsRange: z.object({
+      min: z.number().int().min(1).max(10000),
+      max: z.number().int().min(1).max(10000),
+    }).strict().refine((range) => range.min <= range.max, "Minimum slots must not exceed maximum slots.").optional(),
   })
-  .strict();
+  .strict()
+  .refine((job) => job.openings === undefined || job.openingsRange === undefined, "Use either an exact slot count or a slot range.");
 export const statusSchema = z
   .object({ status: z.enum(applicationStatuses) })
   .strict();

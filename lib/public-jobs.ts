@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { proposedJobs } from "../data/jobs";
-import { additionalApplicationJobs, isAdditionalApplicationJob } from "../data/application-jobs";
+import { additionalApplicationJobs } from "../data/application-jobs";
 import { jobFair } from "../data/job-fair";
 import { getJobBySlug, getJobs } from "./repository";
 import { workerImageSrc } from "./worker-images";
@@ -27,12 +27,12 @@ export function usesPublishedCatalog(env: Record<string, string | undefined> = p
 
 export const getPublicJobs = cache(async () => {
   const jobs = usesPublishedCatalog()
-    ? proposedJobs.filter((job) => job.status === "published" && !job.isExample)
+    ? [...proposedJobs, ...additionalApplicationJobs].filter((job) => job.status === "published" && !job.isExample)
     : await getJobs();
-  return jobs.filter((job) => !isAdditionalApplicationJob(job)).map(publicJobContent);
+  return jobs.map(publicJobContent);
 });
 
-/** The application chooser includes separately grouped roles imported from the reference form. */
+/** The application chooser uses the same published roles as the public directory. */
 export const getApplicationJobs = cache(async () => {
   const jobs = usesPublishedCatalog() ? [...proposedJobs, ...additionalApplicationJobs] : await getJobs();
   return jobs.filter((job) => job.status === "published").map(publicJobContent);
@@ -41,7 +41,7 @@ export const getApplicationJobs = cache(async () => {
 export const getPublicJobBySlug = cache(async (slug: string) => {
   if (!usesPublishedCatalog()) {
     const job = await getJobBySlug(slug);
-    return job && !isAdditionalApplicationJob(job) ? publicJobContent(job) : undefined;
+    return job ? publicJobContent(job) : undefined;
   }
   return (await getPublicJobs()).find((job) => job.slug === slug);
 });

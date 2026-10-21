@@ -1,5 +1,7 @@
 import type { Job } from "@/lib/types";
-import { additionalPositionOptions } from "./application-options";
+import { additionalPositionOptions, destinationCountries } from "./application-options";
+import { applicationJobCategories, applicationJobProfiles } from "./application-job-profiles";
+import { minimumExperienceRequirement, recruitmentBenefits } from "./employment";
 
 // The linked application form's primary job list matches these options. Keep
 // positions already in the website catalog in its first application group.
@@ -18,27 +20,34 @@ function positionSlug(title: string): string {
 
 export const additionalApplicationJobs: Job[] = [...new Set(additionalPositionOptions)]
   .filter((title) => !excludedPositions.has(title))
-  .map((title) => {
+  .map((title, index) => {
     const slug = positionSlug(title);
+    const profile = applicationJobProfiles[title];
+    if (!profile) throw new Error(`Missing application job profile: ${title}`);
+    const category = applicationJobCategories[profile.category];
+    const location = destinationCountries[index % destinationCountries.length];
     return {
       id: `additional-application-${slug}`,
       slug: `additional-${slug}`,
       title,
-      category: "Other jobs we're offering",
-      location: "Selected application destination",
-      employmentType: "To be confirmed",
-      summary: `Submit an application for the ${title} position.`,
-      description: "Share your relevant work experience and supporting documents through the application form.",
-      responsibilities: ["Position responsibilities will be confirmed during recruitment."],
-      requirements: ["Relevant work experience in the selected position."],
-      benefits: [],
-      experience: "Relevant work experience",
-      image: "/images/filipino-intro.webp",
-      imageAlt: "Jobs Street Croatia application",
-      postedAt: "2026-10-20T00:00:00.000Z",
+      category: category.name,
+      location,
+      employmentType: "Full-time",
+      summary: profile.summary,
+      description: `${profile.summary} Explore this ${title} opportunity in ${location} and apply with your relevant experience and supporting documents. The listed EUR monthly salary and available slots are recruitment ranges; the employer, final work location, duties and written terms will be confirmed during recruitment.`,
+      responsibilities: [profile.summary, ...category.duties],
+      requirements: [minimumExperienceRequirement, profile.skill, "Provide an updated CV and relevant supporting documents for recruitment review."],
+      benefits: [...recruitmentBenefits],
+      experience: "Minimum 3 years of relevant work experience",
+      image: category.image,
+      imageAlt: `AI-generated illustration of a Filipino male worker in ${category.name.toLowerCase()}`,
+      postedAt: "2026-10-21T00:00:00.000Z",
       status: "published",
       isExample: false,
       featured: false,
+      salary: "€850–€2,000",
+      salaryStatus: "proposed-net",
+      openingsRange: { min: 250, max: 1200 },
     };
   });
 

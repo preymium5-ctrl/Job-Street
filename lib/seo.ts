@@ -1,7 +1,6 @@
 import type { Metadata, MetadataRoute } from "next";
 import type { Job } from "./types";
 import { site } from "../data/site";
-import { isAdditionalApplicationJob } from "../data/application-jobs";
 
 type SeoEnvironment = Record<string, string | undefined>;
 
@@ -61,13 +60,13 @@ export function pageMetadata({ title, description, path, image = "/images/street
 }
 
 export function discoverableJob(job: Job) {
-  return job.status === "published" && !job.isExample && !isAdditionalApplicationJob(job);
+  return job.status === "published" && !job.isExample;
 }
 
 export function jobPageMetadata(job: Job): Metadata {
   return pageMetadata({
-    title: `${job.title} — Hiring Filipino Workers in Croatia`,
-    description: `${job.title} in Croatia for Filipino applicants. Review the salary range, free accommodation and transportation, no placement fee, requirements and online application.`,
+    title: `${job.title} — Hiring Filipino Workers in ${job.location}`,
+    description: `${job.title} in ${job.location} for Filipino applicants. Review the salary range, free accommodation and transportation, no placement fee, requirements and online application.`,
     path: `/jobs/${encodeURIComponent(job.slug)}`,
     image: job.image,
     imageAlt: job.imageAlt,
@@ -137,7 +136,7 @@ export function webPageData(title: string, description: string, path: string) {
 
 export function jobDirectoryData(jobs: Job[]) {
   return {
-    ...webPageData("Jobs Street Croatia — Hiring in the Philippines", "Explore skilled roles for work abroad in Croatia, with salaries, requirements and online applications.", "/jobs"),
+    ...webPageData("Jobs Street Croatia — Hiring in the Philippines", "Explore roles across our European destinations, with salaries, requirements and online applications.", "/jobs"),
     "@type": "CollectionPage",
     mainEntity: {
       "@type": "ItemList",

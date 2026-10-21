@@ -28,7 +28,7 @@ export default function About() {
         <div>
           <div data-reveal>
             <h2>A clearer way forward.</h2>
-            <p>Jobs Street Croatia is hiring skilled workers in the Philippines for roles in metal fabrication and welding, motor and generator production, electrical work, CNC machining and industrial finishing.</p>
+            <p>Jobs Street Croatia is hiring skilled workers in the Philippines for roles in manufacturing, construction, hospitality, transport, healthcare, marine services and other industries across our European destinations.</p>
             <h3>Built around your skills</h3>
             <p>Find a role that matches your experience. Review its responsibilities, qualifications, salary range and benefits, then apply with your CV and relevant documents.</p>
           </div>

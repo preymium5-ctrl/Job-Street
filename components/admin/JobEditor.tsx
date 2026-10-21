@@ -50,6 +50,12 @@ export default function JobEditor({
     job?.requirements.join("\n") || "",
   );
   const [benefits, setBenefits] = useState(job?.benefits.join("\n") || "");
+  const [openingsMode, setOpeningsMode] = useState<"none" | "exact" | "range">(
+    job?.openingsRange ? "range" : job?.openings !== undefined ? "exact" : "none",
+  );
+  const [exactOpenings, setExactOpenings] = useState(job?.openings?.toString() || "");
+  const [minimumOpenings, setMinimumOpenings] = useState(job?.openingsRange?.min.toString() || "");
+  const [maximumOpenings, setMaximumOpenings] = useState(job?.openingsRange?.max.toString() || "");
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -122,13 +128,17 @@ export default function JobEditor({
       );
       return;
     }
-    if (
-      values.openings !== undefined &&
-      (!Number.isInteger(values.openings) || values.openings < 1)
-    ) {
-      setError(
-        "Available openings must be a positive whole number or left empty.",
-      );
+    const validCount = (value: string) => value.trim() !== "" && Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 10000;
+    if (openingsMode === "exact" && !validCount(exactOpenings)) {
+      const message = "Enter a whole number of positions from 1 to 10,000.";
+      setError(message);
+      setFieldErrors({ openings: message });
+      return;
+    }
+    if (openingsMode === "range" && (!validCount(minimumOpenings) || !validCount(maximumOpenings) || Number(minimumOpenings) > Number(maximumOpenings))) {
+      const message = "Enter whole numbers from 1 to 10,000, with the minimum no higher than the maximum.";
+      setError(message);
+      setFieldErrors({ openingsRange: message });
       return;
     }
     lock.current = true;
@@ -144,6 +154,8 @@ export default function JobEditor({
       salary: values.salary || undefined,
       schedule: values.schedule || undefined,
       contract: values.contract || undefined,
+      openings: openingsMode === "exact" ? Number(exactOpenings) : job ? null : undefined,
+      openingsRange: openingsMode === "range" ? { min: Number(minimumOpenings), max: Number(maximumOpenings) } : job ? null : undefined,
     };
     try {
       const { job: saved } = await adminRequest<{ job: Job }>(
@@ -407,20 +419,35 @@ export default function JobEditor({
           </label>
           {stringField("schedule", "Work schedule")}
           {stringField("contract", "Contract duration / arrangement")}
-          <label className={styles.field}>
-            Worker count
+          <label className={`${styles.field} ${styles.full}`}>
+            Available positions
+            <select
+              value={openingsMode}
+              onChange={(event) => {
+                setOpeningsMode(event.target.value as "none" | "exact" | "range");
+                setFieldErrors((current) => ({ ...current, openings: "", openingsRange: "" }));
+              }}
+              disabled={busy}
+            >
+              <option value="none">Not specified</option>
+              <option value="exact">Exact count</option>
+              <option value="range">Minimum and maximum range</option>
+            </select>
+            <span className={styles.help}>Choose an exact count or a range to display on the public listing.</span>
+          </label>
+          {openingsMode === "exact" && <label className={styles.field}>
+            Worker count *
             <input
               type="number"
               min={1}
               max={10000}
               step={1}
-              value={values.openings ?? ""}
-              onChange={(event) =>
-                update(
-                  "openings",
-                  event.target.value ? Number(event.target.value) : undefined,
-                )
-              }
+              required
+              value={exactOpenings}
+              onChange={(event) => {
+                setExactOpenings(event.target.value);
+                setFieldErrors((current) => ({ ...current, openings: "" }));
+              }}
               disabled={busy}
               aria-invalid={Boolean(fieldErrors.openings)}
               aria-describedby={
@@ -432,7 +459,24 @@ export default function JobEditor({
                 {fieldErrors.openings}
               </span>
             )}
-          </label>
+          </label>}
+          {openingsMode === "range" && <>
+            <label className={styles.field}>
+              Minimum positions *
+              <input type="number" min={1} max={10000} step={1} required value={minimumOpenings} onChange={(event) => {
+                setMinimumOpenings(event.target.value);
+                setFieldErrors((current) => ({ ...current, openingsRange: "" }));
+              }} disabled={busy} aria-invalid={Boolean(fieldErrors.openingsRange)} aria-describedby={fieldErrors.openingsRange ? "job-openings-range-error" : undefined} />
+            </label>
+            <label className={styles.field}>
+              Maximum positions *
+              <input type="number" min={1} max={10000} step={1} required value={maximumOpenings} onChange={(event) => {
+                setMaximumOpenings(event.target.value);
+                setFieldErrors((current) => ({ ...current, openingsRange: "" }));
+              }} disabled={busy} aria-invalid={Boolean(fieldErrors.openingsRange)} aria-describedby={fieldErrors.openingsRange ? "job-openings-range-error" : undefined} />
+              {fieldErrors.openingsRange && <span className={styles.fieldError} id="job-openings-range-error">{fieldErrors.openingsRange}</span>}
+            </label>
+          </>}
           <div className={`${styles.photoEditor} ${styles.full}`}>
             <div>
               {canPreview ? (

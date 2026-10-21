@@ -11,7 +11,7 @@ const slides = [
     image: workerImageSrc("/images/street-v2/hero-career.webp"),
     lines: ["Your skills.", "Your future."],
     emphasis: "In Croatia.",
-    copy: "For skilled Filipino workers ready for their next move. Explore opportunities in Croatia, with no placement fee.",
+    copy: "For skilled Filipino workers ready for their next move. Explore roles in Croatia and our other European destinations, with no placement fee.",
     label: "Your future in Croatia",
   },
   {
@@ -25,7 +25,7 @@ const slides = [
     image: workerImageSrc("/images/street-v2/hero-future.webp"),
     lines: ["Good work.", "New possibilities."],
     emphasis: "No placement fee.",
-    copy: "Take the next step with confidence. Explore opportunities in Croatia, review the requirements, and apply directly with your CV.",
+    copy: "Take the next step with confidence. Explore our European destinations, review the requirements, and apply directly with your CV.",
     label: "Opportunities with no placement fee",
   },
 ] as const;

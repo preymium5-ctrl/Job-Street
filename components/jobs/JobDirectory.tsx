@@ -6,8 +6,11 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUpRight, Search, ShieldCheck, SlidersHorizontal, X } from "lucide-react";
 import type { Job } from "@/lib/types";
+import { formatOpeningRange, getTotalOpeningRange } from "@/lib/job-openings";
 import { JobCard } from "./JobCard";
 import styles from "./JobDirectory.module.css";
+
+const rolesPerPage = 24;
 
 export function JobDirectory({ jobs }: { jobs: Job[] }) {
   const directoryRef = useRef<HTMLElement>(null);
@@ -23,6 +26,8 @@ export function JobDirectory({ jobs }: { jobs: Job[] }) {
   const location = params.get("location") || "";
   const type = params.get("type") || "";
   const sort = params.get("sort") || "newest";
+  const requestedPage = Number(params.get("page") || 1);
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   useEffect(() => {
     const frame = requestAnimationFrame(() => ScrollTrigger.refresh());
     return () => cancelAnimationFrame(frame);
@@ -33,6 +38,7 @@ export function JobDirectory({ jobs }: { jobs: Job[] }) {
   function update(key: string, value: string) {
     const next = new URLSearchParams(window.location.search);
     next.delete("employer");
+    if (key !== "page") next.delete("page");
     if (value) next.set(key, value);
     else next.delete(key);
     window.history.replaceState(null, "", `/jobs${next.size ? "?" + next.toString() : ""}#job-results`);
@@ -45,7 +51,11 @@ export function JobDirectory({ jobs }: { jobs: Job[] }) {
     `${job.title} ${job.category} ${job.location} ${job.summary} ${job.requirements.join(" ")}`.toLowerCase().includes(keyword.toLowerCase().trim())
   ).sort((a, b) => sort === "az" ? a.title.localeCompare(b.title) : Date.parse(b.postedAt) - Date.parse(a.postedAt));
   const hasFilter = !!(query || industry || location || type || sort !== "newest");
-  const workers = result.reduce((total, job) => total + (job.openings || 0), 0);
+  const openings = getTotalOpeningRange(result);
+  const visibleJobs = result.slice(0, page * rolesPerPage);
+  const remainingJobs = result.length - visibleJobs.length;
+  const resultLocations = [...new Set(result.map((job) => job.location))];
+  const locationSummary = location || (resultLocations.length === 1 ? resultLocations[0] : "Across our destinations");
 
   return (
     <section ref={directoryRef} className={`container ${styles.directory}`} id="job-results" data-motion-boundary>
@@ -77,22 +87,23 @@ export function JobDirectory({ jobs }: { jobs: Job[] }) {
           <div className={styles.help}>
             <ShieldCheck size={28} aria-hidden="true" />
             <h3>Big opportunities.<br /><span data-fee-glow="text">Zero placement fee.</span></h3>
-            <p>For Filipino workers ready to build their future in Croatia.</p>
+            <p>For Filipino workers ready to build their future abroad.</p>
             <Link href="/contact">Have a question? <ArrowUpRight size={15} aria-hidden="true" /></Link>
           </div>
         </aside>
         <div className={styles.results}>
           <div className={styles.resultsHeader}>
-            <div><span className={styles.kicker}>The opportunity board</span><h2>{industry || "All opportunities"}<span>{String(result.length).padStart(2, "0")}</span></h2><p aria-live="polite">{result.length} {result.length === 1 ? "role" : "roles"}{workers > 0 && ` · ${workers.toLocaleString("en-US")} positions available`} · Croatia</p></div>
+            <div><span className={styles.kicker}>The opportunity board</span><h2>{industry || "All opportunities"}<span>{String(result.length).padStart(2, "0")}</span></h2><p aria-live="polite">{result.length} {result.length === 1 ? "role" : "roles"}{openings && openings.max > 0 && ` · ${formatOpeningRange(openings)} positions available`} · {locationSummary}</p></div>
             <label className={styles.sort}><span className="sr-only">Sort jobs</span><select aria-label="Sort jobs" value={sort} onChange={(event) => update("sort", event.target.value)}><option value="newest">Newest first</option><option value="az">Title: A to Z</option></select></label>
           </div>
           {hasFilter && <div className={styles.activeFilters}>
             {[["q", query], ["industry", industry], ["location", location], ["type", type]].filter(([, value]) => value).map(([key, value]) => <button key={key} onClick={() => update(key, "")}><span>{value}</span><X size={12} aria-hidden="true" /><span className="sr-only">Remove {key === "q" ? "search" : key} filter</span></button>)}
             <button className={styles.reset} onClick={clear}>Clear all</button>
           </div>}
-          <div className={styles.grid}>{result.map((job, index) => <JobCard key={job.id} job={job} index={index} />)}</div>
+          <div className={styles.grid} id="job-listings">{visibleJobs.map((job, index) => <JobCard key={job.id} job={job} index={index} />)}</div>
+          {remainingJobs > 0 && <div className={styles.loadMore}><p aria-live="polite">Showing {visibleJobs.length} of {result.length} roles</p><button aria-controls="job-listings" onClick={() => update("page", String(page + 1))}>Show {Math.min(rolesPerPage, remainingJobs)} more roles <ArrowDown size={17} aria-hidden="true" /></button></div>}
           {!result.length && <div className={styles.empty}><Search size={31} aria-hidden="true" /><h3>Let’s find your next move.</h3><p>No roles match these filters. Try another skill or explore all opportunities.</p><button onClick={clear}>Show all opportunities <ArrowDown size={17} aria-hidden="true" /></button></div>}
-          <div className={styles.end}><span>You’re up to date with these opportunities.</span><a href="#main-content">Back to top ↑</a></div>
+          <div className={styles.end}><span>{remainingJobs > 0 ? "More opportunities are ready to explore." : "You’re up to date with these opportunities."}</span><a href="#main-content">Back to top ↑</a></div>
         </div>
       </div>
     </section>

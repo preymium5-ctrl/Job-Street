@@ -6,6 +6,7 @@ import { getJobFairRole, jobFair } from "../data/job-fair";
 import { maximumAgeRequirement, minimumExperienceRequirement } from "../data/employment";
 import type { Database } from "./db";
 import { audits, jobs, settings } from "./schema";
+import type { Job } from "./types";
 
 export const proposalCatalogVersion = "proposed-net-jobs-v1";
 export const jobFairCatalogVersion = "job-fair-pdf-2026-09-29-v2";
@@ -17,6 +18,7 @@ export const hiringWorkerCountsVersion = "employer-worker-counts-2026-10-16-v1";
 export const maximumAgeRequirementVersion = "maximum-age-requirement-2026-10-16-v1";
 export const finishingJobsVersion = "separate-grinder-cleaner-2026-10-20-v1";
 export const additionalApplicationJobsVersion = "additional-application-jobs-2026-10-20-v1";
+export const additionalJobListingsVersion = "additional-job-listings-2026-10-21-v1";
 export const legacyExampleJobIds = [
   "example-warehouse-01",
   "example-bus-02",
@@ -92,6 +94,7 @@ export async function migrateProposedJobCatalog(db: Database) {
   await migrateMaximumAgeRequirement(db);
   await migrateFinishingJobs(db);
   await migrateAdditionalApplicationJobs(db);
+  await migrateAdditionalJobListings(db);
 }
 
 /** Split the finishing listing while keeping the original ID, staff edits and applicant history. */
@@ -125,7 +128,7 @@ export async function migrateFinishingJobs(db: Database) {
   });
 }
 
-/** Persist form-only roles for server-side application validation without replacing staff records. */
+/** Persist additional roles for server-side application validation without replacing staff records. */
 export async function migrateAdditionalApplicationJobs(db: Database) {
   await db.transaction(async (tx) => {
     if (process.env.DATABASE_URL) await tx.execute(sql`SELECT pg_advisory_xact_lock(621349133)`);
@@ -143,6 +146,52 @@ export async function migrateAdditionalApplicationJobs(db: Database) {
     await tx.insert(audits).values({
       id: randomUUID(), actorId: "system:catalog-migration", action: "catalog.application-jobs-added",
       targetId: additionalApplicationJobsVersion, details: { addedIds },
+    });
+  });
+}
+
+/** Enrich the original form choices while retaining staff edits and applicant links. */
+export async function migrateAdditionalJobListings(db: Database) {
+  await db.transaction(async (tx) => {
+    if (process.env.DATABASE_URL) await tx.execute(sql`SELECT pg_advisory_xact_lock(621349133)`);
+    const [applied] = await tx.select().from(settings).where(eq(settings.key, additionalJobListingsVersion));
+    if (applied) return;
+    const updatedIds: string[] = [];
+    for (const replacement of additionalApplicationJobs) {
+      const [row] = await tx.select().from(jobs).where(eq(jobs.id, replacement.id)).for("update");
+      if (!row || row.slug !== replacement.slug) continue;
+      const baseline: Partial<Job> = {
+        category: "Other jobs we're offering",
+        location: "Selected application destination",
+        employmentType: "To be confirmed",
+        summary: `Submit an application for the ${replacement.title} position.`,
+        description: "Share your relevant work experience and supporting documents through the application form.",
+        responsibilities: ["Position responsibilities will be confirmed during recruitment."],
+        requirements: ["Relevant work experience in the selected position."],
+        benefits: [],
+        experience: "Relevant work experience",
+        image: "/images/filipino-intro.webp",
+        imageAlt: "Jobs Street Croatia application",
+        postedAt: "2026-10-20T00:00:00.000Z",
+      };
+      const data = { ...row.data };
+      for (const field of Object.keys(baseline) as (keyof Job)[])
+        if (JSON.stringify(data[field]) === JSON.stringify(baseline[field]))
+          Object.assign(data, { [field]: replacement[field] });
+      if (!data.salary) {
+        data.salary = replacement.salary;
+        data.salaryStatus = replacement.salaryStatus;
+      }
+      if (data.openings === undefined && data.openingsRange === undefined)
+        data.openingsRange = replacement.openingsRange;
+      if (JSON.stringify(data) === JSON.stringify(row.data)) continue;
+      await tx.update(jobs).set({ data }).where(eq(jobs.id, row.id));
+      updatedIds.push(row.id);
+    }
+    await tx.insert(settings).values({ key: additionalJobListingsVersion, value: new Date().toISOString() });
+    await tx.insert(audits).values({
+      id: randomUUID(), actorId: "system:catalog-migration", action: "catalog.additional-job-listings-enriched",
+      targetId: additionalJobListingsVersion, details: { updatedIds },
     });
   });
 }

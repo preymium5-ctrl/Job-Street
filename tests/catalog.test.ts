@@ -6,6 +6,8 @@ import path from "node:path";
 import { eq } from "drizzle-orm";
 import { proposedJobs, proposalV1Jobs, previousRecruitmentJobs, previousCombinedFinishingJob } from "../data/jobs";
 import { additionalApplicationJobs, isAdditionalApplicationJob } from "../data/application-jobs";
+import { additionalPositionOptions, destinationCountries } from "../data/application-options";
+import { applicationJobProfiles } from "../data/application-job-profiles";
 import { publicJobContent } from "../lib/public-jobs";
 import { maximumAgeRequirement, maximumApplicantAge, minimumExperienceRequirement, recruitmentBenefits } from "../data/employment";
 import { fairDocuments, fairDocumentTiming, fairNc2Requirements, getJobFairRole, jobFair, nc2ElectricalNote } from "../data/job-fair";
@@ -32,6 +34,8 @@ import {
   finishingJobsVersion,
   migrateAdditionalApplicationJobs,
   additionalApplicationJobsVersion,
+  migrateAdditionalJobListings,
+  additionalJobListingsVersion,
 } from "../lib/catalog-migration";
 import { closeDatabase, getDatabase } from "../lib/db";
 import { applications, audits, jobs, settings } from "../lib/schema";
@@ -568,14 +572,48 @@ test("separating Grinder and Cleaner preserves original links, staff terms and a
   assert.equal((await db.select().from(audits).where(eq(audits.targetId, finishingJobsVersion))).length, 1);
 });
 
-test("additional application jobs are seeded separately without salaries or overwriting staff edits", async () => {
+test("additional application positions have complete public listings and retain their application identities", () => {
+  const excluded = new Set(["Fabricator", "Welder", "Grinder", "Cleaner", "Other (enter below)", "No other position"]);
+  const expectedTitles = [...new Set(additionalPositionOptions)].filter((title) => !excluded.has(title));
+  assert.equal(additionalApplicationJobs.length, 97);
+  assert.deepEqual(additionalApplicationJobs.map(({ title }) => title), expectedTitles);
+  assert.deepEqual(Object.keys(applicationJobProfiles).sort(), [...expectedTitles].sort());
+  assert.equal(new Set(additionalApplicationJobs.map(({ slug }) => slug)).size, expectedTitles.length);
+  assert.deepEqual([...new Set(additionalApplicationJobs.map(({ location }) => location))].sort(), [...destinationCountries].sort());
+  for (const job of additionalApplicationJobs) {
+    const slug = job.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    assert.equal(job.id, `additional-application-${slug}`);
+    assert.equal(job.slug, `additional-${slug}`);
+    assert.equal(job.salary, "€850–€2,000");
+    assert.equal(job.salaryStatus, "proposed-net");
+    assert.deepEqual(job.openingsRange, { min: 250, max: 1200 });
+    assert.equal(job.openings, undefined);
+    assert.equal(job.employmentType, "Full-time");
+    assert.deepEqual(job.benefits, recruitmentBenefits);
+    assert.ok(job.requirements.includes(minimumExperienceRequirement));
+    assert.equal(job.responsibilities.length, 3);
+    assert.ok(job.summary.length > 50, job.title);
+    assert.ok(job.description.includes(job.location), job.title);
+    assert.notEqual(job.category, "Other jobs we're offering");
+    assert.notEqual(job.image, "/images/filipino-intro.webp");
+    assert.equal(job.status, "published");
+    assert.equal(job.isExample, false);
+    assert.equal(jobSchema.safeParse(job).success, true, job.title);
+  }
+  assert.notEqual(additionalApplicationJobs.find(({ title }) => title === "Bus Driver")!.category,
+    additionalApplicationJobs.find(({ title }) => title === "Nurse")!.category);
+  assert.match(additionalApplicationJobs.find(({ title }) => title === "Bus Driver")!.summary, /bus routes/);
+  assert.match(additionalApplicationJobs.find(({ title }) => title === "Dental Technician (CAD/ CAM Designer)")!.summary, /digital files/);
+});
+
+test("additional application jobs are seeded separately without overwriting staff edits", async () => {
   const db = await getDatabase();
   assert.ok(additionalApplicationJobs.length > 90);
   assert.equal(new Set(additionalApplicationJobs.map((job) => job.id)).size, additionalApplicationJobs.length);
   for (const job of additionalApplicationJobs) {
     assert.equal(jobSchema.safeParse(job).success, true, job.title);
     assert.equal(isAdditionalApplicationJob(job), true);
-    assert.equal(job.salary, undefined);
+    assert.equal(job.salary, "€850–€2,000");
     assert.equal(proposedJobs.some((official) => official.title === job.title), false);
   }
   assert.equal(isAdditionalApplicationJob({ id: "additional-application-unrelated-staff-job" }), false);
@@ -592,4 +630,58 @@ test("additional application jobs are seeded separately without salaries or over
   assert.deepEqual(await db.select().from(applications), beforeApplications);
   await migrateAdditionalApplicationJobs(db);
   assert.equal((await db.select().from(audits).where(eq(audits.targetId, additionalApplicationJobsVersion))).length, 1);
+});
+
+test("public listing enrichment upgrades old form roles once and preserves staff changes and applications", async () => {
+  const db = await getDatabase();
+  await db.delete(settings).where(eq(settings.key, additionalJobListingsVersion));
+  await db.delete(audits).where(eq(audits.targetId, additionalJobListingsVersion));
+  const oldFormRole = (job: Job): Job => ({
+    ...job, category: "Other jobs we're offering", location: "Selected application destination",
+    employmentType: "To be confirmed", summary: `Submit an application for the ${job.title} position.`,
+    description: "Share your relevant work experience and supporting documents through the application form.",
+    responsibilities: ["Position responsibilities will be confirmed during recruitment."],
+    requirements: ["Relevant work experience in the selected position."], benefits: [],
+    experience: "Relevant work experience", image: "/images/filipino-intro.webp",
+    imageAlt: "Jobs Street Croatia application", postedAt: "2026-10-20T00:00:00.000Z",
+    salary: undefined, salaryStatus: undefined, openingsRange: undefined,
+  });
+  const baseline = oldFormRole(additionalApplicationJobs[2]);
+  const staffEdited: Job = {
+    ...oldFormRole(additionalApplicationJobs[3]), title: "Staff reviewed car mechanic", status: "closed",
+    location: "Staff selected workshop", salary: "€1,350–€1,700", openings: 85,
+    image: "/images/staff-mechanic.webp", imageAlt: "Staff workshop photo",
+    responsibilities: ["Staff approved workshop duties."],
+  };
+  const renamed = { ...oldFormRole(additionalApplicationJobs[4]), slug: "staff-renamed-forklift-role" };
+  for (const job of [baseline, staffEdited, renamed])
+    await db.update(jobs).set({ slug: job.slug, status: job.status, data: job }).where(eq(jobs.id, job.id));
+  const beforeApplications = await db.select().from(applications);
+  const beforeCount = (await db.select().from(jobs)).length;
+  await migrateAdditionalJobListings(db);
+  const result = await db.select().from(jobs);
+  assert.equal(result.length, beforeCount);
+  const upgraded = result.find(({ id }) => id === baseline.id)!;
+  assert.deepEqual(upgraded.data, additionalApplicationJobs[2]);
+  const edited = result.find(({ id }) => id === staffEdited.id)!;
+  assert.equal(edited.slug, staffEdited.slug);
+  assert.equal(edited.status, "closed");
+  assert.equal(edited.data.title, staffEdited.title);
+  assert.equal(edited.data.location, staffEdited.location);
+  assert.equal(edited.data.salary, staffEdited.salary);
+  assert.equal(edited.data.salaryStatus, undefined);
+  assert.equal(edited.data.openings, 85);
+  assert.equal(edited.data.openingsRange, undefined);
+  assert.equal(edited.data.image, staffEdited.image);
+  assert.equal(edited.data.imageAlt, staffEdited.imageAlt);
+  assert.deepEqual(edited.data.responsibilities, staffEdited.responsibilities);
+  assert.equal(edited.data.category, additionalApplicationJobs[3].category);
+  assert.equal(edited.data.employmentType, "Full-time");
+  assert.deepEqual(result.find(({ id }) => id === renamed.id)!.data, JSON.parse(JSON.stringify(renamed)));
+  assert.deepEqual(await db.select().from(applications), beforeApplications);
+  const laterEdit = { ...upgraded.data, summary: "Staff updated this listing after the migration." };
+  await db.update(jobs).set({ data: laterEdit }).where(eq(jobs.id, laterEdit.id));
+  await migrateAdditionalJobListings(db);
+  assert.deepEqual((await db.select().from(jobs).where(eq(jobs.id, laterEdit.id)))[0].data, laterEdit);
+  assert.equal((await db.select().from(audits).where(eq(audits.targetId, additionalJobListingsVersion))).length, 1);
 });

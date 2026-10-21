@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { Application, Job } from "@/lib/types";
-import { isAdditionalApplicationJob } from "@/data/application-jobs";
 import { AdminApiError, adminRequest, errorMessage } from "./api";
 import JobEditor from "./JobEditor";
 import ApplicationsPanel from "./ApplicationsPanel";
@@ -421,7 +420,6 @@ export default function AdminWorkspace() {
                   <div>
                     <div className={styles.rowTags}>
                       <span>{job.category}</span>
-                      {isAdditionalApplicationJob(job) && <span>Application form only</span>}
                       {job.isExample && (
                         <span className={styles.exampleTag}>
                           Development example
@@ -437,7 +435,7 @@ export default function AdminWorkspace() {
                     {job.status}
                   </span>
                   <div className={styles.rowActions}>
-                    {job.status === "published" && !isAdditionalApplicationJob(job) && (
+                    {job.status === "published" && (
                       <Link
                         href={`/jobs/${job.slug}`}
                         target="_blank"
