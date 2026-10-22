@@ -17,6 +17,7 @@ export function Footer() {
           <div>
             <span>Explore</span>
             <Link href="/jobs">Available jobs</Link>
+            <Link href="/apply">General application</Link>
             <Link href="/#industries">Our industries</Link>
             <Link href="/about#working-in-croatia">Working in Croatia</Link>
             <Link href="/#how-it-works">How to apply</Link>

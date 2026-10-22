@@ -79,8 +79,8 @@ export function Navbar() {
           <Link href="/jobs#job-results" className="nav-search" aria-label="Search jobs">
             <Search size={19} strokeWidth={1.75} aria-hidden="true" />
           </Link>
-          <Link href="/jobs" className="street-pill nav-cta">
-            Find your role <span><ArrowUpRight size={17} /></span>
+          <Link href="/apply" className="street-pill nav-cta">
+            Apply now <span><ArrowUpRight size={17} /></span>
           </Link>
           <button
             ref={toggleRef}
@@ -127,6 +127,9 @@ export function Navbar() {
               <ArrowUpRight />
             </Link>
           ))}
+          <Link href="/apply" onClick={() => setOpen(false)}>
+            General application <ArrowUpRight />
+          </Link>
           <Link href="/contact" onClick={() => setOpen(false)}>
             Contact <ArrowUpRight />
           </Link>

@@ -2,7 +2,7 @@
 export const applicationFaqs = [
   [
     "How do I apply for a job?",
-    "Find a role that fits your experience, read its requirements, and select Apply now. Complete the application form, attach the required documents, and submit. Each application is linked to the position you choose.",
+    "Select Apply now to open the general application form and choose your preferred position inside the form. You can also browse available jobs, read a role's requirements, and apply from its page. Complete the form, attach the required documents, and submit. Each application is linked to the position you choose.",
   ],
   [
     "What documents are required?",

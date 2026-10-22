@@ -19,6 +19,7 @@ If dependencies need reinstalling, run `npm ci`. To create a production build, r
 - The original qualifications, role-specific driver’s licence guidance, and document requirements.
 - Prominent no-placement-fee messaging, free transportation and accommodation, and the supplied overtime/holiday benefits.
 - Job search and filters, detailed role pages, a separate application form with CV/supporting-file uploads, and a private staff workspace.
+- A direct general application at `/apply` reuses the existing form fields, document uploads, and application delivery. Applicants select their primary position inside the form without browsing job listings.
 - Responsive layouts, reduced-motion support and three selectable hero messages.
 - The original logo emblem and matching favicons, with a new Jobs Street Croatia wordmark.
 

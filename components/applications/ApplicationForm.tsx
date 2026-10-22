@@ -36,11 +36,12 @@ function uploadErrorKey(id: ReferenceUploadId): "resume" | `document:${Supportin
   return id === "resume" ? "resume" : `document:${id}`;
 }
 
-export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; jobs?: Job[] }) {
-  const availableJobs = jobs?.filter((job) => job.status === "published") || [initialJob];
+export default function ApplicationForm({ job: initialJob, jobs }: { job?: Job; jobs?: Job[] }) {
+  const generalApplication = !initialJob;
+  const availableJobs = jobs?.filter((job) => job.status === "published") || (initialJob ? [initialJob] : []);
   const [values, setValues] = useState<ApplicationInput>({
-    applicationFormVersion: 2, destinationCountry: destinationCountries.find((country) => country === initialJob.location) || "Croatia", termsAccepted: false,
-    jobId: initialJob.id, fullName: "", email: "", phone: "", country: "", discoverySource: "", consent: false,
+    applicationFormVersion: 2, destinationCountry: destinationCountries.find((country) => country === initialJob?.location) || "Croatia", termsAccepted: false,
+    jobId: initialJob?.id || "", fullName: "", email: "", phone: "", country: "", discoverySource: "", consent: false,
     applicantDetails: {
       firstName: "", lastName: "", gender: "", telegram: "", currentAddress: "",
       street: "", city: "", province: "", postalCode: "", dateOfBirth: "", placeOfBirth: "",
@@ -49,7 +50,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
     },
   });
   const job = availableJobs.find((candidate) => candidate.id === values.jobId) || initialJob;
-  const uploads = getReferenceApplicationUploads({ country: values.country, destinationCountry: values.destinationCountry, jobTitle: job.title });
+  const uploads = getReferenceApplicationUploads({ country: values.country, destinationCountry: values.destinationCountry, jobTitle: job?.title });
   const [files, setFiles] = useState<UploadFiles>({});
   const [errors, setErrors] = useState<FormErrors>({});
   const [error, setError] = useState("");
@@ -100,6 +101,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
   function validateAll(): FormErrors {
     const parsed = applicationSchema.safeParse(values);
     const next: FormErrors = parsed.success ? {} : fieldErrors(parsed.error);
+    if (!values.jobId) next.jobId = "Select the position you would like to apply for.";
     for (const upload of uploads) {
       const message = validateUpload(upload.id, files[upload.id], uploads);
       if (message) next[uploadErrorKey(upload.id)] = message;
@@ -245,14 +247,14 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
   const nameOptions = (options: readonly string[]) => options.map((option) => ({ value: option, label: option }));
 
   return <div className={styles.page}><div className="container">
-    <Link href={`/jobs/${job.slug}`} className={styles.back}><ArrowLeft size={16} /> Back to opportunities</Link>
+    <Link href={!generalApplication && job ? `/jobs/${job.slug}` : "/"} className={styles.back}><ArrowLeft size={16} /> {generalApplication ? "Back to home" : "Back to opportunities"}</Link>
     <div className={styles.shell} role="region" aria-label="Application">
       <header className={styles.masthead}>
         <div className={styles.mastheadBrand}><BrandLockup /></div>
-        <p className={styles.mastheadLabel}>Application form</p>
+        <p className={styles.mastheadLabel}>{generalApplication ? "General application form" : "Application form"}</p>
       </header>
       <div>
-        {job.isExample && <p className={styles.example}><strong>Development example vacancy.</strong> Use fictitious details for this demonstration application.</p>}
+        {job?.isExample && <p className={styles.example}><strong>Development example vacancy.</strong> Use fictitious details for this demonstration application.</p>}
         <section className={styles.formSection}>
           {result ? <div className={styles.success}>
             <CheckCircle2 size={56} strokeWidth={1.5} /><p className="eyebrow">Application received</p>
@@ -268,10 +270,10 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
             <Link href="/jobs" className="button button-primary">Explore more opportunities <ArrowUpRight size={18} /></Link>
           </div> : <>
             <div className={styles.formHeading}>
-              <h1 ref={headingRef} tabIndex={-1}>Welcome! Please tell us about yourself.</h1>
-              <p>Please enter these details as they appear on your passport.</p>
+              <h1 ref={headingRef} tabIndex={-1}>{generalApplication ? "General application" : "Welcome! Please tell us about yourself."}</h1>
+              <p>{generalApplication ? "Apply directly by choosing your preferred position in this form. Please enter your personal details as they appear on your passport." : "Please enter these details as they appear on your passport."}</p>
             </div>
-            <form ref={formRef} aria-label={`${job.title} application form`} noValidate onSubmit={(event) => { event.preventDefault(); submit(); }}>
+            <form ref={formRef} aria-label={generalApplication ? "General application form" : `${job?.title} application form`} noValidate onSubmit={(event) => { event.preventDefault(); submit(); }}>
               <div className={styles.honeypot} aria-hidden="true"><label htmlFor="website">Website</label><input id="website" value={website}
                 onChange={(event) => setWebsite(event.target.value)} tabIndex={-1} autoComplete="off" /></div>
               <p className={styles.required}><span aria-hidden="true">*</span> Required information</p>
@@ -304,7 +306,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job: Job; j
                       {selectField("jobId", "What job position are you primarily applying for?", [
                         ...availableJobs.filter((candidate) => !isAdditionalApplicationJob(candidate)),
                         ...availableJobs.filter(isAdditionalApplicationJob),
-                      ].map((candidate) => ({ value: candidate.id, label: candidate.title, group: isAdditionalApplicationJob(candidate) ? "Other jobs we’re offering" : "Our listed jobs" })), positionHelp, false)}
+                      ].map((candidate) => ({ value: candidate.id, label: candidate.title, group: isAdditionalApplicationJob(candidate) ? "Other jobs we’re offering" : "Our listed jobs" })), positionHelp, generalApplication)}
                       {selectField("secondaryPosition", "Please select an additional role in which you have relevant experience", nameOptions(additionalPositionOptions), "Choose a role other than the one you are applying for. Select ‘No other position’ if none applies.")}
                       {profileText("otherPosition", "If the job you’re applying for is not listed above, please enter it here", { optional: true })}
                     </div>
