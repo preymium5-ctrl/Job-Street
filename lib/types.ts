@@ -55,6 +55,7 @@ export const discoverySources = [
   "YouTube",
   "LinkedIn",
   "Google search",
+  "Email offers",
   "Friend or family",
   "Other",
 ] as const;

@@ -1,6 +1,6 @@
 # Google Sheets application delivery
 
-## Current production connection (21 October 2026)
+## Current production connection (26 October 2026)
 
 The production site uses `APPLICATION_STORAGE=google-sheets`. Set these values in
 the Vercel project's **Production** environment, then deploy the website:
@@ -23,17 +23,20 @@ receiver also accepts the previous 35-column compact tracker and the earlier
 or the older `referralSource` alias. Conflicting nonempty aliases are rejected.
 
 The new column stores the selected Facebook, TikTok, Instagram, Reddit, Threads,
-X (Twitter), YouTube, LinkedIn, Google search, Friend or family, or Other answer
+X (Twitter), YouTube, LinkedIn, Google search, Email offers, Friend or family, or Other answer
 as literal text. Applications with no collected answer retain blank cells; no
 answer is inferred. Private document links, Google sharing, connection secrets,
 and existing source attribution in the application ID notes remain unchanged.
+The shared receiver also accepts the existing tracker choice `Through email offers`
+without renaming historical answers. The website offers the choice `Email offers`.
 The receiver also supports authenticated temporary upload staging for forms
 larger than the hosting platform's request limit. The website sends the form in
 2 MB parts, reconstructs it on the server, and applies the same file signature,
 DOCX container, image sanitization, required-document, and application checks.
 Only a confirmed application creates a tracker row and final document links.
-The checked-in source matches the shared live Version 15 receiver, SHA-256
-`92AA687A21DB0DBBBA0CB06A7CCD45D500E3BA96BA6F6BFF613744F3E6C65583`.
+The checked-in source matches the shared live Version 17 receiver, published on
+26 October 2026. When adding a discovery choice, update the shared receiver
+allowlist and the tracker dropdown before publishing the website option.
 
 Deploy the website transport compatibility change before changing the shared
 receiver or tracker: it accepts health responses with 35, 36, or 54 columns for

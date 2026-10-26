@@ -26,7 +26,7 @@ const CHAPTER_FORM_HEADERS = Object.freeze(CHAPTER_FORM_COLUMNS.map(function (in
 const CHAPTER_NOTE_MARKER = '\n\nCHAPTER_RECEIVER_METADATA_V1\n';
 const CHAPTER_REFERRAL_SOURCES = Object.freeze([
   'Facebook', 'TikTok', 'Instagram', 'Reddit', 'Threads', 'X (Twitter)', 'YouTube',
-  'LinkedIn', 'Google Search', 'Google search', 'Friend or family', 'Other'
+  'LinkedIn', 'Google Search', 'Google search', 'Email offers', 'Through email offers', 'Friend or family', 'Other'
 ]);
 const CHAPTER_SHEET_ID = '1v9-lAvpJPUCxCqr03EkVwKKAfedEDtckHir4ro6cyeU';
 const CHAPTER_MAX_CV_BYTES = 5 * 1024 * 1024;

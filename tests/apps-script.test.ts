@@ -985,7 +985,7 @@ test("owner setup clears inherited referral validation only from new fields and 
   assert.deepEqual(state.validationChanges[1], {
     action: "set", row: 2, column: 30, count: 999, columns: 1,
     rule: { choices: ["Facebook", "TikTok", "Instagram", "Reddit", "Threads", "X (Twitter)", "YouTube", "LinkedIn",
-      "Google Search", "Google search", "Friend or family", "Other"], showDropdown: true, allowInvalid: false },
+      "Google Search", "Google search", "Email offers", "Through email offers", "Friend or family", "Other"], showDropdown: true, allowInvalid: false },
   });
   assert.equal(state.validationChanges.length, 2);
   assert.ok(state.validationChanges.every(({ row, column }) => row === 2 && column >= 30));
@@ -1216,7 +1216,7 @@ test("owner setup chooses a unique native backup title and initializes a blank c
 });
 
 test("every website discovery choice and shared referral alias is stored literally in appended AJ with safe retries", () => {
-  for (const answer of [...discoverySources, "Google Search", ""]) {
+  for (const answer of [...discoverySources, "Google Search", "Through email offers", ""]) {
     const { state, post, context } = fixture();
     vm.runInContext("setupChapterSync()", context);
     const original = profileApplication();
