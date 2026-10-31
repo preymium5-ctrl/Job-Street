@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { proposedJobs } from "../data/jobs";
 import { additionalApplicationJobs, isAdditionalApplicationJob } from "../data/application-jobs";
+import { publishedCatalogJobs } from "../data/catalog";
+import { printingPressOperatorJob } from "../data/job-orders";
 import { site } from "../data/site";
 import { getApplicationJobs, getPublicJobBySlug, getPublicJobs, usesPublishedCatalog } from "../lib/public-jobs";
 import config from "../next.config";
@@ -97,12 +99,15 @@ test("database-free production renders the published fair catalog without touchi
     delete process.env.CHAPTER_LOCAL_MODE;
     const publicJobs = await getPublicJobs();
     const applicationJobs = await getApplicationJobs();
-    assert.equal(publicJobs.length, proposedJobs.length + additionalApplicationJobs.length);
+    assert.equal(publicJobs.length, publishedCatalogJobs.length);
     assert.equal(publicJobs.filter(isAdditionalApplicationJob).length, additionalApplicationJobs.length);
-    assert.equal(applicationJobs.length, proposedJobs.length + additionalApplicationJobs.length);
+    assert.equal(applicationJobs.length, publishedCatalogJobs.length);
     assert.equal(applicationJobs.filter(isAdditionalApplicationJob).length, additionalApplicationJobs.length);
     assert.equal((await getPublicJobBySlug(additionalApplicationJobs[0].slug))?.id, additionalApplicationJobs[0].id);
     assert.equal((await getPublicJobBySlug("electrical-installer"))?.title, "Electrical Installer");
+    assert.equal((await getPublicJobBySlug(printingPressOperatorJob.slug))?.id, printingPressOperatorJob.id);
+    assert.ok(applicationJobs.some(({ id }) => id === printingPressOperatorJob.id));
+    assert.ok(buildSitemap(publicJobs, { VERCEL_ENV: "production" }).some(({ url }) => url.endsWith(`/jobs/${printingPressOperatorJob.slug}`)));
     assert.equal(await getPublicJobBySlug("missing-job"), undefined);
   } finally {
     process.env = original;

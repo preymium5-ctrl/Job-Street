@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { migrateProposedJobCatalog } from "./catalog-migration";
+import { migrateJobOrderRoles, migrateProposedJobCatalog } from "./catalog-migration";
 import { getDatabase, localModeAllowed } from "./db";
 import { applications, audits, jobs, sheetDeliveries } from "./schema";
 import type { Application, ApplicationStatus, Job } from "./types";
@@ -14,8 +14,10 @@ async function ensureSeeded() {
         !localModeAllowed() &&
         process.env.SEED_PROPOSED_JOBS !== "true" &&
         process.env.SEED_EXAMPLE_JOBS !== "true"
-      )
+      ) {
+        await migrateJobOrderRoles(await getDatabase());
         return;
+      }
       const db = await getDatabase();
       await migrateProposedJobCatalog(db);
     })().catch((error) => {

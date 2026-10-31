@@ -6,6 +6,7 @@ import { POST as submit } from "../app/api/applications/route";
 import { POST as upload } from "../app/api/applications/uploads/route";
 import { proposedJobs } from "../data/jobs";
 import { additionalApplicationJobs } from "../data/application-jobs";
+import { printingPressOperatorJob } from "../data/job-orders";
 import { formatApplicantAddress } from "../lib/applicant-address";
 import { prepareApplicationUpload, stageApplicationUpload, type PreparedApplicationUpload } from "../lib/application-upload-client";
 import { initializeStagedUpload, restoreStagedFormData, STAGED_UPLOAD_CHUNK_BYTES, StagedUploadError, uploadStagedChunk, type StagedUploadStart } from "../lib/staged-uploads";
@@ -176,6 +177,17 @@ after(() => {
   globalThis.fetch = originalFetch;
   for (const key of Object.keys(process.env)) if (!(key in originalEnv)) delete process.env[key];
   Object.assign(process.env, originalEnv);
+});
+
+test("printing press applications reach the receiver through the complete staged upload flow", async () => {
+  const payload = { ...values(), jobId: printingPressOperatorJob.id };
+  const { body, key } = form({ size: 5 * MiB, payload });
+  const prepared = await prepareApplicationUpload(body, key);
+  const response = await finish(prepared);
+  assert.equal(response.status, 201, JSON.stringify(await response.clone().json()));
+  assert.equal((await response.json()).jobTitle, printingPressOperatorJob.title);
+  assert.equal(delivered.length, 1);
+  assert.equal(delivered[0].application.jobTitle, printingPressOperatorJob.title);
 });
 
 test("a full 5 MiB CV and passport travel in 2 MiB browser chunks and reach Google with the original profile and private files", async () => {

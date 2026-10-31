@@ -6,6 +6,7 @@ import path from "node:path";
 import { eq } from "drizzle-orm";
 import { proposedJobs, proposalV1Jobs, previousRecruitmentJobs, previousCombinedFinishingJob } from "../data/jobs";
 import { additionalApplicationJobs, isAdditionalApplicationJob } from "../data/application-jobs";
+import { jobOrderJobs } from "../data/job-orders";
 import { additionalPositionOptions, destinationCountries } from "../data/application-options";
 import { applicationJobProfiles } from "../data/application-job-profiles";
 import { publicJobContent } from "../lib/public-jobs";
@@ -262,7 +263,7 @@ test("catalog migration preserves applications and custom jobs, resolves old slu
   await migrateProposedJobCatalog(db);
 
   const migrated = await db.select().from(jobs);
-  assert.equal(migrated.filter((row) => row.status === "published").length, proposedJobs.length + additionalApplicationJobs.length + 1);
+  assert.equal(migrated.filter((row) => row.status === "published").length, proposedJobs.length + additionalApplicationJobs.length + jobOrderJobs.length + 1);
   for (const id of legacyExampleJobIds) {
     const archived = migrated.find((row) => row.id === id)!;
     assert.equal(archived.status, "closed");

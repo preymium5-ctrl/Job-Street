@@ -27,8 +27,7 @@ import { drainSheetsQueue } from "@/lib/sheets-queue";
 import { getReferenceApplicationUploads, MAX_APPLICATION_UPLOAD_BYTES, MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, supportingDocumentTypes } from "@/lib/document-uploads";
 import { saveApplicationToGoogle, usesGoogleApplicationStorage } from "@/lib/google-application-storage";
 import { sheetsConfiguration, SheetsDeliveryError } from "@/lib/sheets-transport";
-import { proposedJobs } from "@/data/jobs";
-import { additionalApplicationJobs } from "@/data/application-jobs";
+import { publishedCatalogJobs } from "@/data/catalog";
 import { restoreStagedFormData, StagedUploadError } from "@/lib/staged-uploads";
 
 export const runtime = "nodejs";
@@ -87,7 +86,7 @@ export async function POST(request: NextRequest) {
       return failure("Complete the current website application form.", 422);
     // Resolve the position on the server rather than trusting a client-supplied title.
     const job = googleStorage
-      ? [...proposedJobs, ...additionalApplicationJobs].find(({ id }) => id === result.data.jobId)
+      ? publishedCatalogJobs.find(({ id }) => id === result.data.jobId)
       : await getJobById(result.data.jobId);
     const referenceUploads = getReferenceApplicationUploads({
       country: result.data.country,

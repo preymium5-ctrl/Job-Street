@@ -15,7 +15,7 @@ If dependencies need reinstalling, run `npm ci`. To create a production build, r
 
 ## Included
 
-- 115 listed roles, including all 97 additional positions from the application form, with salary ranges and dated PHP estimates. New listings show €850–€2,000 per month and 250–1,200 slots across the form's six destination countries.
+- 116 listed roles, including all 97 additional positions from the application form and the Offset Web Printing Press Operator (Coldset) offer copied from jobsincroatiaa.com on 31 October 2026: 100 slots in Croatia, €850–€1,000 NET per month and minimum five years of coldset press experience. The printing role uses a dedicated AI-generated newspaper-press image, documented in `docs/PRINTING_PRESS_IMAGE_2026_10_31.json`.
 - The original qualifications, role-specific driver’s licence guidance, and document requirements.
 - Prominent no-placement-fee messaging, free transportation and accommodation, and the supplied overtime/holiday benefits.
 - Job search and filters, detailed role pages, a separate application form with CV/supporting-file uploads, and a private staff workspace.
