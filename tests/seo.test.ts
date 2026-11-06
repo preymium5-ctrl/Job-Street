@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { proposedJobs } from "../data/jobs";
 import { additionalApplicationJobs, isAdditionalApplicationJob } from "../data/application-jobs";
 import { publishedCatalogJobs } from "../data/catalog";
-import { printingPressOperatorJob } from "../data/job-orders";
+import { printingPressOperatorJob, trailerTruckDriverJob } from "../data/job-orders";
 import { site } from "../data/site";
 import { getApplicationJobs, getPublicJobBySlug, getPublicJobs, usesPublishedCatalog } from "../lib/public-jobs";
 import config from "../next.config";
@@ -108,6 +108,9 @@ test("database-free production renders the published fair catalog without touchi
     assert.equal((await getPublicJobBySlug(printingPressOperatorJob.slug))?.id, printingPressOperatorJob.id);
     assert.ok(applicationJobs.some(({ id }) => id === printingPressOperatorJob.id));
     assert.ok(buildSitemap(publicJobs, { VERCEL_ENV: "production" }).some(({ url }) => url.endsWith(`/jobs/${printingPressOperatorJob.slug}`)));
+    assert.equal((await getPublicJobBySlug(trailerTruckDriverJob.slug))?.id, trailerTruckDriverJob.id);
+    assert.ok(applicationJobs.some(({ id }) => id === trailerTruckDriverJob.id));
+    assert.ok(buildSitemap(publicJobs, { VERCEL_ENV: "production" }).some(({ url }) => url.endsWith(`/jobs/${trailerTruckDriverJob.slug}`)));
     assert.equal(await getPublicJobBySlug("missing-job"), undefined);
   } finally {
     process.env = original;

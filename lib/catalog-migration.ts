@@ -2,7 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { proposedJobs, proposalV1Jobs, previousRecruitmentJobs, previousCombinedFinishingJob } from "../data/jobs";
 import { additionalApplicationJobs } from "../data/application-jobs";
-import { jobOrderJobs } from "../data/job-orders";
+import { jobOrderReleases } from "../data/job-orders";
 import { getJobFairRole, jobFair } from "../data/job-fair";
 import { maximumAgeRequirement, minimumExperienceRequirement } from "../data/employment";
 import type { Database } from "./db";
@@ -20,7 +20,7 @@ export const maximumAgeRequirementVersion = "maximum-age-requirement-2026-10-16-
 export const finishingJobsVersion = "separate-grinder-cleaner-2026-10-20-v1";
 export const additionalApplicationJobsVersion = "additional-application-jobs-2026-10-20-v1";
 export const additionalJobListingsVersion = "additional-job-listings-2026-10-21-v1";
-export const jobOrderRolesVersion = "job-order-printing-press-operator-2026-10-31-v1";
+export const jobOrderRolesVersion = jobOrderReleases[0].version;
 export const legacyExampleJobIds = [
   "example-warehouse-01",
   "example-bus-02",
@@ -100,24 +100,28 @@ export async function migrateProposedJobCatalog(db: Database) {
   await migrateJobOrderRoles(db);
 }
 
-/** Add received job orders once, preserving any staff record with the same ID or URL. */
+/** Add each received job order once, preserving any staff record with the same ID or URL. */
 export async function migrateJobOrderRoles(db: Database) {
+  for (const release of jobOrderReleases) await migrateJobOrderRelease(db, release.version, release.jobs);
+}
+
+async function migrateJobOrderRelease(db: Database, version: string, releaseJobs: Job[]) {
   await db.transaction(async (tx) => {
     if (process.env.DATABASE_URL) await tx.execute(sql`SELECT pg_advisory_xact_lock(621349133)`);
-    const [applied] = await tx.select().from(settings).where(eq(settings.key, jobOrderRolesVersion));
+    const [applied] = await tx.select().from(settings).where(eq(settings.key, version));
     if (applied) return;
     const addedIds: string[] = [];
-    for (const job of jobOrderJobs) {
+    for (const job of releaseJobs) {
       const [byId] = await tx.select().from(jobs).where(eq(jobs.id, job.id));
       const [bySlug] = await tx.select().from(jobs).where(eq(jobs.slug, job.slug));
       if (byId || bySlug) continue;
       await tx.insert(jobs).values({ id: job.id, slug: job.slug, status: job.status, data: job });
       addedIds.push(job.id);
     }
-    await tx.insert(settings).values({ key: jobOrderRolesVersion, value: new Date().toISOString() });
+    await tx.insert(settings).values({ key: version, value: new Date().toISOString() });
     await tx.insert(audits).values({
       id: randomUUID(), actorId: "system:catalog-migration", action: "catalog.job-order-roles-published",
-      targetId: jobOrderRolesVersion, details: { addedIds },
+      targetId: version, details: { addedIds },
     });
   });
 }

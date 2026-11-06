@@ -142,7 +142,7 @@ test("driver license collection is restricted to the PDF roles, including attach
 });
 
 test("reference form requires residence ID abroad, permits 5 MB per file within 15 MB total and preserves exact retries", async () => {
-  const job = (await getJobs())[0];
+  const job = (await getJobs()).find(({ title }) => !/\bdriver\b/i.test(title))!;
   const input = {
     applicationFormVersion: 2, destinationCountry: "Croatia", termsAccepted: true,
     jobId: job.id, fullName: "Modern Applicant", email: "modern-documents@example.test", phone: "+639171234567", country: "Romania", consent: true,
