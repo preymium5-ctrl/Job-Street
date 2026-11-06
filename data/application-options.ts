@@ -1,5 +1,7 @@
 // Options captured from the owner-provided application form on 20 October 2026.
 export const destinationCountries = ["Croatia", "Slovenia", "Serbia", "Romania", "North Macedonia", "Montenegro"] as const;
+/** Destinations an applicant can choose. The general listings rotate only through `destinationCountries`. */
+export const applicationDestinationCountries = [...destinationCountries, "Czech Republic"] as const;
 export const nationalityOptions = [
   "Filipino",
   "Afghanistan",

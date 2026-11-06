@@ -18,7 +18,7 @@ import { administrators, audits } from "../lib/schema";
 import { applicationSchema, fieldErrors } from "../lib/validation";
 import { applicantGenders, discoverySources, type ApplicantDetails } from "../lib/types";
 import { formatApplicantAddress } from "../lib/applicant-address";
-import { additionalPositionOptions, currentWorkCountries, destinationCountries, nationalityOptions } from "../data/application-options";
+import { additionalPositionOptions, applicationDestinationCountries, currentWorkCountries, destinationCountries, nationalityOptions } from "../data/application-options";
 import {
   decodeSession,
   hashPassword,
@@ -360,7 +360,8 @@ test("version 2 matches the captured form choices and defaults uncollected backg
   for (const country of currentWorkCountries)
     assert.equal(applicationSchema.safeParse({ ...input, country }).success, true, country);
   assert.deepEqual(destinationCountries, ["Croatia", "Slovenia", "Serbia", "Romania", "North Macedonia", "Montenegro"]);
-  for (const destinationCountry of destinationCountries)
+  assert.deepEqual(applicationDestinationCountries, [...destinationCountries, "Czech Republic"]);
+  for (const destinationCountry of applicationDestinationCountries)
     assert.equal(applicationSchema.safeParse({ ...input, destinationCountry }).success, true, destinationCountry);
   for (const secondaryPosition of additionalPositionOptions)
     assert.equal(applicationSchema.safeParse({ ...input, applicantDetails: { ...input.applicantDetails, secondaryPosition, otherPosition: "" } }).success, true, secondaryPosition);

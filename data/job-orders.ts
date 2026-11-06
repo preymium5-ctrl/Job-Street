@@ -47,9 +47,13 @@ export const printingPressOperatorJob: Job = {
 };
 
 // Supplied by the site operator on 6 November 2026: 5–10 years of experience and
-// €2,000 per month. Shown as NET EUR per month like the other listings. The
+// €2,000 per month. Moved to the Czech Republic with a maximum age of 50 on
+// 7 November 2026. Shown as NET EUR per month like the other listings. The
 // employer, worksite, routes, schedule, slot count and contract terms are not
 // supplied and remain to be confirmed; no benefits are inferred.
+export const trailerTruckDriverMaximumAge = 50;
+export const trailerTruckDriverAgeRequirement = `Applicants must be ${trailerTruckDriverMaximumAge} years old or below.`;
+
 const trailerTruckDriverSummary =
   "Drive trailer trucks on assigned routes and deliver loads safely and on schedule.";
 
@@ -58,10 +62,10 @@ export const trailerTruckDriverJob: Job = {
   slug: "trailer-truck-driver",
   title: "Trailer Truck Driver",
   category: "Transport & Logistics",
-  location: "Croatia",
+  location: "Czech Republic",
   employmentType: "Terms to be confirmed",
   summary: trailerTruckDriverSummary,
-  description: `${trailerTruckDriverSummary} We are hiring experienced trailer truck drivers for work in Croatia. The displayed salary is a NET amount in EUR per month; the employer, routes, workplace, schedule and contract terms will be confirmed by the recruitment team.`,
+  description: `${trailerTruckDriverSummary} We are hiring experienced trailer truck drivers for work in the Czech Republic. The displayed salary is a NET amount in EUR per month; the employer, routes, workplace, schedule and contract terms will be confirmed by the recruitment team.`,
   responsibilities: [
     "Drive trailer trucks safely on the assigned routes.",
     "Inspect the truck and trailer before and after each trip and report any defects.",
@@ -71,8 +75,9 @@ export const trailerTruckDriverJob: Job = {
     "Keep the vehicle clean and in good working order.",
   ],
   requirements: [
+    trailerTruckDriverAgeRequirement,
     "5–10 years of experience as a trailer truck driver.",
-    "Valid driver’s licence for trucks with trailers (category CE or equivalent); conversion requirements for working in Croatia will be confirmed by the recruitment team.",
+    "Valid driver’s licence for trucks with trailers (category CE or equivalent); conversion requirements for working in the Czech Republic will be confirmed by the recruitment team.",
     "Good knowledge of road safety, load securing and vehicle checks.",
     "Your CV should clearly state the truck and trailer types you have driven and your years of experience on each.",
     "Upload a copy of your driver’s licence (front and back) with your application.",

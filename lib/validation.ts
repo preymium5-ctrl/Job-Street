@@ -2,7 +2,7 @@ import { z } from "zod";
 import { applicantGenders, applicationStatuses, discoverySources, documentStatuses } from "./types";
 import { minimumExperienceYears } from "../data/employment";
 import { formatApplicantAddress } from "./applicant-address";
-import { additionalPositionOptions, currentWorkCountries, destinationCountries, nationalityOptions } from "../data/application-options";
+import { additionalPositionOptions, applicationDestinationCountries, currentWorkCountries, nationalityOptions } from "../data/application-options";
 
 const shortText = (maximum = 160) =>
   z.string().trim().min(2, "Enter at least 2 characters.").max(maximum);
@@ -42,7 +42,7 @@ const applicantDetailsSchema = z.object({
 export const applicationSchema = z
   .object({
     applicationFormVersion: z.literal(2).optional(),
-    destinationCountry: z.enum(destinationCountries, { error: "Select a listed application destination." }).optional(),
+    destinationCountry: z.enum(applicationDestinationCountries, { error: "Select a listed application destination." }).optional(),
     termsAccepted: z.boolean().optional(),
     jobId: z.string().trim().min(1).max(100),
     fullName: shortText(120),

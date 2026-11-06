@@ -2,7 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { proposedJobs, proposalV1Jobs, previousRecruitmentJobs, previousCombinedFinishingJob } from "../data/jobs";
 import { additionalApplicationJobs } from "../data/application-jobs";
-import { jobOrderReleases } from "../data/job-orders";
+import { jobOrderReleases, trailerTruckDriverJob } from "../data/job-orders";
 import { getJobFairRole, jobFair } from "../data/job-fair";
 import { maximumAgeRequirement, minimumExperienceRequirement } from "../data/employment";
 import type { Database } from "./db";
@@ -21,6 +21,7 @@ export const finishingJobsVersion = "separate-grinder-cleaner-2026-10-20-v1";
 export const additionalApplicationJobsVersion = "additional-application-jobs-2026-10-20-v1";
 export const additionalJobListingsVersion = "additional-job-listings-2026-10-21-v1";
 export const jobOrderRolesVersion = jobOrderReleases[0].version;
+export const trailerTruckDriverCzechVersion = "trailer-truck-driver-czech-republic-age-50-2026-11-07-v1";
 export const legacyExampleJobIds = [
   "example-warehouse-01",
   "example-bus-02",
@@ -103,6 +104,28 @@ export async function migrateProposedJobCatalog(db: Database) {
 /** Add each received job order once, preserving any staff record with the same ID or URL. */
 export async function migrateJobOrderRoles(db: Database) {
   for (const release of jobOrderReleases) await migrateJobOrderRelease(db, release.version, release.jobs);
+  await migrateTrailerTruckDriverToCzechRepublic(db);
+}
+
+/** Move the trailer truck driver offer to the Czech Republic with its age limit, unless staff changed its location. */
+export async function migrateTrailerTruckDriverToCzechRepublic(db: Database) {
+  await db.transaction(async (tx) => {
+    if (process.env.DATABASE_URL) await tx.execute(sql`SELECT pg_advisory_xact_lock(621349133)`);
+    const [applied] = await tx.select().from(settings).where(eq(settings.key, trailerTruckDriverCzechVersion));
+    if (applied) return;
+    const [row] = await tx.select().from(jobs).where(eq(jobs.id, trailerTruckDriverJob.id));
+    const updatedIds: string[] = [];
+    if (row && row.data.location === "Croatia") {
+      const { location, description, requirements } = trailerTruckDriverJob;
+      await tx.update(jobs).set({ data: { ...row.data, location, description, requirements } }).where(eq(jobs.id, row.id));
+      updatedIds.push(row.id);
+    }
+    await tx.insert(settings).values({ key: trailerTruckDriverCzechVersion, value: new Date().toISOString() });
+    await tx.insert(audits).values({
+      id: randomUUID(), actorId: "system:catalog-migration", action: "catalog.trailer-truck-driver-moved",
+      targetId: trailerTruckDriverCzechVersion, details: { updatedIds, fields: ["location", "description", "requirements"] },
+    });
+  });
 }
 
 async function migrateJobOrderRelease(db: Database, version: string, releaseJobs: Job[]) {

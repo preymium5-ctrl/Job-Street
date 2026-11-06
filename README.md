@@ -15,7 +15,7 @@ If dependencies need reinstalling, run `npm ci`. To create a production build, r
 
 ## Included
 
-- 117 listed roles, including all 97 additional positions from the application form, the Trailer Truck Driver offer added on 6 November 2026 (Croatia, €2,000 NET per month, 5–10 years of experience, using the transport image), and the Offset Web Printing Press Operator (Coldset) offer copied from jobsincroatiaa.com on 31 October 2026: 100 slots in Croatia, €850–€1,000 NET per month and minimum five years of coldset press experience. The printing role uses a dedicated AI-generated newspaper-press image, documented in `docs/PRINTING_PRESS_IMAGE_2026_10_31.json`.
+- 117 listed roles, including all 97 additional positions from the application form, the Trailer Truck Driver offer added on 6 November 2026 (Czech Republic since 7 November 2026, €2,000 NET per month, 5–10 years of experience, applicants 50 or below, using the transport image; Czech Republic is also a selectable application destination), and the Offset Web Printing Press Operator (Coldset) offer copied from jobsincroatiaa.com on 31 October 2026: 100 slots in Croatia, €850–€1,000 NET per month and minimum five years of coldset press experience. The printing role uses a dedicated AI-generated newspaper-press image, documented in `docs/PRINTING_PRESS_IMAGE_2026_10_31.json`.
 - The original qualifications, role-specific driver’s licence guidance, and document requirements.
 - Prominent no-placement-fee messaging, free transportation and accommodation, and the supplied overtime/holiday benefits.
 - Job search and filters, detailed role pages, a separate application form with CV/supporting-file uploads, and a private staff workspace.

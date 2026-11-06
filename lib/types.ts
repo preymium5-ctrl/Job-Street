@@ -1,5 +1,5 @@
 import type { SupportingDocumentCategory } from "./document-uploads";
-import type { destinationCountries } from "../data/application-options";
+import type { applicationDestinationCountries } from "../data/application-options";
 export type JobStatus = "published" | "draft" | "closed";
 export interface Job {
   id: string;
@@ -82,7 +82,7 @@ export interface ApplicantDetails {
 }
 export interface ApplicationInput {
   applicationFormVersion?: 2;
-  destinationCountry?: (typeof destinationCountries)[number];
+  destinationCountry?: (typeof applicationDestinationCountries)[number];
   termsAccepted?: boolean;
   jobId: string;
   fullName: string;

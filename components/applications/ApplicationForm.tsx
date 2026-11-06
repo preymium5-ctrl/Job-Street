@@ -8,7 +8,7 @@ import { discoverySources } from "@/lib/types";
 import { formatApplicantAddress } from "@/lib/applicant-address";
 import { applicationSchema, fieldErrors } from "@/lib/validation";
 import { prepareApplicationUpload, stageApplicationUpload, resetStagedUpload, type PreparedApplicationUpload } from "@/lib/application-upload-client";
-import { additionalPositionOptions, currentWorkCountries, destinationCountries } from "@/data/application-options";
+import { additionalPositionOptions, applicationDestinationCountries, currentWorkCountries } from "@/data/application-options";
 import { isAdditionalApplicationJob } from "@/data/application-jobs";
 import { MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, getReferenceApplicationUploads, type ReferenceUploadId, type SupportingDocumentCategory } from "@/lib/document-uploads";
 import { BrandLockup } from "@/components/ui/Brand";
@@ -40,7 +40,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job?: Job; 
   const generalApplication = !initialJob;
   const availableJobs = jobs?.filter((job) => job.status === "published") || (initialJob ? [initialJob] : []);
   const [values, setValues] = useState<ApplicationInput>({
-    applicationFormVersion: 2, destinationCountry: destinationCountries.find((country) => country === initialJob?.location) || "Croatia", termsAccepted: false,
+    applicationFormVersion: 2, destinationCountry: applicationDestinationCountries.find((country) => country === initialJob?.location) || "Croatia", termsAccepted: false,
     jobId: initialJob?.id || "", fullName: "", email: "", phone: "", country: "", discoverySource: "", consent: false,
     applicantDetails: {
       firstName: "", lastName: "", gender: "", telegram: "", currentAddress: "",
@@ -72,7 +72,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job?: Job; 
     idempotencyRef.current = null;
     preparedUploadRef.current = null;
     const selectedJob = key === "jobId" ? availableJobs.find((candidate) => candidate.id === value) : undefined;
-    const destination = selectedJob && destinationCountries.find((country) => country === selectedJob.location);
+    const destination = selectedJob && applicationDestinationCountries.find((country) => country === selectedJob.location);
     setValues((current) => ({ ...current, [key]: value, ...(destination ? { destinationCountry: destination } : {}) }));
     setErrors((current) => ({ ...current, [key]: undefined,
       ...(key === "country" ? { "document:residence-id": undefined } : {}),
@@ -296,7 +296,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job?: Job; 
                       {profileText("placeOfBirth", "Your place of birth", { placeholder: "City / province and country" })}
                       {profileText("fatherName", "Your father’s full name", { optional: true })}
                       {profileText("motherName", "Your mother’s full name", { optional: true })}
-                      <div className={styles.full}>{selectField("destinationCountry", "Please select a country where you would like to apply", nameOptions(destinationCountries), undefined, false)}</div>
+                      <div className={styles.full}>{selectField("destinationCountry", "Please select a country where you would like to apply", nameOptions(applicationDestinationCountries), undefined, false)}</div>
                     </div>
                   </section>
                   <section id="work-experience" className={styles.sectionCard} aria-labelledby="work-heading">
