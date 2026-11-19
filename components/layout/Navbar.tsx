@@ -130,6 +130,9 @@ export function Navbar() {
           <Link href="/apply" onClick={() => setOpen(false)}>
             General application <ArrowUpRight />
           </Link>
+          <Link href="/apply/video" onClick={() => setOpen(false)}>
+            Video application <ArrowUpRight />
+          </Link>
           <Link href="/contact" onClick={() => setOpen(false)}>
             Contact <ArrowUpRight />
           </Link>

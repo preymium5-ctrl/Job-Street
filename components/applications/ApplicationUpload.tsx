@@ -15,15 +15,19 @@ export interface ApplicationUploadProps {
   error?: string;
   onChange: (file: File | undefined) => void;
   onRemove: () => void;
+  /** Overrides the default document format and size line. */
+  limitsText?: string;
+  /** Extra detail shown under the selected file name, such as the video length. */
+  fileDetail?: string;
 }
 
-export function ApplicationUpload({ id, label, description, required, accept, file, disabled, error, onChange, onRemove }: ApplicationUploadProps) {
+export function ApplicationUpload({ id, label, description, required, accept, file, disabled, error, onChange, onRemove, limitsText, fileDetail }: ApplicationUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const supportsImages = /(?:jpe?g|png)/i.test(accept);
-  const limits = supportsImages
+  const limits = limitsText || (supportsImages
     ? "PDF, DOC, DOCX, JPG, JPEG, PNG · Maximum 5 MB per file"
-    : "PDF, DOC, DOCX · Maximum 5 MB per file";
+    : "PDF, DOC, DOCX · Maximum 5 MB per file");
   const describedBy = [`${id}-description`, `${id}-help`, `${id}-limits`, error ? `${id}-error` : undefined].filter(Boolean).join(" ");
 
   return (
@@ -50,7 +54,7 @@ export function ApplicationUpload({ id, label, description, required, accept, fi
       {file ? (
         <div className={styles.file}>
           <FileText size={20} aria-hidden="true" />
-          <div><strong>{file.name}</strong><span>{(file.size / 1024 / 1024).toFixed(2)} MB</span></div>
+          <div><strong>{file.name}</strong><span>{(file.size / 1024 / 1024).toFixed(2)} MB{fileDetail ? ` · ${fileDetail}` : ""}</span></div>
           <button type="button" disabled={disabled} aria-label={`Remove ${label}`} onClick={() => {
             if (inputRef.current) inputRef.current.value = "";
             onRemove();

@@ -1,5 +1,37 @@
 # Google Sheets application delivery
 
+## Video applications (19 November 2026)
+
+The `/apply/video` form collects name, age, nationality, position, years of
+experience, WhatsApp and Telegram numbers, and a work video of at least one
+minute and at most 100 MB. Videos are far larger than the hosting request
+limit, so they never pass through the website server:
+
+1. `video-upload-start` (signed): the receiver validates the name, type and
+   size, reserves a Drive file ID, applies quotas (6 sessions per client and
+   60 overall per hour), and opens a private resumable Drive upload in the CV
+   folder. It sends the website origin as `Origin` so that Google accepts the
+   browser's cross-origin upload to that session.
+2. The applicant's browser sends the video directly to that Google upload URL
+   in 8 MB parts and resumes automatically after a dropped connection.
+3. `video-application-submit` (signed): the receiver checks that the exact
+   reserved file arrived in the private folder with the declared size and type,
+   then writes one row to the **Video Applications** tab. That tab is created
+   with its header row on first use; the **Applications** tab is not changed.
+   Retries return the original row and reference.
+
+Uploads that are never submitted are moved to Drive Trash (recoverable) after
+24 hours. Public health now also advertises `videoApplications: 1` and
+`maxVideoBytes: 104857600`.
+
+**Deployment order:** copy the updated `integrations/google-sheets/Code.gs` into
+the shared receiver project, publish a new version of the **existing** web app
+deployment (same `/exec` URL, so no secret or Vercel variable changes), then
+deploy the website. Until the receiver is updated, the video form shows
+"Video applications are temporarily unavailable" and nothing is stored. After
+publishing, submit one short test video from the live site and confirm the row
+and Drive link before announcing the form.
+
 ## Current production connection (26 October 2026)
 
 The production site uses `APPLICATION_STORAGE=google-sheets`. Set these values in

@@ -37,13 +37,26 @@ const CHAPTER_UPLOAD_STAGE_PREFIX = 'CHAPTER_UPLOAD_STAGE_';
 const CHAPTER_UPLOAD_STAGE_LIFETIME = 60 * 60 * 1000;
 const CHAPTER_DOCUMENT_CATEGORIES = ['diploma', 'nc2', 'nbi', 'form18a', 'other', 'driver-license', 'passport', 'residence-id', 'employment-certificate'];
 const CHAPTER_FILE_FIELDS = 'id,name,mimeType,size,trashed,parents,appProperties,driveId';
+// Video applications use their own tab; the Applications tab layout is untouched.
+const CHAPTER_VIDEO_SHEET_NAME = 'Video Applications';
+const CHAPTER_VIDEO_HEADERS = Object.freeze([
+  'Application ID', 'Reference', 'Submitted at (UTC)', 'Complete name', 'Age', 'Nationality',
+  'Position applying for', 'Years of experience', 'WhatsApp number', 'Telegram number',
+  'Work video', 'Video file', 'Video size (MB)', 'Video length (seconds)', 'Terms and privacy accepted', 'Application source'
+]);
+const CHAPTER_VIDEO_MAX_BYTES = 100 * 1024 * 1024;
+const CHAPTER_VIDEO_PREFIX = 'CHAPTER_VIDEO_SESSION_';
+const CHAPTER_VIDEO_LIFETIME = 24 * 60 * 60 * 1000;
+const CHAPTER_VIDEO_TYPES = Object.freeze({
+  'video/mp4': '.mp4', 'video/x-m4v': '.m4v', 'video/quicktime': '.mov', 'video/webm': '.webm', 'video/3gpp': '.3gp'
+});
 
 /** Public health response intentionally exposes no configuration or applicant data. */
 function doGet() {
   return chapterJson_({ ok: true, service: 'chapter-applications', version: 1, schemaVersion: 7,
     columns: CHAPTER_FORM_HEADERS.length, supportedColumns: [CHAPTER_FORM_HEADERS.length, CHAPTER_V6_FORM_COLUMNS.length, CHAPTER_HEADERS.length],
     stagedUploads: 1, maxFileBytes: CHAPTER_MAX_CV_BYTES, maxUploadBytes: 15 * 1024 * 1024,
-    uploadChunkBytes: CHAPTER_UPLOAD_CHUNK_BYTES });
+    uploadChunkBytes: CHAPTER_UPLOAD_CHUNK_BYTES, videoApplications: 1, maxVideoBytes: CHAPTER_VIDEO_MAX_BYTES });
 }
 
 function doPost(event) {
@@ -80,6 +93,13 @@ function doPost(event) {
       }
       chapterPrivateFolder_(config.folderId);
       return chapterJson_(chapterUploadStage_(config, parsed));
+    }
+    if (parsed && typeof parsed.operation === 'string' && parsed.operation.indexOf('video-') === 0) {
+      lock = LockService.getScriptLock();
+      locked = lock.tryLock(25000);
+      chapterAssert_(locked, 'BUSY_RETRY');
+      chapterPrivateFolder_(config.folderId);
+      return chapterJson_(chapterVideo_(config, parsed));
     }
     const payload = chapterValidatePayload_(parsed);
 
@@ -289,6 +309,139 @@ function chapterUploadStage_(config, payload) {
   const bytes = response.getContent();
   chapterAssert_(bytes.length === expectedSize && chapterUploadDigest_(bytes) === part.sha256, 'UPLOAD_STAGE_CONFLICT');
   return { ok: true, sessionId: payload.sessionId, index: index, base64: Utilities.base64Encode(bytes) };
+}
+
+/**
+ * Video applications. The website asks for a private resumable Drive upload,
+ * the applicant's browser sends the video directly to Google (up to 100 MB),
+ * and a second signed call verifies that exact file before writing the row.
+ */
+function chapterVideo_(config, payload) {
+  chapterAssert_(payload.version === 1, 'INVALID_VERSION');
+  const properties = PropertiesService.getScriptProperties();
+  const now = Date.now();
+  if (payload.operation === 'video-upload-start') {
+    chapterKeys_(payload, ['operation', 'version', 'session']);
+    const session = payload.session;
+    chapterKeys_(session, ['id', 'name', 'mime', 'size', 'origin', 'clientKey', 'source']);
+    chapterText_(session.name, 200, 1);
+    chapterAssert_(chapterUploadUuid_(session.id) && chapterUploadHash_(session.clientKey) &&
+      Number.isSafeInteger(session.size) && session.size > 0 && session.size <= CHAPTER_VIDEO_MAX_BYTES &&
+      Object.prototype.hasOwnProperty.call(CHAPTER_VIDEO_TYPES, session.mime) &&
+      !/[\\/\x00-\x1f\x7f]/.test(session.name) && session.name.toLowerCase().endsWith(CHAPTER_VIDEO_TYPES[session.mime]) &&
+      typeof session.origin === 'string' && session.origin.length <= 200 &&
+      /^(https:\/\/[a-z0-9.-]+|http:\/\/(?:127\.0\.0\.1|localhost))(?::\d{1,5})?$/.test(session.origin) &&
+      session.source === 'Jobstreet Croatia', 'INVALID_VIDEO');
+    chapterVideoCleanup_(config, properties, now);
+    const key = CHAPTER_VIDEO_PREFIX + session.id;
+    chapterAssert_(!properties.getProperty(key), 'VIDEO_SESSION_CONFLICT');
+    const all = properties.getProperties();
+    const recent = Object.keys(all).filter(function (name) { return name.indexOf(CHAPTER_VIDEO_PREFIX) === 0; })
+      .map(function (name) { return chapterParse_(all[name]); });
+    const lastHour = recent.filter(function (record) { return record.createdAt > now - 60 * 60 * 1000; });
+    chapterAssert_(recent.length < 300 && lastHour.length < 60 &&
+      lastHour.filter(function (record) { return record.clientKey === session.clientKey; }).length < 6, 'VIDEO_RATE_LIMIT');
+    // A pre-allocated ID lets the submit step and cleanup find this exact file.
+    const generated = chapterGoogleJson_('https://www.googleapis.com/drive/v3/files/generateIds?count=1&space=drive&type=files', {}, 'RECEIVER_ERROR');
+    chapterAssert_(Array.isArray(generated.ids) && generated.ids.length === 1 &&
+      typeof generated.ids[0] === 'string' && /^[A-Za-z0-9_-]{10,200}$/.test(generated.ids[0]), 'RECEIVER_ERROR');
+    const record = { id: session.id, fileId: generated.ids[0], name: session.name, mime: session.mime, size: session.size,
+      clientKey: session.clientKey, createdAt: now, completed: false };
+    properties.setProperty(key, JSON.stringify(record));
+    // The Origin header makes Google accept the browser's cross-origin upload to this session.
+    const response = chapterGoogleFetch_('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id', {
+      method: 'post', contentType: 'application/json; charset=UTF-8', headers: {
+        'X-Upload-Content-Type': session.mime, 'X-Upload-Content-Length': String(session.size), Origin: session.origin
+      }, payload: JSON.stringify({ id: record.fileId, name: 'Video application ' + session.id + ' — ' + session.name,
+        mimeType: session.mime, parents: [config.folderId], appProperties: { chapterVideoSessionId: session.id } })
+    }, 'RECEIVER_ERROR');
+    const headers = response.getAllHeaders();
+    const locationKey = Object.keys(headers).find(function (name) { return name.toLowerCase() === 'location'; });
+    const location = locationKey && headers[locationKey];
+    chapterAssert_(typeof location === 'string' && /^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files\?/.test(location), 'RECEIVER_ERROR');
+    return { ok: true, sessionId: session.id, uploadUrl: location };
+  }
+
+  chapterAssert_(payload.operation === 'video-application-submit', 'INVALID_REQUEST');
+  chapterKeys_(payload, ['operation', 'version', 'application']);
+  const application = payload.application;
+  chapterKeys_(application, ['id', 'reference', 'submittedAt', 'fullName', 'age', 'nationality', 'jobTitle',
+    'experienceYears', 'whatsapp', 'telegram', 'durationSeconds', 'consent', 'source']);
+  [['fullName', 120, 2], ['nationality', 60, 2], ['jobTitle', 160, 2], ['whatsapp', 30, 7], ['telegram', 30, 7]]
+    .forEach(function (rule) { chapterText_(application[rule[0]], rule[1], rule[2]); });
+  chapterAssert_(chapterUploadUuid_(application.id) && typeof application.reference === 'string' && /^VA-[A-F0-9]{16}$/.test(application.reference) &&
+    typeof application.submittedAt === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(application.submittedAt) && Number.isFinite(Date.parse(application.submittedAt)) &&
+    Number.isSafeInteger(application.age) && application.age >= 18 && application.age <= 65 &&
+    Number.isSafeInteger(application.experienceYears) && application.experienceYears >= 0 && application.experienceYears <= 50 &&
+    [application.whatsapp, application.telegram].every(function (value) { return /^\+?[\d\s().-]+$/.test(value) && value.replace(/\D/g, '').length >= 7; }) &&
+    (application.durationSeconds === null || Number.isSafeInteger(application.durationSeconds) && application.durationSeconds >= 60 && application.durationSeconds <= 86400) &&
+    application.consent === true && application.source === 'Jobstreet Croatia', 'INVALID_APPLICATION');
+  const sheet = chapterVideoSheet_(config);
+  const existing = chapterFindRow_(sheet, application.id, application.reference);
+  if (existing) return { ok: true, applicationId: application.id, reference: application.reference, row: existing, duplicate: true };
+  const stored = properties.getProperty(CHAPTER_VIDEO_PREFIX + application.id);
+  chapterAssert_(stored, 'VIDEO_SESSION_NOT_FOUND');
+  const record = chapterParse_(stored);
+  chapterAssert_(!record.completed, 'VIDEO_SESSION_CONFLICT');
+  // A resumable upload creates the file only after its final byte arrives.
+  const file = chapterUploadFile_(record.fileId, true);
+  chapterAssert_(file, 'VIDEO_UPLOAD_INCOMPLETE');
+  chapterAssert_(file.id === record.fileId && !file.trashed && !file.driveId && Array.isArray(file.parents) &&
+    file.parents.indexOf(config.folderId) !== -1 && file.mimeType === record.mime && Number(file.size) === record.size &&
+    Number(file.size) <= CHAPTER_VIDEO_MAX_BYTES && file.appProperties && file.appProperties.chapterVideoSessionId === application.id, 'VIDEO_SESSION_CONFLICT');
+  chapterPrivatePermissions_(file.id);
+  const rowNumber = sheet.getLastRow() + 1;
+  if (rowNumber > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), 100);
+  const lastColumn = String.fromCharCode(64 + CHAPTER_VIDEO_HEADERS.length);
+  chapterWriteValues_({ sheetId: config.sheetId, sheetName: CHAPTER_VIDEO_SHEET_NAME }, rowNumber, 'A', lastColumn, [
+    application.id, application.reference, new Date(application.submittedAt).toISOString(), application.fullName,
+    application.age, application.nationality, application.jobTitle, application.experienceYears,
+    application.whatsapp, application.telegram, 'https://drive.google.com/file/d/' + file.id + '/view', file.name,
+    Math.round(Number(file.size) / 1048576 * 10) / 10, application.durationSeconds === null ? '' : application.durationSeconds,
+    'Yes', application.source
+  ]);
+  record.completed = true;
+  properties.setProperty(CHAPTER_VIDEO_PREFIX + application.id, JSON.stringify(record));
+  return { ok: true, applicationId: application.id, reference: application.reference, row: rowNumber, duplicate: false };
+}
+
+/** Creates the Video Applications tab on first use and refuses unexpected headers. */
+function chapterVideoSheet_(config) {
+  const spreadsheet = SpreadsheetApp.openById(config.sheetId);
+  let sheet = spreadsheet.getSheetByName(CHAPTER_VIDEO_SHEET_NAME);
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(CHAPTER_VIDEO_SHEET_NAME);
+    sheet.getRange(1, 1, 1, CHAPTER_VIDEO_HEADERS.length).setValues([CHAPTER_VIDEO_HEADERS.slice()]).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    SpreadsheetApp.flush();
+  }
+  chapterAssert_(sheet.getMaxColumns() >= CHAPTER_VIDEO_HEADERS.length &&
+    sheet.getRange(1, 1, 1, CHAPTER_VIDEO_HEADERS.length).getValues()[0].every(function (header, index) {
+      return header === CHAPTER_VIDEO_HEADERS[index];
+    }), 'HEADER_MISMATCH');
+  return sheet;
+}
+
+/** Trashes (recoverably) videos whose applicant never finished within 24 hours. */
+function chapterVideoCleanup_(config, properties, now) {
+  const all = properties.getProperties();
+  let remaining = 5;
+  Object.keys(all).filter(function (key) { return key.indexOf(CHAPTER_VIDEO_PREFIX) === 0; }).forEach(function (key) {
+    const record = chapterParse_(all[key]);
+    if (record.createdAt > now - CHAPTER_VIDEO_LIFETIME) return;
+    if (!record.completed) {
+      if (remaining <= 0) return;
+      remaining--;
+      const file = chapterUploadFile_(record.fileId, true);
+      if (file && !file.trashed) {
+        chapterAssert_(Array.isArray(file.parents) && file.parents.indexOf(config.folderId) !== -1 &&
+          file.appProperties && file.appProperties.chapterVideoSessionId === record.id, 'VIDEO_SESSION_CONFLICT');
+        chapterGoogleJson_('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(record.fileId) + '?fields=id,trashed',
+          { method: 'patch', contentType: 'application/json', payload: JSON.stringify({ trashed: true }) }, 'RECEIVER_ERROR');
+      }
+    }
+    properties.deleteProperty(key);
+  });
 }
 
 function chapterUploadUuid_(value) {
