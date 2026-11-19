@@ -9,7 +9,7 @@ const secret = "isolated-video-application-test-secret-".repeat(3);
 const folderId = "private-video-fixture-folder";
 const origin = "https://jobs-street.example";
 type DriveFile = { id: string; name: string; mimeType: string; size: string; trashed: boolean; parents: string[]; appProperties: Record<string, string> };
-type Reply = { ok: boolean; code?: string; sessionId?: string; uploadUrl?: string; applicationId?: string; reference?: string; row?: number; duplicate?: boolean };
+type Reply = { ok: boolean; code?: string; sessionId?: string; uploadUrl?: string; photoUploadUrl?: string; applicationId?: string; reference?: string; row?: number; duplicate?: boolean };
 
 function fixture() {
   const properties = new Map([["CHAPTER_WEBHOOK_SECRET", secret], ["CHAPTER_CV_FOLDER_ID", folderId]]);
@@ -31,6 +31,10 @@ function fixture() {
       setFrozenRows: () => undefined,
       getRange: (row: number, column: number, count: number, columns: number) => ({
         getValues: () => Array.from({ length: count }, (_, index) => Array.from({ length: columns }, (_, c) => rows[row - 1 + index]?.[column - 1 + c] ?? "")),
+        setValue: (value: unknown) => {
+          (rows[row - 1] ??= [])[column - 1] = value;
+          return { setFontWeight: () => undefined };
+        },
         setValues: (values: unknown[][]) => {
           values.forEach((value, index) => { rows[row - 1 + index] = value; });
           return { setFontWeight: () => undefined };
@@ -71,7 +75,7 @@ function fixture() {
         state.sheets.get(match[1])![Number(match[2]) - 1] = values;
         return response({ updatedRange: range, updatedRows: 1, updatedColumns: values.length });
       }
-      if (parsed.pathname.endsWith("/files/generateIds")) return response({ ids: [`allocated-video-${++state.allocations}`] });
+      if (parsed.pathname.endsWith("/files/generateIds")) return response({ ids: Array.from({ length: Number(parsed.searchParams.get("count")) }, () => `allocated-video-${++state.allocations}`) });
       if (parsed.pathname.endsWith("/permissions")) return response({ permissions: [{ type: "user", role: "owner" }] });
       if (parsed.searchParams.get("uploadType") === "resumable") {
         state.origins.push(headers.Origin);
@@ -101,16 +105,21 @@ function fixture() {
     return vm.runInContext("doPost(event)", context) as Reply;
   }
   const clientKey = createHash("sha256").update("client").digest("hex");
+  const photo = { name: "face.jpg", mime: "image/jpeg", size: 2_000_000 };
   const start = (overrides: Record<string, unknown> = {}) => {
     const id = randomUUID();
     return { id, reply: post({ operation: "video-upload-start", version: 1, session: {
-      id, name: "welding.mp4", mime: "video/mp4", size: 52_428_800, origin, clientKey, source: "Jobstreet Croatia", ...overrides,
+      id, name: "welding.mp4", mime: "video/mp4", size: 52_428_800, origin, clientKey, source: "Jobstreet Croatia", photo, ...overrides,
     } }) };
   };
-  /** Simulates the browser finishing its direct resumable upload to Google. */
-  const finishUpload = (size = 52_428_800) => {
-    for (const [id, metadata] of state.pending) state.files.set(id, { ...metadata, size: String(size), trashed: false });
-    state.pending.clear();
+  /** Simulates the browser finishing its direct resumable uploads to Google. */
+  const finishUpload = (size = 52_428_800, photoSize = 2_000_000, only?: "video" | "photo") => {
+    for (const [id, metadata] of state.pending) {
+      const part = metadata.appProperties.chapterVideoPart === "photo" ? "photo" : "video";
+      if (only && part !== only) continue;
+      state.files.set(id, { ...metadata, size: String(part === "photo" ? photoSize : size), trashed: false });
+      state.pending.delete(id);
+    }
   };
   const submit = (id: string, overrides: Record<string, unknown> = {}) => post({ operation: "video-application-submit", version: 1, application: {
     id, reference: "VA-0123456789ABCDEF", submittedAt: new Date(state.now).toISOString(), fullName: "Juan Dela Cruz", age: 34,
@@ -126,15 +135,21 @@ test("video receiver opens a private browser upload and records one row only aft
   assert.equal(reply.ok, true);
   assert.equal(reply.sessionId, id);
   assert.match(reply.uploadUrl!, /^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files\?upload_id=allocated-video-1$/);
-  assert.deepEqual(state.origins, [origin], "The browser origin must be bound to the resumable session for CORS");
+  assert.match(reply.photoUploadUrl!, /^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files\?upload_id=allocated-video-2$/);
+  assert.deepEqual(state.origins, [origin, origin], "The browser origin must be bound to both resumable sessions for CORS");
+  assert.equal(state.pending.get("allocated-video-2")!.mimeType, "image/jpeg");
 
   assert.deepEqual(submit(id), { ok: false, code: "VIDEO_UPLOAD_INCOMPLETE" });
+  finishUpload(52_428_800, 2_000_000, "video");
+  assert.deepEqual(submit(id), { ok: false, code: "VIDEO_UPLOAD_INCOMPLETE" }, "A missing photo must block the row");
   finishUpload();
   const saved = submit(id);
   assert.deepEqual(saved, { ok: true, applicationId: id, reference: "VA-0123456789ABCDEF", row: 2, duplicate: false });
   const rows = state.sheets.get("Video Applications")!;
   assert.equal(rows[0][0], "Application ID");
-  assert.equal(rows[0].length, 16);
+  assert.equal(rows[0].length, 17);
+  assert.equal(rows[0][16], "Applicant photo");
+  assert.equal(rows[1][16], "https://drive.google.com/file/d/allocated-video-2/view");
   assert.deepEqual(rows[1].slice(3, 11), ["Juan Dela Cruz", 34, "Filipino", "Welder", 7, "+63 912 345 6789", "+63 912 345 6789",
     "https://drive.google.com/file/d/allocated-video-1/view"]);
   assert.equal(rows[1][12], 50);
@@ -148,6 +163,9 @@ test("video receiver rejects oversized, unsupported or mismatched videos", () =>
   assert.deepEqual(start({ size: 100 * 1024 * 1024 + 1 }).reply, { ok: false, code: "INVALID_VIDEO" });
   assert.deepEqual(start({ name: "work.exe", mime: "video/mp4" }).reply, { ok: false, code: "INVALID_VIDEO" });
   assert.deepEqual(start({ origin: "javascript:alert(1)" }).reply, { ok: false, code: "INVALID_VIDEO" });
+  assert.deepEqual(start({ photo: { name: "face.gif", mime: "image/gif", size: 1000 } }).reply, { ok: false, code: "INVALID_PHOTO" });
+  assert.deepEqual(start({ photo: { name: "face.png", mime: "image/jpeg", size: 1000 } }).reply, { ok: false, code: "INVALID_PHOTO" });
+  assert.deepEqual(start({ photo: { name: "face.jpg", mime: "image/jpeg", size: 10 * 1024 * 1024 + 1 } }).reply, { ok: false, code: "INVALID_PHOTO" });
   const { id } = start();
   finishUpload(1024);
   assert.deepEqual(submit(id), { ok: false, code: "VIDEO_SESSION_CONFLICT" });
@@ -166,4 +184,22 @@ test("video receiver limits upload sessions per client and trashes abandoned upl
   state.now += 25 * 60 * 60 * 1000;
   assert.equal(start().reply.ok, true);
   assert.equal(state.files.get(firstFile)!.trashed, true);
+});
+
+test("video receiver upgrades the earlier 16-column tab and still accepts sessions without a photo", () => {
+  const { state, start, finishUpload, submit } = fixture();
+  const oldHeaders = ["Application ID", "Reference", "Submitted at (UTC)", "Complete name", "Age", "Nationality",
+    "Position applying for", "Years of experience", "WhatsApp number", "Telegram number",
+    "Work video", "Video file", "Video size (MB)", "Video length (seconds)", "Terms and privacy accepted", "Application source"];
+  state.sheets.set("Video Applications", [oldHeaders.slice(), ["earlier-row", "VA-AAAAAAAAAAAAAAAA"]]);
+  const { id, reply } = start({ photo: undefined });
+  assert.equal(reply.ok, true);
+  assert.equal(reply.photoUploadUrl, undefined);
+  finishUpload();
+  const saved = submit(id);
+  assert.equal(saved.ok, true);
+  assert.equal(saved.row, 3);
+  const rows = state.sheets.get("Video Applications")!;
+  assert.deepEqual(rows[0], [...oldHeaders, "Applicant photo"]);
+  assert.equal(rows[2][16], "");
 });

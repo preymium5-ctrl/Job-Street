@@ -52,4 +52,21 @@ export const videoFileSchema = z.object({
 
 export type VideoFileInput = z.infer<typeof videoFileSchema>;
 
+export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+export const PHOTO_ACCEPT = "image/jpeg,image/png,.jpg,.jpeg,.png";
+const photoTypes: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png" };
+
+export function photoMimeType(name: string): string | undefined {
+  const extension = /\.([a-z0-9]+)$/i.exec(name)?.[1].toLowerCase();
+  return extension ? photoTypes[extension] : undefined;
+}
+
+export const photoFileSchema = z.object({
+  name: z.string().min(1).max(200).refine((value) => !/[\\/\x00-\x1f\x7f]/.test(value) && Boolean(photoMimeType(value)),
+    "Choose a JPG or PNG photo."),
+  size: z.number().int().min(1, "Choose a photo that is not empty.").max(MAX_PHOTO_BYTES, "Choose a photo no larger than 10 MB."),
+}).strict();
+
+export type PhotoFileInput = z.infer<typeof photoFileSchema>;
+
 export const SESSION_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;

@@ -5,7 +5,7 @@ import path from "node:path";
 import { dataDirectory, localModeAllowed } from "./db";
 import { usesGoogleApplicationStorage } from "./google-application-storage";
 import { sheetsConfiguration, signedSheetsBody, type SheetsPayload } from "./sheets-transport";
-import { MAX_VIDEO_BYTES, SESSION_ID, VIDEO_CHUNK_BYTES, videoMimeType, type VideoApplicationDetails, type VideoFileInput } from "./video-application";
+import { MAX_PHOTO_BYTES, MAX_VIDEO_BYTES, photoMimeType, SESSION_ID, VIDEO_CHUNK_BYTES, videoMimeType, type PhotoFileInput, type VideoApplicationDetails, type VideoFileInput } from "./video-application";
 
 const SOURCE = "Jobstreet Croatia";
 const LOCAL_SESSION_LIFETIME_MS = 24 * 60 * 60 * 1000;
@@ -80,7 +80,8 @@ function clientKey(clientAddress: string) {
 
 /* ---------------- Local preview storage (.data/video-applications) ---------------- */
 
-interface LocalSession { id: string; name: string; mime: string; size: number; createdAt: number; reference?: string; }
+/** A video session links the applicant photo, which has its own upload session. */
+interface LocalSession { id: string; name: string; mime: string; size: number; createdAt: number; reference?: string; photoId?: string; }
 const localRoot = () => path.join(dataDirectory(), "video-applications");
 const sessionPath = (id: string) => path.join(localRoot(), "sessions", `${id}.json`);
 const partPath = (id: string) => path.join(localRoot(), "uploads", `${id}.part`);
@@ -127,25 +128,31 @@ export async function writeLocalVideoChunk(id: string, contentRange: string | nu
 
 /* ---------------- Public operations used by the API route ---------------- */
 
-export async function startVideoUpload(video: VideoFileInput, origin: string, clientAddress: string) {
+const googleUploadUrl = (value: unknown): value is string =>
+  typeof value === "string" && value.startsWith("https://www.googleapis.com/upload/drive/v3/files?");
+
+export async function startVideoUpload(video: VideoFileInput, photo: PhotoFileInput, origin: string, clientAddress: string) {
   const mode = videoStorageMode();
   const mime = videoMimeType(video.name);
-  if (mode === "unavailable" || !mime) throw new VideoApplicationError(mode === "unavailable" ? "UNAVAILABLE" : "INVALID");
+  const photoMime = photoMimeType(photo.name);
+  if (mode === "unavailable" || !mime || !photoMime) throw new VideoApplicationError(mode === "unavailable" ? "UNAVAILABLE" : "INVALID");
   const id = randomUUID();
   if (mode === "local") {
     await mkdir(path.dirname(sessionPath(id)), { recursive: true });
     await mkdir(path.dirname(partPath(id)), { recursive: true });
-    const session: LocalSession = { id, name: video.name, mime, size: video.size, createdAt: Date.now() };
-    await writeFile(sessionPath(id), JSON.stringify(session));
-    return { sessionId: id, uploadUrl: `/api/video-applications/upload/${id}` };
+    const photoId = randomUUID();
+    const now = Date.now();
+    await writeFile(sessionPath(photoId), JSON.stringify({ id: photoId, name: photo.name, mime: photoMime, size: photo.size, createdAt: now } satisfies LocalSession));
+    await writeFile(sessionPath(id), JSON.stringify({ id, name: video.name, mime, size: video.size, createdAt: now, photoId } satisfies LocalSession));
+    return { sessionId: id, uploadUrl: `/api/video-applications/upload/${id}`, photoUploadUrl: `/api/video-applications/upload/${photoId}` };
   }
   const reply = await receiver({ operation: "video-upload-start", version: 1, session: {
     id, name: video.name, mime, size: video.size, origin, clientKey: clientKey(clientAddress), source: SOURCE,
+    photo: { name: photo.name, mime: photoMime, size: photo.size },
   } });
-  const uploadUrl = reply.uploadUrl;
-  if (reply.sessionId !== id || typeof uploadUrl !== "string" || !uploadUrl.startsWith("https://www.googleapis.com/upload/drive/v3/files?"))
+  if (reply.sessionId !== id || !googleUploadUrl(reply.uploadUrl) || !googleUploadUrl(reply.photoUploadUrl))
     throw new VideoApplicationError("UNAVAILABLE");
-  return { sessionId: id, uploadUrl };
+  return { sessionId: id, uploadUrl: reply.uploadUrl, photoUploadUrl: reply.photoUploadUrl };
 }
 
 function googleReference(sessionId: string) {
@@ -153,7 +160,7 @@ function googleReference(sessionId: string) {
     .update(`video-application-v1\0${sessionId}`).digest("hex").slice(0, 16).toUpperCase()}`;
 }
 
-export async function completeVideoApplication(sessionId: string, details: VideoApplicationDetails, video: VideoFileInput, jobTitle: string) {
+export async function completeVideoApplication(sessionId: string, details: VideoApplicationDetails, video: VideoFileInput, photo: PhotoFileInput, jobTitle: string) {
   if (!SESSION_ID.test(sessionId)) throw new VideoApplicationError("INVALID");
   const mode = videoStorageMode();
   if (mode === "unavailable") throw new VideoApplicationError("UNAVAILABLE");
@@ -171,16 +178,23 @@ export async function completeVideoApplication(sessionId: string, details: Video
   }
   const session = await readLocalSession(sessionId);
   if (session.reference) return { reference: session.reference, jobTitle, duplicate: true };
-  if (session.name !== video.name || session.size !== video.size) throw new VideoApplicationError("CONFLICT");
-  if (await receivedBytes(sessionId) !== session.size || session.size > MAX_VIDEO_BYTES) throw new VideoApplicationError("INCOMPLETE");
+  if (session.name !== video.name || session.size !== video.size || !session.photoId) throw new VideoApplicationError("CONFLICT");
+  const photoSession = await readLocalSession(session.photoId);
+  if (photoSession.name !== photo.name || photoSession.size !== photo.size) throw new VideoApplicationError("CONFLICT");
+  if (await receivedBytes(sessionId) !== session.size || session.size > MAX_VIDEO_BYTES ||
+    await receivedBytes(session.photoId) !== photoSession.size || photoSession.size > MAX_PHOTO_BYTES)
+    throw new VideoApplicationError("INCOMPLETE");
   const reference = `VA-${randomBytes(8).toString("hex").toUpperCase()}`;
   const folder = path.join(localRoot(), "applications", reference);
   await mkdir(folder, { recursive: true });
   const extension = path.extname(session.name).toLowerCase();
+  const photoExtension = path.extname(photoSession.name).toLowerCase();
   await rename(partPath(sessionId), path.join(folder, `work-video${extension}`));
+  await rename(partPath(session.photoId), path.join(folder, `photo${photoExtension}`));
   await writeFile(path.join(folder, "application.json"), JSON.stringify({
     reference, sessionId, submittedAt, ...details, jobTitle,
     video: { originalName: session.name, mime: session.mime, size: session.size, durationSeconds: video.durationSeconds, file: `work-video${extension}` },
+    photo: { originalName: photoSession.name, mime: photoSession.mime, size: photoSession.size, file: `photo${photoExtension}` },
   }, null, 2));
   await writeFile(sessionPath(sessionId), JSON.stringify({ ...session, reference }));
   return { reference, jobTitle, duplicate: false };

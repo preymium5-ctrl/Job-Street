@@ -20,12 +20,20 @@ limit, so they never pass through the website server:
    with its header row on first use; the **Applications** tab is not changed.
    Retries return the original row and reference.
 
-Uploads that are never submitted are moved to Drive Trash (recoverable) after
-24 hours. Public health now also advertises `videoApplications: 1` and
-`maxVideoBytes: 104857600`.
+Since receiver **Version 23** (19 November 2026) the form also requires a
+clear applicant photo (JPG or PNG, up to 10 MB). `video-upload-start` accepts an
+optional `photo` entry and opens a second private resumable upload for it; the
+submit step verifies both files and writes the photo link to **Applicant photo**
+(column Q). A tab created before that version gains the header automatically;
+earlier rows keep a blank photo cell. Sessions without a photo are still
+accepted so a website deployed before the receiver keeps working.
 
-Published as receiver **Version 22** on 19 November 2026 (same deployment and
-`/exec` URL). The checked-in `Code.gs` now matches that live version exactly,
+Uploads that are never submitted (video and photo) are moved to Drive Trash
+(recoverable) after 24 hours. Public health advertises `videoApplications: 2`,
+`maxVideoBytes: 104857600` and `maxPhotoBytes: 10485760`.
+
+Published as receiver **Version 22** (video) and **Version 23** (photo) on 19 November 2026 (same deployment and
+`/exec` URL). The checked-in `Code.gs` matches live Version 23 exactly,
 including the Driver Applications receiver added on 17 November 2026 from the
 other recruitment website. A browser upload from the website to Google Drive
 was verified against the live receiver before the website was deployed.

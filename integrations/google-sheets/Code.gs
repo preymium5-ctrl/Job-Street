@@ -42,7 +42,8 @@ const CHAPTER_VIDEO_SHEET_NAME = 'Video Applications';
 const CHAPTER_VIDEO_HEADERS = Object.freeze([
   'Application ID', 'Reference', 'Submitted at (UTC)', 'Complete name', 'Age', 'Nationality',
   'Position applying for', 'Years of experience', 'WhatsApp number', 'Telegram number',
-  'Work video', 'Video file', 'Video size (MB)', 'Video length (seconds)', 'Terms and privacy accepted', 'Application source'
+  'Work video', 'Video file', 'Video size (MB)', 'Video length (seconds)', 'Terms and privacy accepted', 'Application source',
+  'Applicant photo'
 ]);
 const CHAPTER_VIDEO_MAX_BYTES = 100 * 1024 * 1024;
 const CHAPTER_VIDEO_PREFIX = 'CHAPTER_VIDEO_SESSION_';
@@ -50,6 +51,8 @@ const CHAPTER_VIDEO_LIFETIME = 24 * 60 * 60 * 1000;
 const CHAPTER_VIDEO_TYPES = Object.freeze({
   'video/mp4': '.mp4', 'video/x-m4v': '.m4v', 'video/quicktime': '.mov', 'video/webm': '.webm', 'video/3gpp': '.3gp'
 });
+const CHAPTER_PHOTO_MAX_BYTES = 10 * 1024 * 1024;
+const CHAPTER_PHOTO_TYPES = Object.freeze({ 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'] });
 
 // Driver-only form: a separate tab so licence/IDP answers never shift the Applications tracker.
 const CHAPTER_DRIVER_HEADERS = Object.freeze([
@@ -73,7 +76,7 @@ function doGet() {
   return chapterJson_({ ok: true, service: 'chapter-applications', version: 1, schemaVersion: 7,
     columns: CHAPTER_FORM_HEADERS.length, supportedColumns: [CHAPTER_FORM_HEADERS.length, CHAPTER_V6_FORM_COLUMNS.length, CHAPTER_HEADERS.length],
     stagedUploads: 1, maxFileBytes: CHAPTER_MAX_CV_BYTES, maxUploadBytes: 15 * 1024 * 1024,
-    uploadChunkBytes: CHAPTER_UPLOAD_CHUNK_BYTES, videoApplications: 1, maxVideoBytes: CHAPTER_VIDEO_MAX_BYTES });
+    uploadChunkBytes: CHAPTER_UPLOAD_CHUNK_BYTES, videoApplications: 2, maxVideoBytes: CHAPTER_VIDEO_MAX_BYTES, maxPhotoBytes: CHAPTER_PHOTO_MAX_BYTES });
 }
 
 function doPost(event) {
@@ -341,9 +344,10 @@ function chapterUploadStage_(config, payload) {
 }
 
 /**
- * Video applications. The website asks for a private resumable Drive upload,
- * the applicant's browser sends the video directly to Google (up to 100 MB),
- * and a second signed call verifies that exact file before writing the row.
+ * Video applications. The website asks for private resumable Drive uploads,
+ * the applicant's browser sends the video (up to 100 MB) and photo (up to
+ * 10 MB) directly to Google, and a second signed call verifies those exact
+ * files before writing the row.
  */
 function chapterVideo_(config, payload) {
   chapterAssert_(payload.version === 1, 'INVALID_VERSION');
@@ -352,7 +356,10 @@ function chapterVideo_(config, payload) {
   if (payload.operation === 'video-upload-start') {
     chapterKeys_(payload, ['operation', 'version', 'session']);
     const session = payload.session;
-    chapterKeys_(session, ['id', 'name', 'mime', 'size', 'origin', 'clientKey', 'source']);
+    const sessionKeys = ['id', 'name', 'mime', 'size', 'origin', 'clientKey', 'source'];
+    // Sessions opened before the photo question have no photo; new ones always do.
+    if (session && Object.prototype.hasOwnProperty.call(session, 'photo')) sessionKeys.push('photo');
+    chapterKeys_(session, sessionKeys);
     chapterText_(session.name, 200, 1);
     chapterAssert_(chapterUploadUuid_(session.id) && chapterUploadHash_(session.clientKey) &&
       Number.isSafeInteger(session.size) && session.size > 0 && session.size <= CHAPTER_VIDEO_MAX_BYTES &&
@@ -361,6 +368,15 @@ function chapterVideo_(config, payload) {
       typeof session.origin === 'string' && session.origin.length <= 200 &&
       /^(https:\/\/[a-z0-9.-]+|http:\/\/(?:127\.0\.0\.1|localhost))(?::\d{1,5})?$/.test(session.origin) &&
       session.source === 'Jobstreet Croatia', 'INVALID_VIDEO');
+    const photo = session.photo;
+    if (photo !== undefined) {
+      chapterKeys_(photo, ['name', 'mime', 'size']);
+      chapterText_(photo.name, 200, 1);
+      chapterAssert_(Object.prototype.hasOwnProperty.call(CHAPTER_PHOTO_TYPES, photo.mime) &&
+        !/[\\/\x00-\x1f\x7f]/.test(photo.name) && CHAPTER_PHOTO_TYPES[photo.mime].some(function (extension) {
+          return photo.name.toLowerCase().endsWith(extension);
+        }) && Number.isSafeInteger(photo.size) && photo.size > 0 && photo.size <= CHAPTER_PHOTO_MAX_BYTES, 'INVALID_PHOTO');
+    }
     chapterVideoCleanup_(config, properties, now);
     const key = CHAPTER_VIDEO_PREFIX + session.id;
     chapterAssert_(!properties.getProperty(key), 'VIDEO_SESSION_CONFLICT');
@@ -370,25 +386,27 @@ function chapterVideo_(config, payload) {
     const lastHour = recent.filter(function (record) { return record.createdAt > now - 60 * 60 * 1000; });
     chapterAssert_(recent.length < 300 && lastHour.length < 60 &&
       lastHour.filter(function (record) { return record.clientKey === session.clientKey; }).length < 6, 'VIDEO_RATE_LIMIT');
-    // A pre-allocated ID lets the submit step and cleanup find this exact file.
-    const generated = chapterGoogleJson_('https://www.googleapis.com/drive/v3/files/generateIds?count=1&space=drive&type=files', {}, 'RECEIVER_ERROR');
-    chapterAssert_(Array.isArray(generated.ids) && generated.ids.length === 1 &&
-      typeof generated.ids[0] === 'string' && /^[A-Za-z0-9_-]{10,200}$/.test(generated.ids[0]), 'RECEIVER_ERROR');
+    // Pre-allocated IDs let the submit step and cleanup find these exact files.
+    const count = photo ? 2 : 1;
+    const generated = chapterGoogleJson_('https://www.googleapis.com/drive/v3/files/generateIds?count=' + count + '&space=drive&type=files', {}, 'RECEIVER_ERROR');
+    chapterAssert_(Array.isArray(generated.ids) && generated.ids.length === count && generated.ids.every(function (id) {
+      return typeof id === 'string' && /^[A-Za-z0-9_-]{10,200}$/.test(id);
+    }) && new Set(generated.ids).size === count, 'RECEIVER_ERROR');
     const record = { id: session.id, fileId: generated.ids[0], name: session.name, mime: session.mime, size: session.size,
       clientKey: session.clientKey, createdAt: now, completed: false };
+    if (photo) {
+      record.photoFileId = generated.ids[1];
+      record.photoName = photo.name;
+      record.photoMime = photo.mime;
+      record.photoSize = photo.size;
+    }
     properties.setProperty(key, JSON.stringify(record));
-    // The Origin header makes Google accept the browser's cross-origin upload to this session.
-    const response = chapterGoogleFetch_('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id', {
-      method: 'post', contentType: 'application/json; charset=UTF-8', headers: {
-        'X-Upload-Content-Type': session.mime, 'X-Upload-Content-Length': String(session.size), Origin: session.origin
-      }, payload: JSON.stringify({ id: record.fileId, name: 'Video application ' + session.id + ' — ' + session.name,
-        mimeType: session.mime, parents: [config.folderId], appProperties: { chapterVideoSessionId: session.id } })
-    }, 'RECEIVER_ERROR');
-    const headers = response.getAllHeaders();
-    const locationKey = Object.keys(headers).find(function (name) { return name.toLowerCase() === 'location'; });
-    const location = locationKey && headers[locationKey];
-    chapterAssert_(typeof location === 'string' && /^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files\?/.test(location), 'RECEIVER_ERROR');
-    return { ok: true, sessionId: session.id, uploadUrl: location };
+    const uploadUrl = chapterVideoUploadSession_(config, session, record.fileId, 'Video application ' + session.id + ' — ' + session.name,
+      session.mime, session.size, 'video');
+    const reply = { ok: true, sessionId: session.id, uploadUrl: uploadUrl };
+    if (photo) reply.photoUploadUrl = chapterVideoUploadSession_(config, session, record.photoFileId,
+      'Video application ' + session.id + ' photo — ' + photo.name, photo.mime, photo.size, 'photo');
+    return reply;
   }
 
   chapterAssert_(payload.operation === 'video-application-submit', 'INVALID_REQUEST');
@@ -413,12 +431,9 @@ function chapterVideo_(config, payload) {
   const record = chapterParse_(stored);
   chapterAssert_(!record.completed, 'VIDEO_SESSION_CONFLICT');
   // A resumable upload creates the file only after its final byte arrives.
-  const file = chapterUploadFile_(record.fileId, true);
-  chapterAssert_(file, 'VIDEO_UPLOAD_INCOMPLETE');
-  chapterAssert_(file.id === record.fileId && !file.trashed && !file.driveId && Array.isArray(file.parents) &&
-    file.parents.indexOf(config.folderId) !== -1 && file.mimeType === record.mime && Number(file.size) === record.size &&
-    Number(file.size) <= CHAPTER_VIDEO_MAX_BYTES && file.appProperties && file.appProperties.chapterVideoSessionId === application.id, 'VIDEO_SESSION_CONFLICT');
-  chapterPrivatePermissions_(file.id);
+  const file = chapterVideoVerifyFile_(config, application.id, record.fileId, record.mime, record.size, CHAPTER_VIDEO_MAX_BYTES);
+  const photoFile = record.photoFileId
+    ? chapterVideoVerifyFile_(config, application.id, record.photoFileId, record.photoMime, record.photoSize, CHAPTER_PHOTO_MAX_BYTES) : null;
   const rowNumber = sheet.getLastRow() + 1;
   if (rowNumber > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), 100);
   const lastColumn = String.fromCharCode(64 + CHAPTER_VIDEO_HEADERS.length);
@@ -427,11 +442,38 @@ function chapterVideo_(config, payload) {
     application.age, application.nationality, application.jobTitle, application.experienceYears,
     application.whatsapp, application.telegram, 'https://drive.google.com/file/d/' + file.id + '/view', file.name,
     Math.round(Number(file.size) / 1048576 * 10) / 10, application.durationSeconds === null ? '' : application.durationSeconds,
-    'Yes', application.source
+    'Yes', application.source, photoFile ? 'https://drive.google.com/file/d/' + photoFile.id + '/view' : ''
   ]);
   record.completed = true;
   properties.setProperty(CHAPTER_VIDEO_PREFIX + application.id, JSON.stringify(record));
   return { ok: true, applicationId: application.id, reference: application.reference, row: rowNumber, duplicate: false };
+}
+
+/** Opens one private resumable upload that the applicant's browser may fill. */
+function chapterVideoUploadSession_(config, session, fileId, name, mime, size, part) {
+  // The Origin header makes Google accept the browser's cross-origin upload to this session.
+  const response = chapterGoogleFetch_('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id', {
+    method: 'post', contentType: 'application/json; charset=UTF-8', headers: {
+      'X-Upload-Content-Type': mime, 'X-Upload-Content-Length': String(size), Origin: session.origin
+    }, payload: JSON.stringify({ id: fileId, name: name, mimeType: mime, parents: [config.folderId],
+      appProperties: part === 'video' ? { chapterVideoSessionId: session.id } : { chapterVideoSessionId: session.id, chapterVideoPart: part } })
+  }, 'RECEIVER_ERROR');
+  const headers = response.getAllHeaders();
+  const locationKey = Object.keys(headers).find(function (key) { return key.toLowerCase() === 'location'; });
+  const location = locationKey && headers[locationKey];
+  chapterAssert_(typeof location === 'string' && /^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files\?/.test(location), 'RECEIVER_ERROR');
+  return location;
+}
+
+/** The exact reserved file must be complete, private and in the applications folder. */
+function chapterVideoVerifyFile_(config, sessionId, fileId, mime, size, maximum) {
+  const file = chapterUploadFile_(fileId, true);
+  chapterAssert_(file, 'VIDEO_UPLOAD_INCOMPLETE');
+  chapterAssert_(file.id === fileId && !file.trashed && !file.driveId && Array.isArray(file.parents) &&
+    file.parents.indexOf(config.folderId) !== -1 && file.mimeType === mime && Number(file.size) === size &&
+    Number(file.size) <= maximum && file.appProperties && file.appProperties.chapterVideoSessionId === sessionId, 'VIDEO_SESSION_CONFLICT');
+  chapterPrivatePermissions_(file.id);
+  return file;
 }
 
 /** Creates the Video Applications tab on first use and refuses unexpected headers. */
@@ -444,14 +486,19 @@ function chapterVideoSheet_(config) {
     sheet.setFrozenRows(1);
     SpreadsheetApp.flush();
   }
-  chapterAssert_(sheet.getMaxColumns() >= CHAPTER_VIDEO_HEADERS.length &&
-    sheet.getRange(1, 1, 1, CHAPTER_VIDEO_HEADERS.length).getValues()[0].every(function (header, index) {
-      return header === CHAPTER_VIDEO_HEADERS[index];
-    }), 'HEADER_MISMATCH');
+  chapterAssert_(sheet.getMaxColumns() >= CHAPTER_VIDEO_HEADERS.length, 'HEADER_MISMATCH');
+  const headers = sheet.getRange(1, 1, 1, CHAPTER_VIDEO_HEADERS.length).getValues()[0];
+  const last = CHAPTER_VIDEO_HEADERS.length - 1;
+  // A tab created before the photo question gains its header in the next column.
+  if (headers[last] === '' && headers.slice(0, last).every(function (header, index) { return header === CHAPTER_VIDEO_HEADERS[index]; })) {
+    sheet.getRange(1, last + 1).setValue(CHAPTER_VIDEO_HEADERS[last]).setFontWeight('bold');
+    headers[last] = CHAPTER_VIDEO_HEADERS[last];
+  }
+  chapterAssert_(headers.every(function (header, index) { return header === CHAPTER_VIDEO_HEADERS[index]; }), 'HEADER_MISMATCH');
   return sheet;
 }
 
-/** Trashes (recoverably) videos whose applicant never finished within 24 hours. */
+/** Trashes (recoverably) uploads whose applicant never finished within 24 hours. */
 function chapterVideoCleanup_(config, properties, now) {
   const all = properties.getProperties();
   let remaining = 5;
@@ -461,13 +508,14 @@ function chapterVideoCleanup_(config, properties, now) {
     if (!record.completed) {
       if (remaining <= 0) return;
       remaining--;
-      const file = chapterUploadFile_(record.fileId, true);
-      if (file && !file.trashed) {
+      [record.fileId, record.photoFileId].filter(Boolean).forEach(function (fileId) {
+        const file = chapterUploadFile_(fileId, true);
+        if (!file || file.trashed) return;
         chapterAssert_(Array.isArray(file.parents) && file.parents.indexOf(config.folderId) !== -1 &&
           file.appProperties && file.appProperties.chapterVideoSessionId === record.id, 'VIDEO_SESSION_CONFLICT');
-        chapterGoogleJson_('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(record.fileId) + '?fields=id,trashed',
+        chapterGoogleJson_('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '?fields=id,trashed',
           { method: 'patch', contentType: 'application/json', payload: JSON.stringify({ trashed: true }) }, 'RECEIVER_ERROR');
-      }
+      });
     }
     properties.deleteProperty(key);
   });

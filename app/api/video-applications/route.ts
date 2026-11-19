@@ -5,7 +5,7 @@ import { rateLimit, sameOrigin } from "@/lib/auth";
 import { getJobById } from "@/lib/repository";
 import { publishedCatalogJobs } from "@/data/catalog";
 import { fieldErrors } from "@/lib/validation";
-import { SESSION_ID, videoApplicationSchema, videoFileSchema } from "@/lib/video-application";
+import { photoFileSchema, SESSION_ID, videoApplicationSchema, videoFileSchema } from "@/lib/video-application";
 import { completeVideoApplication, startVideoUpload, VideoApplicationError, videoStorageMode } from "@/lib/video-application-storage";
 
 export const runtime = "nodejs";
@@ -34,15 +34,17 @@ export async function POST(request: NextRequest) {
       return failure("Use the website application form.", 400);
     const body = await limitedJson(request, 16 * 1024);
     if (!body || typeof body !== "object" || Array.isArray(body)) return failure("Use the website application form.", 400);
-    const { action, details, video, sessionId, website } = body as Record<string, unknown>;
+    const { action, details, video, photo, sessionId, website } = body as Record<string, unknown>;
     if (typeof website === "string" && website.trim()) return failure("The application could not be accepted.", 400);
 
     const parsedDetails = videoApplicationSchema.safeParse(details);
     const parsedVideo = videoFileSchema.safeParse(video);
-    if (!parsedDetails.success || !parsedVideo.success) {
+    const parsedPhoto = photoFileSchema.safeParse(photo);
+    if (!parsedDetails.success || !parsedVideo.success || !parsedPhoto.success) {
       const errors = {
         ...(parsedDetails.success ? {} : fieldErrors(parsedDetails.error)),
         ...(parsedVideo.success ? {} : { video: parsedVideo.error.issues[0]?.message || "Choose a valid video." }),
+        ...(parsedPhoto.success ? {} : { photo: parsedPhoto.error.issues[0]?.message || "Attach a clear photo of yourself." }),
       };
       return failure("Check the highlighted details.", 422, { fieldErrors: errors });
     }
@@ -57,11 +59,11 @@ export async function POST(request: NextRequest) {
       if (mode === "local" && !(await rateLimit(request, "video-application", 10, 3600)))
         throw new VideoApplicationError("RATE_LIMIT");
       const origin = new URL(request.headers.get("origin")!).origin;
-      return json(await startVideoUpload(parsedVideo.data, origin, clientAddress(request)), 201);
+      return json(await startVideoUpload(parsedVideo.data, parsedPhoto.data, origin, clientAddress(request)), 201);
     }
     if (action === "complete") {
       if (typeof sessionId !== "string" || !SESSION_ID.test(sessionId)) return failure("Refresh the form and try again.", 400);
-      const saved = await completeVideoApplication(sessionId, parsedDetails.data, parsedVideo.data, job.title);
+      const saved = await completeVideoApplication(sessionId, parsedDetails.data, parsedVideo.data, parsedPhoto.data, job.title);
       return json({ reference: saved.reference, jobTitle: saved.jobTitle }, saved.duplicate ? 200 : 201);
     }
     return failure("Use the website application form.", 400);
