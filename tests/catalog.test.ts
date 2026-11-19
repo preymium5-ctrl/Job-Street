@@ -576,7 +576,7 @@ test("separating Grinder and Cleaner preserves original links, staff terms and a
 test("additional application positions have complete public listings and retain their application identities", () => {
   const excluded = new Set(["Fabricator", "Welder", "Grinder", "Cleaner", "Other (enter below)", "No other position"]);
   const expectedTitles = [...new Set(additionalPositionOptions)].filter((title) => !excluded.has(title));
-  assert.equal(additionalApplicationJobs.length, 97);
+  assert.equal(additionalApplicationJobs.length, 141);
   assert.deepEqual(additionalApplicationJobs.map(({ title }) => title), expectedTitles);
   assert.deepEqual(Object.keys(applicationJobProfiles).sort(), [...expectedTitles].sort());
   assert.equal(new Set(additionalApplicationJobs.map(({ slug }) => slug)).size, expectedTitles.length);

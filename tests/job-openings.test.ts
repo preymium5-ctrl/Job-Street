@@ -7,8 +7,8 @@ import { jobSchema } from "../lib/validation";
 
 test("directory totals include every new role's slot range and retain existing exact counts", () => {
   const total = getTotalOpeningRange([...proposedJobs, ...additionalApplicationJobs]);
-  assert.deepEqual(total, { min: 35350, max: 127500 });
-  assert.equal(formatOpeningRange(total!), "35,350–127,500");
+  assert.deepEqual(total, { min: 46350, max: 180300 });
+  assert.equal(formatOpeningRange(total!), "46,350–180,300");
   assert.equal(formatOpeningRange(getJobOpeningRange(additionalApplicationJobs[0])!), "250–1,200");
   assert.deepEqual(getJobOpeningRange({ openings: 1150 }), { min: 1150, max: 1150 });
   assert.equal(getJobOpeningRange({}), null);

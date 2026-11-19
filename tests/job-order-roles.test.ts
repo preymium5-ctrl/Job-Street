@@ -5,7 +5,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { publishedCatalogJobs } from "../data/catalog";
 import { jobOrderJobs, jobOrderReleases, printingPressOperatorJob, trailerTruckDriverAgeRequirement, trailerTruckDriverJob } from "../data/job-orders";
-import { jobOrderRolesVersion, migrateJobOrderRoles, trailerTruckDriverCzechVersion } from "../lib/catalog-migration";
+import { applicantRequestedApplicationJobs } from "../data/application-jobs";
+import { applicantRequestedPositionOptions } from "../data/application-options";
+import { applicantRequestedJobsVersion, jobOrderRolesVersion, migrateApplicantRequestedRoles, migrateJobOrderRoles, trailerTruckDriverCzechVersion } from "../lib/catalog-migration";
 import { closeDatabase, getDatabase } from "../lib/db";
 import { jobs, settings } from "../lib/schema";
 import { jobSchema } from "../lib/validation";
@@ -104,4 +106,23 @@ test("the Czech Republic move leaves a staff-chosen trailer truck driver locatio
   await migrateJobOrderRoles(db);
   const [row] = (await db.select().from(jobs)).filter(({ id }) => id === staff.id);
   assert.equal(row.data.location, "Slovenia");
+});
+
+test("roles requested in the PH applicant list are published once and reach existing databases", async () => {
+  assert.equal(applicantRequestedApplicationJobs.length, applicantRequestedPositionOptions.length);
+  assert.ok(applicantRequestedApplicationJobs.some(({ title }) => title === "Fruit Picker"));
+  for (const job of applicantRequestedApplicationJobs) {
+    assert.equal(jobSchema.safeParse(job).success, true, job.title);
+    assert.equal(publishedCatalogJobs.filter(({ title }) => title.toLowerCase() === job.title.toLowerCase()).length, 1, job.title);
+    assert.equal(job.postedAt, "2026-11-19T00:00:00.000Z");
+  }
+  const db = await getDatabase();
+  const staffEdited = { ...applicantRequestedApplicationJobs[0], title: "Staff-reviewed fruit picking role", status: "closed" as const };
+  await db.insert(jobs).values({ id: staffEdited.id, slug: staffEdited.slug, status: staffEdited.status, data: staffEdited });
+  await migrateApplicantRequestedRoles(db);
+  await migrateApplicantRequestedRoles(db);
+  const rows = await db.select().from(jobs);
+  assert.deepEqual(rows.map(({ id }) => id).sort(), applicantRequestedApplicationJobs.map(({ id }) => id).sort());
+  assert.equal(rows.find(({ id }) => id === staffEdited.id)?.data.title, staffEdited.title);
+  assert.equal((await db.select().from(settings)).filter(({ key }) => key === applicantRequestedJobsVersion).length, 1);
 });

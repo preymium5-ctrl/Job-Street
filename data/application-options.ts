@@ -508,6 +508,54 @@ export const currentWorkCountries = [
   "Zimbabwe"
 ] as const;
 
+// Added 19 November 2026 from roles requested in the PH applicant list.
+export const applicantRequestedPositionOptions = [
+  "Fruit Picker",
+  "Sales Associate (Salesman/Saleslady)",
+  "Airport Ground Staff",
+  "B Category Driver (Light Vehicle Driver)",
+  "Taxi Driver",
+  "Medium Truck Driver",
+  "Heavy Truck Driver (Delivery)",
+  "Delivery Helper",
+  "E-bike Delivery Rider",
+  "Aircon Maintenance Man",
+  "Maintenance Man",
+  "Automotive Refrigeration Technician",
+  "Bus Electrician",
+  "Bakery Sales Associate",
+  "Fresh Meat & Fish Sales Associate",
+  "Shelf Stocker/Retail Assistant",
+  "Caterer",
+  "Croupier (Gambling Table Assistant)",
+  "Event Organizer",
+  "Event Support Technician",
+  "Lifeguard",
+  "Pool Cleaner",
+  "Brick Mason",
+  "Plaster Worker",
+  "Exterior and Interior Finisher (Plaster, Facade, Painting)",
+  "Scaffolder",
+  "Glass Installer",
+  "Construction Elements Installer",
+  "Iron Fitter",
+  "Structural Fitter",
+  "Metal Caster",
+  "Crane Operator",
+  "Excavator Operator",
+  "Loader Operator",
+  "Bulldozer Operator",
+  "Jet Pump Operator",
+  "Drilling Machine Operator",
+  "Lathe Machinist",
+  "Milling Machinist",
+  "Digital Printer Operator",
+  "DTF Printer Operator",
+  "Print Finishing Worker",
+  "Yacht Plasticizing Worker",
+  "Dental Hygienist",
+] as const;
+
 export const additionalPositionOptions = [
   "Waiter/Waitress",
   "Production worker (Concrete Molder)",
@@ -610,6 +658,7 @@ export const additionalPositionOptions = [
   "Dental Technician (CAD/ CAM Designer)",
   "Sales Executive/ Medical Tourism",
   "Dishwasher",
+  ...applicantRequestedPositionOptions,
   "Other (enter below)",
   "No other position"
 ] as const;

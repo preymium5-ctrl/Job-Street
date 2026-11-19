@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { proposedJobs, proposalV1Jobs, previousRecruitmentJobs, previousCombinedFinishingJob } from "../data/jobs";
-import { additionalApplicationJobs } from "../data/application-jobs";
+import { additionalApplicationJobs, applicantRequestedApplicationJobs } from "../data/application-jobs";
 import { jobOrderReleases, trailerTruckDriverJob } from "../data/job-orders";
 import { getJobFairRole, jobFair } from "../data/job-fair";
 import { maximumAgeRequirement, minimumExperienceRequirement } from "../data/employment";
@@ -20,6 +20,7 @@ export const maximumAgeRequirementVersion = "maximum-age-requirement-2026-10-16-
 export const finishingJobsVersion = "separate-grinder-cleaner-2026-10-20-v1";
 export const additionalApplicationJobsVersion = "additional-application-jobs-2026-10-20-v1";
 export const additionalJobListingsVersion = "additional-job-listings-2026-10-21-v1";
+export const applicantRequestedJobsVersion = "applicant-requested-roles-2026-11-19-v1";
 export const jobOrderRolesVersion = jobOrderReleases[0].version;
 export const trailerTruckDriverCzechVersion = "trailer-truck-driver-czech-republic-age-50-2026-11-07-v1";
 export const legacyExampleJobIds = [
@@ -99,6 +100,12 @@ export async function migrateProposedJobCatalog(db: Database) {
   await migrateAdditionalApplicationJobs(db);
   await migrateAdditionalJobListings(db);
   await migrateJobOrderRoles(db);
+  await migrateApplicantRequestedRoles(db);
+}
+
+/** Databases that already ran the original additional-roles migration still need the 19 November 2026 roles. */
+export async function migrateApplicantRequestedRoles(db: Database) {
+  await migrateJobOrderRelease(db, applicantRequestedJobsVersion, applicantRequestedApplicationJobs, "catalog.applicant-requested-roles-added");
 }
 
 /** Add each received job order once, preserving any staff record with the same ID or URL. */
@@ -128,7 +135,7 @@ export async function migrateTrailerTruckDriverToCzechRepublic(db: Database) {
   });
 }
 
-async function migrateJobOrderRelease(db: Database, version: string, releaseJobs: Job[]) {
+async function migrateJobOrderRelease(db: Database, version: string, releaseJobs: Job[], action = "catalog.job-order-roles-published") {
   await db.transaction(async (tx) => {
     if (process.env.DATABASE_URL) await tx.execute(sql`SELECT pg_advisory_xact_lock(621349133)`);
     const [applied] = await tx.select().from(settings).where(eq(settings.key, version));
@@ -143,7 +150,7 @@ async function migrateJobOrderRelease(db: Database, version: string, releaseJobs
     }
     await tx.insert(settings).values({ key: version, value: new Date().toISOString() });
     await tx.insert(audits).values({
-      id: randomUUID(), actorId: "system:catalog-migration", action: "catalog.job-order-roles-published",
+      id: randomUUID(), actorId: "system:catalog-migration", action,
       targetId: version, details: { addedIds },
     });
   });

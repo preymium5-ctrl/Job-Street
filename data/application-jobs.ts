@@ -1,5 +1,5 @@
 import type { Job } from "@/lib/types";
-import { additionalPositionOptions, destinationCountries } from "./application-options";
+import { additionalPositionOptions, applicantRequestedPositionOptions, destinationCountries } from "./application-options";
 import { applicationJobCategories, applicationJobProfiles } from "./application-job-profiles";
 import { minimumExperienceRequirement, recruitmentBenefits } from "./employment";
 
@@ -17,6 +17,8 @@ const excludedPositions = new Set<string>([
 function positionSlug(title: string): string {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
+
+const applicantRequestedTitles = new Set<string>(applicantRequestedPositionOptions);
 
 export const additionalApplicationJobs: Job[] = [...new Set(additionalPositionOptions)]
   .filter((title) => !excludedPositions.has(title))
@@ -41,7 +43,7 @@ export const additionalApplicationJobs: Job[] = [...new Set(additionalPositionOp
       experience: "Minimum 3 years of relevant work experience",
       image: category.image,
       imageAlt: `AI-generated illustration of a Filipino male worker in ${category.name.toLowerCase()}`,
-      postedAt: "2026-10-21T00:00:00.000Z",
+      postedAt: applicantRequestedTitles.has(title) ? "2026-11-19T00:00:00.000Z" : "2026-10-21T00:00:00.000Z",
       status: "published",
       isExample: false,
       featured: false,
@@ -50,6 +52,9 @@ export const additionalApplicationJobs: Job[] = [...new Set(additionalPositionOp
       openingsRange: { min: 250, max: 1200 },
     };
   });
+
+/** Roles added on 19 November 2026 from the positions requested in the PH applicant list. */
+export const applicantRequestedApplicationJobs = additionalApplicationJobs.filter(({ title }) => applicantRequestedTitles.has(title));
 
 const additionalApplicationJobIds = new Set(additionalApplicationJobs.map((job) => job.id));
 
