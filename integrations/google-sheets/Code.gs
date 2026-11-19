@@ -31,7 +31,7 @@ const CHAPTER_REFERRAL_SOURCES = Object.freeze([
 const CHAPTER_SHEET_ID = '1v9-lAvpJPUCxCqr03EkVwKKAfedEDtckHir4ro6cyeU';
 const CHAPTER_MAX_CV_BYTES = 5 * 1024 * 1024;
 const CHAPTER_MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;
-const CHAPTER_MAX_BODY_CHARS = 23000000;
+const CHAPTER_MAX_BODY_CHARS = 42000000;
 const CHAPTER_UPLOAD_CHUNK_BYTES = 2 * 1024 * 1024;
 const CHAPTER_UPLOAD_STAGE_PREFIX = 'CHAPTER_UPLOAD_STAGE_';
 const CHAPTER_UPLOAD_STAGE_LIFETIME = 60 * 60 * 1000;
@@ -50,6 +50,23 @@ const CHAPTER_VIDEO_LIFETIME = 24 * 60 * 60 * 1000;
 const CHAPTER_VIDEO_TYPES = Object.freeze({
   'video/mp4': '.mp4', 'video/x-m4v': '.m4v', 'video/quicktime': '.mov', 'video/webm': '.webm', 'video/3gpp': '.3gp'
 });
+
+// Driver-only form: a separate tab so licence/IDP answers never shift the Applications tracker.
+const CHAPTER_DRIVER_HEADERS = Object.freeze([
+  'Application ID', 'Reference', 'Submitted at (UTC)', 'Form', 'Full name', 'First name', 'Last name',
+  'Email', 'WhatsApp number', 'Telegram number', 'Date of birth', 'Current country', 'Current city / province',
+  'Driver position', 'Destination country', 'Licence categories', 'Philippine licence expiry',
+  'Driving experience (years)', 'Has International Driving Permit', 'IDP expiry',
+  'Meets Czech requirement (C + CE + IDP)', 'Agrees to share documents with Tenda Dom',
+  'Licence front', 'Licence back', 'IDP pages', 'CV document',
+  'English proficiency', 'Where did you find us?', 'Terms accepted', 'Privacy consent'
+]);
+const CHAPTER_DRIVER_LICENSE_CATEGORIES = ['A', 'A1', 'B', 'B1', 'B2', 'BE', 'C', 'CE', 'D'];
+// Files per upload box. Earlier single-file names (license-front, idp-N) remain accepted.
+const CHAPTER_DRIVER_FILE_LIMITS = Object.freeze({ 'license-front': 3, 'license-back': 3, 'idp': 20 });
+const CHAPTER_DRIVER_MAX_FILES = 27; // every box at its limit, plus one CV
+const CHAPTER_DRIVER_MAX_FILE_BYTES = 10 * 1024 * 1024;
+const CHAPTER_DRIVER_MAX_TOTAL_BYTES = 30 * 1024 * 1024;
 
 /** Public health response intentionally exposes no configuration or applicant data. */
 function doGet() {
@@ -100,6 +117,18 @@ function doPost(event) {
       chapterAssert_(locked, 'BUSY_RETRY');
       chapterPrivateFolder_(config.folderId);
       return chapterJson_(chapterVideo_(config, parsed));
+    }
+    if (parsed && parsed.kind === 'driver-application') {
+      const driverPayload = chapterValidateDriverPayload_(parsed);
+      chapterPrivateFolder_(config.folderId);
+      // Store up to 30 MB of files before taking the writer lock, so a large
+      // driver upload never blocks other applicants. Files are found again by
+      // their private IDs, so a retry reuses them instead of uploading twice.
+      const links = chapterPrepareDriverApplication_(config, driverPayload);
+      lock = LockService.getScriptLock();
+      locked = lock.tryLock(25000);
+      chapterAssert_(locked, 'BUSY_RETRY');
+      return chapterJson_(chapterSaveDriverApplication_(config, driverPayload, links));
     }
     const payload = chapterValidatePayload_(parsed);
 
@@ -217,9 +246,9 @@ function chapterUploadStage_(config, payload) {
     const manifest = payload.manifest;
     chapterKeys_(manifest, ['id', 'idempotencyKey', 'size', 'chunkSize', 'chunkCount', 'sha256', 'contentType', 'expiresAt', 'source', 'emailKey', 'clientKey']);
     chapterAssert_(chapterUploadUuid_(manifest.id) && chapterUploadUuid_(manifest.idempotencyKey) &&
-      Number.isSafeInteger(manifest.size) && manifest.size > 0 && manifest.size <= 16 * 1024 * 1024 &&
+      Number.isSafeInteger(manifest.size) && manifest.size > 0 && manifest.size <= 32 * 1024 * 1024 &&
       manifest.chunkSize === CHAPTER_UPLOAD_CHUNK_BYTES && Number.isSafeInteger(manifest.chunkCount) &&
-      manifest.chunkCount === Math.ceil(manifest.size / CHAPTER_UPLOAD_CHUNK_BYTES) && manifest.chunkCount <= 8 &&
+      manifest.chunkCount === Math.ceil(manifest.size / CHAPTER_UPLOAD_CHUNK_BYTES) && manifest.chunkCount <= 16 &&
       chapterUploadHash_(manifest.sha256) && chapterUploadHash_(manifest.emailKey) && chapterUploadHash_(manifest.clientKey) &&
       typeof manifest.contentType === 'string' && manifest.contentType.length <= 160 &&
       /^multipart\/form-data;\s*boundary=(?:[A-Za-z0-9'()+_,./:=?-]{1,70}|"[A-Za-z0-9'()+_,./:=?-]{1,70}")$/.test(manifest.contentType) &&
@@ -910,6 +939,214 @@ function chapterValidatePayload_(payload) {
   return { version: payload.version, application: application, resume: resume, bytes: bytes, documents: validated };
 }
 
+function chapterValidateDriverPayload_(payload) {
+  chapterKeys_(payload, ['kind', 'version', 'application', 'documents']);
+  chapterAssert_(payload.version === 1, 'INVALID_VERSION');
+  const application = payload.application;
+  chapterKeys_(application, ['id', 'reference', 'submittedAt', 'form', 'jobId', 'jobTitle', 'firstName', 'lastName', 'fullName',
+    'email', 'phone', 'telegram', 'dateOfBirth', 'currentCountry', 'currentLocation', 'destinationCountry', 'licenseCategories',
+    'licenseExpiry', 'drivingExperienceYears', 'hasIdp', 'idpExpiry', 'meetsCzechRequirement', 'shareWithTendaDom',
+    'englishProficiency', 'referralSource', 'termsAccepted', 'consent', 'applicationSource']);
+  [['id', 100, 1], ['reference', 80, 1], ['form', 80, 2], ['jobId', 100, 1], ['jobTitle', 160, 2], ['firstName', 60, 1],
+    ['lastName', 60, 1], ['fullName', 121, 3], ['email', 254, 3], ['phone', 30, 7], ['telegram', 80, 0], ['currentCountry', 80, 2],
+    ['currentLocation', 140, 1], ['destinationCountry', 80, 2], ['licenseCategories', 60, 1], ['idpExpiry', 10, 0],
+    ['referralSource', 80, 1], ['applicationSource', 80, 1]
+  ].forEach(function (rule) { chapterText_(application[rule[0]], rule[1], rule[2]); });
+  chapterAssert_(/^dr-[a-f0-9-]{36}$/.test(application.id) && /^DR-[A-F0-9]{24}$/.test(application.reference) &&
+    application.applicationSource === 'Jobs in Croatia', 'INVALID_APPLICATION');
+  chapterAssert_(typeof application.submittedAt === 'string' && application.submittedAt.length <= 35 &&
+    /^\d{4}-\d{2}-\d{2}T/.test(application.submittedAt) && Number.isFinite(Date.parse(application.submittedAt)), 'INVALID_APPLICATION');
+  chapterAssert_(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(application.email) && /^[+\d\s().-]+$/.test(application.phone) &&
+    application.phone.replace(/\D/g, '').length >= 7, 'INVALID_APPLICATION');
+  ['dateOfBirth', 'licenseExpiry'].forEach(function (key) { chapterAssert_(chapterIsoDate_(application[key]), 'INVALID_APPLICATION'); });
+  chapterAssert_(application.idpExpiry === '' || chapterIsoDate_(application.idpExpiry), 'INVALID_APPLICATION');
+  chapterAssert_(application.licenseCategories.split(', ').every(function (category) {
+    return CHAPTER_DRIVER_LICENSE_CATEGORIES.indexOf(category) !== -1;
+  }), 'INVALID_APPLICATION');
+  chapterAssert_(Number.isSafeInteger(application.drivingExperienceYears) && application.drivingExperienceYears >= 0 &&
+    application.drivingExperienceYears <= 50, 'INVALID_APPLICATION');
+  ['hasIdp', 'meetsCzechRequirement', 'shareWithTendaDom', 'englishProficiency'].forEach(function (key) {
+    chapterAssert_(application[key] === 'Yes' || application[key] === 'No', 'INVALID_APPLICATION');
+  });
+  chapterAssert_(CHAPTER_REFERRAL_SOURCES.indexOf(application.referralSource) !== -1 &&
+    application.termsAccepted === true && application.consent === true, 'INVALID_APPLICATION');
+  const documents = payload.documents;
+  const allowed = ['cv', 'license-front', 'license-back'];
+  Object.keys(CHAPTER_DRIVER_FILE_LIMITS).forEach(function (base) {
+    for (let index = 1; index <= CHAPTER_DRIVER_FILE_LIMITS[base]; index++) allowed.push(base + '-' + index);
+  });
+  chapterAssert_(Array.isArray(documents) && documents.length <= CHAPTER_DRIVER_MAX_FILES, 'INVALID_DOCUMENT');
+  const categories = {};
+  let totalBytes = 0;
+  documents.forEach(function (document) {
+    chapterKeys_(document, ['id', 'category', 'name', 'mime', 'base64']);
+    chapterAssert_(allowed.indexOf(document.category) !== -1 && !categories[document.category] &&
+      document.id === application.id + '-' + document.category, 'INVALID_DOCUMENT');
+    categories[document.category] = true;
+    // Decode only to check the file; it is decoded again just before storage,
+    // so 30 MB of files is never held in memory at once.
+    totalBytes += chapterValidateFile_(document, chapterDriverFileLimit_(document), document.category !== 'cv').length;
+    chapterAssert_(totalBytes <= CHAPTER_DRIVER_MAX_TOTAL_BYTES, 'INVALID_DOCUMENT');
+  });
+  chapterAssert_((categories['license-front'] || categories['license-front-1']) &&
+    (categories['license-back'] || categories['license-back-1']), 'INVALID_DOCUMENT');
+  return { application: application, documents: documents };
+}
+
+function chapterDriverFileLimit_(document) {
+  return document.category === 'cv' ? CHAPTER_MAX_CV_BYTES : CHAPTER_DRIVER_MAX_FILE_BYTES;
+}
+
+function chapterIsoDate_(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(value + 'T00:00:00.000Z');
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+/** Create the driver tab on first use; afterwards require its exact header row. */
+function chapterDriverSheetName_(config) {
+  const name = PropertiesService.getScriptProperties().getProperty('CHAPTER_DRIVER_SHEET_NAME') || 'Driver Applications';
+  chapterAssert_(name.length <= 100 && !/[\[\]*?:/\\]/.test(name) && name !== config.sheetName, 'INVALID_CONFIGURATION');
+  return name;
+}
+
+function chapterDriverSheet_(config) {
+  const name = chapterDriverSheetName_(config);
+  const spreadsheet = SpreadsheetApp.openById(config.sheetId);
+  const sheet = spreadsheet.getSheetByName(name) || spreadsheet.insertSheet(name);
+  const columns = CHAPTER_DRIVER_HEADERS.length;
+  if (sheet.getLastRow() === 0 && sheet.getLastColumn() === 0) {
+    if (sheet.getMaxColumns() < columns) sheet.insertColumnsAfter(sheet.getMaxColumns(), columns - sheet.getMaxColumns());
+    sheet.getRange(1, 1, 1, columns).setValues([CHAPTER_DRIVER_HEADERS.slice()]);
+    sheet.getRange(1, 1, 1, columns).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    // Cosmetic only: a styling problem must never block a driver submission.
+    try { chapterStyleDriverSheet_(spreadsheet, sheet, config); } catch (_) { /* keep the plain tab */ }
+  }
+  chapterAssert_(sheet.getMaxColumns() >= columns && sheet.getLastColumn() <= columns &&
+    sheet.getRange(1, 1, 1, columns).getValues()[0].every(function (header, index) { return header === CHAPTER_DRIVER_HEADERS[index]; }), 'HEADER_MISMATCH');
+  return { sheet: sheet, config: Object.assign({}, config, { sheetName: name }) };
+}
+
+/** Owner action: give the Driver Applications tab the same look as the Applications tab. Values are not changed. */
+function formatDriverApplicationsTab() {
+  const config = chapterConfig_();
+  const lock = LockService.getScriptLock();
+  chapterAssert_(lock.tryLock(25000), 'BUSY_RETRY');
+  try {
+    const target = chapterDriverSheet_(config);
+    chapterStyleDriverSheet_(SpreadsheetApp.openById(config.sheetId), target.sheet, config);
+    return { ok: true, sheetName: target.config.sheetName };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Driver columns that share an Applications column take its exact header, cell format and width.
+const CHAPTER_DRIVER_STYLE_ALIASES = Object.freeze({ 'Driver position': 'Job position' });
+
+function chapterStyleDriverSheet_(spreadsheet, sheet, config) {
+  const source = spreadsheet.getSheetByName(config.sheetName);
+  if (!source || source.getSheetId() === sheet.getSheetId() || source.getLastColumn() < 2) return;
+  const columns = CHAPTER_DRIVER_HEADERS.length;
+  const sourceHeaders = source.getRange(1, 1, 1, source.getLastColumn()).getValues()[0];
+  // The Reference column is the template for driver-only questions.
+  const template = Math.max(1, sourceHeaders.indexOf('Reference') + 1);
+  const rows = sheet.getMaxRows();
+  // Copy body formatting from the newest applicant row: the first rows may be highlighted test entries.
+  const sample = source.getLastRow();
+  CHAPTER_DRIVER_HEADERS.forEach(function (header, index) {
+    const match = sourceHeaders.indexOf(CHAPTER_DRIVER_STYLE_ALIASES[header] || header) + 1;
+    const from = match || template;
+    const column = index + 1;
+    source.getRange(1, from).copyFormatToRange(sheet, column, column, 1, 1);
+    if (sample > 1 && rows > 1) source.getRange(sample, from).copyFormatToRange(sheet, column, column, 2, rows);
+    sheet.setColumnWidth(column, source.getColumnWidth(from));
+  });
+  // Formats can carry tracker dropdowns; driver answers keep only their own values.
+  sheet.getRange(1, 1, rows, columns).clearDataValidations();
+  sheet.setRowHeight(1, source.getRowHeight(1));
+  if (sample > 1 && rows > 1) sheet.setRowHeights(2, rows - 1, source.getRowHeight(sample));
+  if (sourceHeaders[0] === 'Application ID' && source.isColumnHiddenByUser(1)) sheet.hideColumns(1);
+  sheet.setFrozenRows(Math.max(1, source.getFrozenRows()));
+  sheet.setFrozenColumns(Math.min(source.getFrozenColumns(), 5));
+  // A filter gives the header row its dropdowns and the green row/column markers, as on Applications.
+  if (!sheet.getFilter()) sheet.getRange(1, 1, rows, columns).createFilter();
+}
+
+/** Read-only checks, then private file storage. Returns null when the row already exists. */
+function chapterPrepareDriverApplication_(config, payload) {
+  const application = payload.application;
+  const sheet = SpreadsheetApp.openById(config.sheetId).getSheetByName(chapterDriverSheetName_(config));
+  if (sheet && chapterFindRow_(sheet, application.id, application.reference)) return null;
+  if (sheet) chapterDriverRateLimit_(sheet, application);
+  const links = {};
+  payload.documents.forEach(function (document) {
+    const limit = chapterDriverFileLimit_(document);
+    const bytes = chapterValidateFile_(document, limit, document.category !== 'cv');
+    const file = chapterGetOrCreateCv_(config, application, document, bytes, document.id,
+      { maxFiles: CHAPTER_DRIVER_MAX_FILES, maxBytes: limit });
+    links[document.category] = 'https://drive.google.com/file/d/' + file.id + '/view';
+  });
+  return links;
+}
+
+function chapterDriverRateLimit_(sheet, application) {
+  const count = sheet.getLastRow() - 1;
+  if (count < 1) return;
+  const now = Date.now();
+  const email = application.email.trim().toLowerCase();
+  let total = 0;
+  let matchingEmail = 0;
+  sheet.getRange(2, 1, count, 8).getValues().forEach(function (row) {
+    const submittedAt = new Date(row[2]).getTime();
+    if (!Number.isFinite(submittedAt) || submittedAt < now - 60 * 60 * 1000 || submittedAt > now) return;
+    total++;
+    if (String(row[7]).trim().toLowerCase() === email) matchingEmail++;
+  });
+  chapterAssert_(total < 20 && matchingEmail < 3, 'SUBMISSION_RATE_LIMIT');
+}
+
+/** One cell per upload box, one private link per line, in the order the applicant added the files. */
+function chapterDriverLinks_(links, base) {
+  const list = links[base] ? [links[base]] : [];
+  for (let index = 1; index <= CHAPTER_DRIVER_FILE_LIMITS[base]; index++) if (links[base + '-' + index]) list.push(links[base + '-' + index]);
+  return list.join('\n');
+}
+
+/** Runs under the writer lock: create the tab if needed, then write one row. */
+function chapterSaveDriverApplication_(config, payload, links) {
+  const application = payload.application;
+  const target = chapterDriverSheet_(config);
+  const sheet = target.sheet;
+  const existing = chapterFindRow_(sheet, application.id, application.reference);
+  if (existing) return { ok: true, applicationId: application.id, reference: application.reference, row: existing, duplicate: true };
+  // The row was seen before the lock but is gone now (for example, deleted by staff): ask for a retry.
+  chapterAssert_(links, 'BUSY_RETRY');
+  chapterDriverRateLimit_(sheet, application);
+  const row = [application.id, application.reference, new Date(application.submittedAt).toISOString(), application.form,
+    application.fullName, application.firstName, application.lastName, application.email, application.phone, application.telegram,
+    application.dateOfBirth, application.currentCountry, application.currentLocation, application.jobTitle, application.destinationCountry,
+    application.licenseCategories, application.licenseExpiry, application.drivingExperienceYears, application.hasIdp, application.idpExpiry,
+    application.meetsCzechRequirement, application.shareWithTendaDom, chapterDriverLinks_(links, 'license-front'),
+    chapterDriverLinks_(links, 'license-back'), chapterDriverLinks_(links, 'idp'), links.cv || '',
+    application.englishProficiency, application.referralSource, 'Yes', 'Yes'];
+  const rowNumber = sheet.getLastRow() + 1;
+  if (rowNumber > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), 100);
+  chapterWriteValues_(target.config, rowNumber, 'A', chapterColumnName_(row.length), row);
+  return { ok: true, applicationId: application.id, reference: application.reference, row: rowNumber, duplicate: false };
+}
+
+function chapterColumnName_(number) {
+  let name = '';
+  while (number > 0) {
+    const remainder = (number - 1) % 26;
+    name = String.fromCharCode(65 + remainder) + name;
+    number = Math.floor((number - 1) / 26);
+  }
+  return name;
+}
+
 function chapterValidateProfile_(profile) {
   const required = ['firstName', 'lastName', 'gender', 'address', 'dateOfBirth', 'placeOfBirth',
     'destinationCountry', 'currentWorkCountry', 'secondaryJobTitle', 'englishProficiency', 'termsAccepted'];
@@ -958,13 +1195,15 @@ function chapterValidateFile_(resume, maximum, supporting) {
   return bytes;
 }
 
-function chapterGetOrCreateCv_(config, application, resume, bytes, documentId) {
+function chapterGetOrCreateCv_(config, application, resume, bytes, documentId, limits) {
+  // Driver applications may store more and larger files than the general form.
+  const maxFiles = limits ? limits.maxFiles : CHAPTER_DOCUMENT_CATEGORIES.length + 1;
   // Drive property searches require both key and value. Select the CV from the
   // bounded application files locally, including legacy CVs without a document ID.
   const query = "trashed = false and '" + config.folderId + "' in parents and appProperties has { key='chapterApplicationId' and value='" + application.id + "' }";
   const search = chapterGoogleJson_('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(query) +
-    '&pageSize=' + (CHAPTER_DOCUMENT_CATEGORIES.length + 2) + '&fields=' + encodeURIComponent('files(' + CHAPTER_FILE_FIELDS + '),nextPageToken'), {}, 'CV_LOOKUP_FAILED');
-  chapterAssert_(Array.isArray(search.files) && search.files.length <= CHAPTER_DOCUMENT_CATEGORIES.length + 1 && !search.nextPageToken, 'DUPLICATE_CV_CONFLICT');
+    '&pageSize=' + (maxFiles + 1) + '&fields=' + encodeURIComponent('files(' + CHAPTER_FILE_FIELDS + '),nextPageToken'), {}, 'CV_LOOKUP_FAILED');
+  chapterAssert_(Array.isArray(search.files) && search.files.length <= maxFiles && !search.nextPageToken, 'DUPLICATE_CV_CONFLICT');
   const matches = search.files.filter(function (file) {
     const identifier = file.appProperties && file.appProperties.chapterDocumentId;
     return documentId ? identifier === documentId : !identifier;
@@ -988,7 +1227,7 @@ function chapterGetOrCreateCv_(config, application, resume, bytes, documentId) {
     file = chapterGoogleJson_(uploadUrl, { method: 'put', contentType: resume.mime,
       payload: Utilities.newBlob(bytes, resume.mime, resume.name) }, 'CV_UPLOAD_FAILED');
   }
-  chapterVerifyCv_(file, config.folderId, application, resume, documentId);
+  chapterVerifyCv_(file, config.folderId, application, resume, documentId, limits && limits.maxBytes);
   chapterPrivatePermissions_(file.id);
   return file;
 }
@@ -1002,10 +1241,10 @@ function chapterExistingPrivateFile_(config, application, document, link, docume
   return file;
 }
 
-function chapterVerifyCv_(file, folderId, application, resume, documentId) {
+function chapterVerifyCv_(file, folderId, application, resume, documentId, maxBytes) {
   chapterAssert_(file && /^[A-Za-z0-9_-]+$/.test(file.id) && !file.trashed && !file.driveId &&
     Array.isArray(file.parents) && file.parents.indexOf(folderId) !== -1 && file.mimeType === resume.mime &&
-    Number(file.size) > 0 && Number(file.size) <= (documentId ? CHAPTER_MAX_DOCUMENT_BYTES : CHAPTER_MAX_CV_BYTES) && file.appProperties &&
+    Number(file.size) > 0 && Number(file.size) <= (maxBytes || (documentId ? CHAPTER_MAX_DOCUMENT_BYTES : CHAPTER_MAX_CV_BYTES)) && file.appProperties &&
     file.appProperties.chapterApplicationId === application.id && file.appProperties.chapterReference === application.reference &&
     (documentId ? file.appProperties.chapterDocumentId === documentId : !file.appProperties.chapterDocumentId), 'CV_METADATA_MISMATCH');
 }

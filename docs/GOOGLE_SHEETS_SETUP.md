@@ -24,10 +24,17 @@ Uploads that are never submitted are moved to Drive Trash (recoverable) after
 24 hours. Public health now also advertises `videoApplications: 1` and
 `maxVideoBytes: 104857600`.
 
-**Deployment order:** copy the updated `integrations/google-sheets/Code.gs` into
-the shared receiver project, publish a new version of the **existing** web app
-deployment (same `/exec` URL, so no secret or Vercel variable changes), then
-deploy the website. Until the receiver is updated, the video form shows
+Published as receiver **Version 22** on 19 November 2026 (same deployment and
+`/exec` URL). The checked-in `Code.gs` now matches that live version exactly,
+including the Driver Applications receiver added on 17 November 2026 from the
+other recruitment website. A browser upload from the website to Google Drive
+was verified against the live receiver before the website was deployed.
+
+**Deployment order for future changes:** start from the live receiver code (it
+may contain changes from the other website), copy in the updated
+`integrations/google-sheets/Code.gs`, publish a new version of the **existing**
+web app deployment (same `/exec` URL, so no secret or Vercel variable changes),
+then deploy the website. Until the receiver is updated, the video form shows
 "Video applications are temporarily unavailable" and nothing is stored. After
 publishing, submit one short test video from the live site and confirm the row
 and Drive link before announcing the form.
