@@ -1,0 +1,15 @@
+/* Recruitment advisory: a calm amber warning, distinct from the teal fee badges. */
+.recruitment-advisory { --advisory-ink: #6b3f00; --advisory-bg: #fff6e0; --advisory-line: #f1c66b; color: var(--advisory-ink); }
+.recruitment-advisory-text { display: flex; align-items: flex-start; gap: 10px; margin: 0; font-size: 14px; line-height: 1.5; }
+.recruitment-advisory-text svg { flex: none; margin-top: 2px; color: #b26b00; }
+.recruitment-advisory-text span { display: flex; flex-wrap: wrap; column-gap: .45em; }
+.recruitment-advisory-text strong { font-weight: 700; color: inherit; }
+
+.recruitment-advisory-band { background: var(--advisory-bg); border-top: 1px solid var(--advisory-line); border-bottom: 1px solid var(--advisory-line); }
+.recruitment-advisory-band .recruitment-advisory-text { justify-content: center; padding-block: 14px; font-size: 15px; text-align: center; }
+
+.recruitment-advisory-inline { margin-top: 16px; padding: 12px 14px; border: 1px solid var(--advisory-line); border-radius: 14px; background: var(--advisory-bg); }
+
+@media (max-width: 700px) {
+  .recruitment-advisory-band .recruitment-advisory-text { justify-content: flex-start; text-align: left; font-size: 14px; }
+}

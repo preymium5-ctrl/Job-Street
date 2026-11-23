@@ -1,4 +1,10 @@
 export const noPlacementFee = "NO PLACEMENT FEE";
+// Supplied by the site operator on 23 November 2026; shown word for word.
+export const recruitmentAdvisory = [
+  "For Manpower Pooling Only.",
+  "No Fees to be Collected.",
+  "Beware of Illegal Recruiters and Human Traffickers.",
+] as const;
 export const minimumExperienceYears = 3;
 export const minimumExperienceRequirement = "Minimum 3 years of relevant work experience.";
 export const maximumApplicantAge = 45;

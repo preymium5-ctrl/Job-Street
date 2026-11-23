@@ -5,6 +5,7 @@ import type { Job } from "@/lib/types";
 import { formatOpeningRange, getJobOpeningRange } from "@/lib/job-openings";
 import { fairDocumentTiming, getJobFairRole } from "@/data/job-fair";
 import { maximumAgeRequirement, noPlacementFee, recruitmentBenefits, workingInCroatia } from "@/data/employment";
+import { RecruitmentAdvisory } from "@/components/layout/RecruitmentAdvisory";
 import { MobileApply } from "./MobileApply";
 import { JobSalary } from "./JobSalary";
 import { JobCard } from "./JobCard";
@@ -70,6 +71,7 @@ export function JobDetails({ job, relatedJobs }: { job: Job; relatedJobs: Job[] 
               <div><MapPin size={16} aria-hidden="true" /><p><strong>{job.location}</strong><span>{role ? "For Filipino applicants" : job.employmentType}</span></p></div>
             </div>
             <ApplyLink job={job} />
+            <RecruitmentAdvisory />
             <p className={styles.applicationHint}>Have your CV ready. Apply in a few simple steps.</p>
             {job.isExample && <p className={styles.applicationHint}>Example vacancy · Applications are for demonstration purposes.</p>}
           </aside>

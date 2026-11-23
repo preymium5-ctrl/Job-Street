@@ -1,4 +1,5 @@
 import { BrandLockup } from "@/components/ui/Brand";
+import { RecruitmentAdvisory } from "@/components/layout/RecruitmentAdvisory";
 import { socialChannels } from "@/data/social";
 import Image from "next/image";
 import Link from "next/link";
@@ -7,6 +8,7 @@ import { ArrowUpRight, MessageSquare } from "lucide-react";
 export function Footer() {
   return (
     <footer className="street-footer">
+      <RecruitmentAdvisory variant="band" />
       <div className="container street-footer-top">
         <div>
           <Link href="/" aria-label="Jobs Street Croatia home"><BrandLockup /></Link>

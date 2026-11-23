@@ -10,6 +10,7 @@ import { readVideoDuration, uploadVideo, VideoUploadError } from "@/lib/video-up
 import { fieldErrors } from "@/lib/validation";
 import { BrandLockup } from "@/components/ui/Brand";
 import { TelegramIcon, WhatsAppIcon } from "@/components/ui/ContactIcons";
+import { RecruitmentAdvisory } from "@/components/layout/RecruitmentAdvisory";
 import { ApplicationUpload } from "./ApplicationUpload";
 import styles from "./ApplicationForm.module.css";
 
@@ -297,6 +298,7 @@ export default function VideoApplicationForm({ jobs }: { jobs: Job[] }) {
                 </label>
                 {errors.consent && <p id="consent-error" className={styles.fieldError}>{errors.consent}</p>}
                 <p className={styles.feeNote}>No placement fee.</p>
+                <RecruitmentAdvisory />
               </section>
             </div>
             {error && <div className={styles.error} role="alert">{error}</div>}

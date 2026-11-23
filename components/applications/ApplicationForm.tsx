@@ -13,6 +13,7 @@ import { isAdditionalApplicationJob } from "@/data/application-jobs";
 import { MAX_REFERENCE_FILE_BYTES, MAX_REFERENCE_UPLOAD_BYTES, getReferenceApplicationUploads, type ReferenceUploadId, type SupportingDocumentCategory } from "@/lib/document-uploads";
 import { BrandLockup } from "@/components/ui/Brand";
 import { TelegramIcon, WhatsAppIcon } from "@/components/ui/ContactIcons";
+import { RecruitmentAdvisory } from "@/components/layout/RecruitmentAdvisory";
 import { ApplicationRequirements } from "./ApplicationRequirements";
 import { ApplicationUpload } from "./ApplicationUpload";
 import styles from "./ApplicationForm.module.css";
@@ -334,6 +335,7 @@ export default function ApplicationForm({ job: initialJob, jobs }: { job?: Job; 
                     <SectionHeading id="notices-heading" title="IMPORTANT NOTICES" />
                     {choices("englishProficiency", "We require all candidates to display basic proficiency in English. Are you able to speak, read, and write English at a basic level?", ["Yes", "No"])}
                     <p className={styles.feeNote}>No placement fee.</p>
+                    <RecruitmentAdvisory />
                   </section>
                   <section id="application-terms" className={styles.sectionCard} aria-labelledby="terms-heading">
                     <SectionHeading id="terms-heading" title="Terms and Conditions" />
