@@ -947,7 +947,7 @@ svg {
 }
 .process-heading {
   position: sticky;
-  top: 130px;
+  top: calc(130px + var(--advisory-bar-h, 0px));
   align-self: start;
 }
 .process-heading .subtle-text {

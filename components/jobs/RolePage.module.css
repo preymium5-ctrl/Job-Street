@@ -49,7 +49,7 @@
 .highlights strong { display: block; color: var(--brand-blue); font-size: 14px; font-weight: 500; line-height: 1.5; }
 .highlights small { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; line-height: 1.5; }
 .readingLayout { display: grid; grid-template-columns: 230px minmax(0,1fr); gap: 36px; padding-top: 55px; }
-.sectionNav { position: sticky; top: 110px; align-self: start; min-width: 0; }
+.sectionNav { position: sticky; top: calc(110px + var(--advisory-bar-h, 0px)); align-self: start; min-width: 0; }
 .sectionNav > .kicker { margin-bottom: 21px; font-size: 12px; }
 .sectionNav nav { display: grid; }
 .sectionNav nav a { display: flex; align-items: center; gap: 13px; min-height: 54px; padding-block: 10px; border-bottom: 1px solid var(--line); color: var(--brand-blue); font-size: 14px; line-height: 1.5; }

@@ -8,7 +8,7 @@
 .search button { padding: 3px; color: var(--brand-blue); display: flex; }
 .searchNote { color: var(--muted); font-size: 11px; margin-left: auto; white-space: nowrap; }
 .workspace { display: grid; grid-template-columns: 225px minmax(0, 1fr); gap: 37px; align-items: start; }
-.sidebar { position: sticky; top: 104px; }
+.sidebar { position: sticky; top: calc(104px + var(--advisory-bar-h, 0px)); }
 .filters { border-bottom: 1px solid var(--line); padding-bottom: 23px; }
 .filters > summary { display: flex; align-items: center; justify-content: space-between; gap: 18px; color: var(--brand-blue); font-size: 13px; font-weight: 600; list-style: none; cursor: pointer; }
 .filters > summary::-webkit-details-marker { display: none; }

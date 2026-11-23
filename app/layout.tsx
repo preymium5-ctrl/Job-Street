@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { RecruitmentAdvisoryBar } from "@/components/layout/RecruitmentAdvisoryBar";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { site } from "@/data/site";
 import { pageMetadata, websiteData } from "@/lib/seo";
@@ -71,6 +72,7 @@ export default function RootLayout({
         <a className="skip-link" href="#main-content">
           Skip to content
         </a>
+        <RecruitmentAdvisoryBar />
         <Navbar />
         <main id="main-content">{children}</main>
         <Footer />

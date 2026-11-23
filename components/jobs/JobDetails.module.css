@@ -324,7 +324,7 @@
 }
 .sidebar {
   position: sticky;
-  top: 110px;
+  top: calc(110px + var(--advisory-bar-h, 0px));
 }
 .applyPanel {
   background: var(--teal-soft);
